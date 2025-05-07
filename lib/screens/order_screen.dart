@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../models.dart';
+import '../models/order_item.dart';
+import '../models/product.dart';
+import 'package:myApp/objectbox.dart';
 import '../widgets/product_item.dart'; // Import the ProductItem widget
 
 class OrderScreen extends StatefulWidget {
-  const OrderScreen({Key? key}) : super(key: key);
+  const OrderScreen({super.key});
 
   @override
   State<OrderScreen> createState() => _OrderScreenState();
@@ -11,78 +13,86 @@ class OrderScreen extends StatefulWidget {
 
 class _OrderScreenState extends State<OrderScreen> {
   final List<OrderItem> _cart = [];
-  final List<Product> sampleProducts = [
-    Product(
-      id: '1',
-      name: 'Spaghetti Carbonara',
-      price: 12.99,
-      category: 'Pasta',
-      description: 'Creamy spaghetti with bacon and eggs.',
-      imageUrl: 'https://example.com/spaghetti.jpg', // Replace with a valid image URL
-      isAvailable: true,
-    ),
-    Product(
-      id: '2',
-      name: 'Margherita Pizza',
-      price: 10.50,
-      category: 'Pizza',
-      description: 'Classic pizza with tomato, mozzarella, and basil.',
-      imageUrl: 'https://example.com/pizza.jpg', // Replace with a valid image URL
-      isAvailable: true,
-    ),
-  ];
 
   void _addToCart(Product product) {
     setState(() {
-      final existingItem = _cart.firstWhere((item) => item.product.id == product.id, orElse: () => OrderItem(product: product, quantity: 0));
+      final existingItem = _cart.firstWhere(
+          (item) => item.product.target?.id == product.id, orElse: () {
+        final newItem = OrderItem(quantity: 0);
+        newItem.product.target = product;
+        return newItem;
+        });
 
-      if (existingItem.quantity > 0){
+        if (existingItem.quantity > 0) {
         existingItem.quantity++;
       } else {
-        
-        _cart.add(OrderItem(product: product, quantity: 1));
+        existingItem.quantity = 1;
+        _cart.add(existingItem);
       }
     });
+  }
+
+  String getProductName(OrderItem item) {
+    return item.product.target?.name ?? 'Unknown Product';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Order'),
-      ),      
+        title: const Text('Order'),
+      ),
         body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 20.0), // Add padding here
-                  child: ListView.builder(
-                    itemCount: sampleProducts.length,
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20.0),
+              child: StreamBuilder<List<Product>>(
+                stream: productBox.query()
+                    .watch(triggerImmediately: true)
+                    .map((query) => query.find()),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final products = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: products.length,
                     itemBuilder: (context, index) => ProductItem(
-                      product: sampleProducts[index],
+                      product: products[index],
                       onAddToCart: _addToCart,
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-              Text('Order Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Expanded(
-                child: _cart.isEmpty
-                    ? Center(child: Text('Your cart is empty'))
-                    : ListView.builder(
-                        itemCount: _cart.length,
-                        itemBuilder: (context, index) => ListTile(
-                          leading: Text(
-                            _cart[index].quantity.toString(),
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        title: Text(_cart[index].product.name),
-                        trailing: Text('\$${_cart[index].subtotal.toStringAsFixed(2)}'),
-                      ),
-                  ),
+            ),
+          ),
+          const Text('Order Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Expanded(
+            child: _cart.isEmpty
+                ? const Center(child: Text('Your cart is empty'))
+                : ListView.builder(
+                    itemCount: _cart.length,
+                    itemBuilder: (context, index) {
+                      final item = _cart[index];
+                      return ListTile(
+                        leading: Text(item.quantity.toString(),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        title: Text(getProductName(item)),
+                        trailing: Text(
+                            '\$${(item.quantity * (item.product.target?.price ?? 0).toDouble()).toStringAsFixed(2)}'),
+                      );
+                    }),
             ),
             ],
           ),

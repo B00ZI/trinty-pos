@@ -1,0 +1,118 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:7649823169092191057",
+      "lastPropertyId": "11:1215224271417333887",
+      "name": "Product",
+      "properties": [
+        {
+          "id": "1:4520390416306682604",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:8659425489452910569",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:5200036996763568237",
+          "name": "price",
+          "type": 8
+        },
+        {
+          "id": "8:1904109220085410039",
+          "name": "category",
+          "type": 9
+        },
+        {
+          "id": "9:3677162802135254533",
+          "name": "description",
+          "type": 9
+        },
+        {
+          "id": "10:1098355679031842727",
+          "name": "imageUrl",
+          "type": 9
+        },
+        {
+          "id": "11:1215224271417333887",
+          "name": "isAvailable",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:7719230692724575644",
+      "lastPropertyId": "3:6159233334699626007",
+      "name": "OrderItem",
+      "properties": [
+        {
+          "id": "1:4540099424202038411",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:5086519063665624427",
+          "name": "productId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "1:4823262623031552778",
+          "relationTarget": "Product"
+        },
+        {
+          "id": "3:6159233334699626007",
+          "name": "quantity",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:5101334298372515029",
+      "lastPropertyId": "3:8887651537502346251",
+      "name": "PrinterConfig",
+      "properties": [
+        {
+          "id": "1:927144868425782511",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3133952761694628052",
+          "name": "ipAddress",
+          "type": 9
+        },
+        {
+          "id": "3:8887651537502346251",
+          "name": "port",
+          "type": 6
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "3:5101334298372515029",
+  "lastIndexId": "1:4823262623031552778",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [
+    7625330162759834078,
+    6675152637186099789,
+    2262285333084755789,
+    5829155339343151683
+  ],
+  "retiredRelationUids": [],
+  "version": 1
+}

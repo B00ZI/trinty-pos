@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../models.dart';
+import 'package:myApp/models/product.dart';
 
 class ProductItem extends StatelessWidget {
   final Product product;
   final void Function(Product) onAddToCart;
 
-  const ProductItem({
-    Key? key,
+  const ProductItem({ // Add const here
+    super.key,
     required this.product,
     required this.onAddToCart,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
