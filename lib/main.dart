@@ -36,7 +36,7 @@ class MainScreen extends StatefulWidget {
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
-
+ 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late final List<Widget> _widgetOptions;
@@ -45,9 +45,9 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _widgetOptions = <Widget>[
-      OrderScreen(), 
-      HistoryScreen(), 
-      ProductsScreen(), 
+      OrderScreen(objectbox: widget.objectbox), 
+      HistoryScreen(objectbox: widget.objectbox),
+      ProductsScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
     ];
   }
@@ -66,27 +66,25 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
-      drawer: const Drawer(
-        child: ListView(children: []),
-      ),
+      
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[ // Added const here
-          BottomNavigationBarItem( 
-            icon: const Icon(Icons.shopping_cart), // Added const here
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
             label: 'Order',
           ),
-          BottomNavigationBarItem( 
-            icon: const Icon(Icons.history), // Added const here
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
             label: 'History',
           ),
-          BottomNavigationBarItem( 
-            icon: const Icon(Icons.apps), // Added const here
+          BottomNavigationBarItem(
+            icon: Icon(Icons.apps),
             label: 'Products',
-          ),
+          ), 
           BottomNavigationBarItem( 
             icon: const Icon(Icons.settings), // Added const here
             label: 'Settings',

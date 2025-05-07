@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../objectbox.dart';
 
 class HistoryScreen extends StatelessWidget {
-  const HistoryScreen({super.key});
+    final ObjectBox objectbox;
+  const HistoryScreen({super.key, required this.objectbox});
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Order History'),

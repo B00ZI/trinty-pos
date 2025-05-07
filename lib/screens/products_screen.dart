@@ -6,11 +6,16 @@ import '../models/product.dart';
 import '../widgets/product_item.dart';
 
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key});
+  final ObjectBox objectbox;
+  const ProductsScreen({super.key, required this.objectbox});
 
   @override
-  ProductsScreenState createState() => ProductsScreenState();
+  State<ProductsScreen> createState() => ProductsScreenState();
 }
+
+
+
+
 
 class ProductsScreenState extends State<ProductsScreen> {
   late final Box<Product> productBoxInstance;
@@ -27,7 +32,7 @@ class ProductsScreenState extends State<ProductsScreen> {
   @override
   void initState() {
     super.initState();
-    productBoxInstance = productBox;
+    productBoxInstance = widget.objectbox.productBox;
   }
 
 

@@ -3,9 +3,12 @@ import '../models/order_item.dart';
 import '../models/product.dart';
 import 'package:myApp/objectbox.dart';
 import '../widgets/product_item.dart'; // Import the ProductItem widget
+import 'package:objectbox/objectbox.dart';
 
 class OrderScreen extends StatefulWidget {
-  const OrderScreen({super.key});
+  final ObjectBox objectbox;
+  const OrderScreen({super.key, required this.objectbox});
+
 
   @override
   State<OrderScreen> createState() => _OrderScreenState();
@@ -13,6 +16,13 @@ class OrderScreen extends StatefulWidget {
 
 class _OrderScreenState extends State<OrderScreen> {
   final List<OrderItem> _cart = [];
+  late final Box<Product> _productBox;
+
+  @override
+  void initState() {
+    super.initState();
+    _productBox = widget.objectbox.store.box<Product>();
+  }
 
   void _addToCart(Product product) {
     setState(() {
@@ -51,7 +61,7 @@ class _OrderScreenState extends State<OrderScreen> {
             child: Padding(
               padding: const EdgeInsets.only(bottom: 20.0),
               child: StreamBuilder<List<Product>>(
-                stream: productBox.query()
+                stream: _productBox.query()
                     .watch(triggerImmediately: true)
                     .map((query) => query.find()),
                 builder: (context, snapshot) {

@@ -21,4 +21,5 @@ class ObjectBox {
     final store = await openStore();
     return ObjectBox._create(store);
   }
+  
 }
