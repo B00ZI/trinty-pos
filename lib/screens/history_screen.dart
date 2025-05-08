@@ -1,9 +1,11 @@
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:912966895.
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:453303779.
 
-import 'dart:io';
-import 'dart:typed_data'; // Add this import for Uint8List
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:esc_pos_printer/esc_pos_printer.dart';
+import '../models/order_item.dart';
 import '../objectbox.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/order.dart';
@@ -28,53 +30,110 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _orderBox = widget.objectbox.store.box<Ruci>();
     _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
   }
+
   Future<void> _printOrder(Ruci order) async {
-     // Retrieve printer configuration from the database
-    final printerConfig = _printerConfigBox.get(1); // Assuming you have only one config with ID 1
+    // Retrieve printer configuration from the database
+    final printerConfig = _printerConfigBox.get(1);
 
     if (printerConfig == null) {
       print('Printer configuration not found');
-      // Consider showing an error message to the user
       return;
     }
 
-    final printerIp = printerConfig.ipAddress;
-    final printerPort = printerConfig.port;
+    final profile = await CapabilityProfile.load();
+    final printer = NetworkPrinter(PaperSize.mm80, profile);
 
+    final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port);
 
+    if (res != PosPrintResult.success) {
+      print('Could not connect to printer: $res');
+      return;
+    }
 
+    // Header - Business Name
+    printer.row([
+      PosColumn(
+        text: '------ Drywich ------',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center, bold: true),
+      )
+    ]);
 
+    // Order ID
+    printer.row([
+      PosColumn(
+        text: 'Order ID: ${order.id}',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center),
+      )
+    ]);
 
-      try {
-        // Connect to printer
-        final socket = await Socket.connect(printerIp, printerPort, timeout: const Duration(seconds: 5));
-        
-        // Generate print data
-        final commands = _generatePrinterData(order); // Call _generatePrinterData here
-    
-        // Send to printer
-        socket.add(commands);
-        await socket.flush();
-        await socket.close();
-        
-        print('Print job sent successfully'); // Consider using proper logging
-      } catch (e) {
-        print('Failed to print: $e'); // Consider showing error to user
-      }
+    printer.feed(1);
+
+    // Items List
+    for (final item in order.items) {
+      final name = item.product.target?.name ?? 'Unknown';
+      final quantity = item.quantity;
+      final price = calculateItemTotal(item).toStringAsFixed(2);
+
+      printer.row([
+        PosColumn(
+          text: '$quantity x $name',
+          width: 8,
+          styles: PosStyles(align: PosAlign.left),
+        ),
+        PosColumn(
+          text: '\$$price',
+          width: 4,
+          styles: PosStyles(align: PosAlign.right),
+        ),
+      ]);
+    }
+
+    // Divider
+    printer.row([
+      PosColumn(
+        text: '----------------------------------------',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center),
+      )
+    ]);
+
+    // Total Calculation
+    final total = order.items
+        .fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
+
+    printer.row([
+      PosColumn(
+        text: 'TOTAL',
+        width: 8,
+        styles: PosStyles(align: PosAlign.left, bold: true),
+      ),
+      PosColumn(
+        text: '\$${total.toStringAsFixed(2)}',
+        width: 4,
+        styles: PosStyles(align: PosAlign.right, bold: true),
+      ),
+    ]);
+
+    // Divider
+    printer.row([
+      PosColumn(
+        text: '----------------------------------------',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center),
+      )
+    ]);
+
+    printer.feed(3);
+    printer.cut();
+    printer.disconnect();
+
+    print('Receipt sent successfully.');
   }
-  Uint8List _generatePrinterData(Ruci order) {
-      final buffer = StringBuffer();
-      buffer.writeln("Order ID: ${order.id}");
-      buffer.writeln("Order Date: ${order.date.toLocal().toString().split('.')[0]}");
-      buffer.writeln("Items:");
-      for (final item in order.items) {
-        buffer.writeln("- ${item.product.target!.name}: ${item.product.target!.price} x ${item.quantity}");
-      }
-      buffer.writeln("\n\n\n");
-      // Convert string to bytes, adding special characters
-      final List<int> bytes = [...buffer.toString().codeUnits];
-    
-      return Uint8List.fromList(bytes);
+
+  double calculateItemTotal(OrderItem item) {
+    return item.quantity * (item.product.target?.price ?? 0).toDouble();
   }
 
   @override
@@ -125,14 +184,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         Padding(
                           padding: const EdgeInsets.only(left: 16.0),
                           child: Text(
-                              '- ${item.product.target!.name}: ${item.product.target!.price} x ${item.quantity}'),
+                              '- ${item.product.target != null ? item.product.target!.name : 'Deleted Product'}: ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
                         ),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          ElevatedButton.icon(
-                            onPressed: () {_printOrder(order);
+                          ElevatedButton.icon(                                                        
+                            onPressed: () {
+                              _printOrder(order);
+
                             },
                             icon: const Icon(Icons.print),
                             label: const Text('Print'),
