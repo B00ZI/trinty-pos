@@ -99,44 +99,48 @@
       "relations": []
     },
     {
-      "id": "4:8743093086059233857",
-      "lastPropertyId": "2:7962593895875164527",
-      "name": "Order",
+      "id": "5:459141988423342695",
+      "lastPropertyId": "2:3448860529002648996",
+      "name": "Ruci",
       "properties": [
         {
-          "id": "1:8024876417859417182",
+          "id": "1:5360933610670697418",
           "name": "id",
           "type": 6,
           "flags": 1
         },
         {
-          "id": "2:7962593895875164527",
+          "id": "2:3448860529002648996",
           "name": "date",
           "type": 10
         }
       ],
       "relations": [
         {
-          "id": "1:3063753525763394773",
+          "id": "2:4326529116841583281",
           "name": "items",
           "targetId": "2:7719230692724575644"
         }
       ]
     }
   ],
-  "lastEntityId": "4:8743093086059233857",
+  "lastEntityId": "5:459141988423342695",
   "lastIndexId": "1:4823262623031552778",
-  "lastRelationId": "1:3063753525763394773",
+  "lastRelationId": "2:4326529116841583281",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
   "modelVersionParserMinimum": 5,
-  "retiredEntityUids": [],
+  "retiredEntityUids": [
+    8743093086059233857
+  ],
   "retiredIndexUids": [],
   "retiredPropertyUids": [
     7625330162759834078,
     6675152637186099789,
     2262285333084755789,
-    5829155339343151683
+    5829155339343151683,
+    8024876417859417182,
+    7962593895875164527
   ],
   "retiredRelationUids": [],
   "version": 1

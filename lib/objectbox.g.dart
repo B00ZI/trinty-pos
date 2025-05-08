@@ -133,19 +133,19 @@ final _entities = <obx_int.ModelEntity>[
     backlinks: <obx_int.ModelBacklink>[],
   ),
   obx_int.ModelEntity(
-    id: const obx_int.IdUid(4, 8743093086059233857),
-    name: 'Order',
-    lastPropertyId: const obx_int.IdUid(2, 7962593895875164527),
+    id: const obx_int.IdUid(5, 459141988423342695),
+    name: 'Ruci',
+    lastPropertyId: const obx_int.IdUid(2, 3448860529002648996),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(1, 8024876417859417182),
+        id: const obx_int.IdUid(1, 5360933610670697418),
         name: 'id',
         type: 6,
         flags: 1,
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(2, 7962593895875164527),
+        id: const obx_int.IdUid(2, 3448860529002648996),
         name: 'date',
         type: 10,
         flags: 0,
@@ -153,7 +153,7 @@ final _entities = <obx_int.ModelEntity>[
     ],
     relations: <obx_int.ModelRelation>[
       obx_int.ModelRelation(
-        id: const obx_int.IdUid(1, 3063753525763394773),
+        id: const obx_int.IdUid(2, 4326529116841583281),
         name: 'items',
         targetId: const obx_int.IdUid(2, 7719230692724575644),
       ),
@@ -200,17 +200,19 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(4, 8743093086059233857),
+    lastEntityId: const obx_int.IdUid(5, 459141988423342695),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
-    lastRelationId: const obx_int.IdUid(1, 3063753525763394773),
+    lastRelationId: const obx_int.IdUid(2, 4326529116841583281),
     lastSequenceId: const obx_int.IdUid(0, 0),
-    retiredEntityUids: const [],
+    retiredEntityUids: const [8743093086059233857],
     retiredIndexUids: const [],
     retiredPropertyUids: const [
       7625330162759834078,
       6675152637186099789,
       2262285333084755789,
       5829155339343151683,
+      8024876417859417182,
+      7962593895875164527,
     ],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -380,18 +382,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
-    Order: obx_int.EntityDefinition<Order>(
+    Ruci: obx_int.EntityDefinition<Ruci>(
       model: _entities[3],
-      toOneRelations: (Order object) => [],
+      toOneRelations: (Ruci object) => [],
       toManyRelations:
-          (Order object) => {
-            obx_int.RelInfo<Order>.toMany(1, object.id): object.items,
+          (Ruci object) => {
+            obx_int.RelInfo<Ruci>.toMany(2, object.id): object.items,
           },
-      getId: (Order object) => object.id,
-      setId: (Order object, int id) {
+      getId: (Ruci object) => object.id,
+      setId: (Ruci object, int id) {
         object.id = id;
       },
-      objectToFB: (Order object, fb.Builder fbb) {
+      objectToFB: (Ruci object, fb.Builder fbb) {
         fbb.startTable(3);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.date.millisecondsSinceEpoch);
@@ -410,11 +412,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final dateParam = DateTime.fromMillisecondsSinceEpoch(
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 6, 0),
         );
-        final object = Order(id: idParam, date: dateParam);
-        obx_int.InternalToManyAccess.setRelInfo<Order>(
+        final object = Ruci(id: idParam, date: dateParam);
+        obx_int.InternalToManyAccess.setRelInfo<Ruci>(
           object.items,
           store,
-          obx_int.RelInfo<Order>.toMany(1, object.id),
+          obx_int.RelInfo<Ruci>.toMany(2, object.id),
         );
         return object;
       },
@@ -498,16 +500,16 @@ class PrinterConfig_ {
   );
 }
 
-/// [Order] entity fields to define ObjectBox queries.
-class Order_ {
-  /// See [Order.id].
-  static final id = obx.QueryIntegerProperty<Order>(_entities[3].properties[0]);
+/// [Ruci] entity fields to define ObjectBox queries.
+class Ruci_ {
+  /// See [Ruci.id].
+  static final id = obx.QueryIntegerProperty<Ruci>(_entities[3].properties[0]);
 
-  /// See [Order.date].
-  static final date = obx.QueryDateProperty<Order>(_entities[3].properties[1]);
+  /// See [Ruci.date].
+  static final date = obx.QueryDateProperty<Ruci>(_entities[3].properties[1]);
 
-  /// see [Order.items]
-  static final items = obx.QueryRelationToMany<Order, OrderItem>(
+  /// see [Ruci.items]
+  static final items = obx.QueryRelationToMany<Ruci, OrderItem>(
     _entities[3].relations[0],
   );
 }
