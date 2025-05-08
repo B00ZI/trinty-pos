@@ -1,6 +1,8 @@
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:1286985924.
-import 'dart:io';
-
+import 'dart:async';
+import '../models/printer_config.dart';
+import 'package:esc_pos_utils/esc_pos_utils.dart'; // Import esc_pos_utils
+import 'package:esc_pos_printer/esc_pos_printer.dart'; // Import esc_pos_printer
 import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../models/order_item.dart';
@@ -20,10 +22,12 @@ class OrderScreen extends StatefulWidget {
 class _OrderScreenState extends State<OrderScreen> {
   final List<OrderItem> _cart = [];
   late final Box<Product> _productBox;
+  late final Box<PrinterConfig> _printerConfigBox;
 
   @override
   void initState() {
     super.initState();
+    _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
     _productBox = widget.objectbox.store.box<Product>();
   }
 
@@ -181,43 +185,44 @@ class _OrderScreenState extends State<OrderScreen> {
     // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ConfirmationScreen()));
   }
 
-  Future<void> _printReceipt(Ruci order) async {
-    const String printerIp =
-        '192.168.1.100'; // Replace with your printer's IP address
-    const int printerPort = 9100; // Common port for raw TCP printing
+Future<void> _printReceipt(Ruci order) async {
+  // Retrieve printer configuration from the database
+    final printerConfig = _printerConfigBox.get(1);
 
-    try {
-      final socket = await Socket.connect(printerIp, printerPort,
-          timeout: const Duration(seconds: 5));
-      print('Connected to printer at $printerIp:$printerPort');
-
-      final receipt = StringBuffer();
-      receipt.writeln('------ Order Receipt ------');
-      receipt.writeln('Order ID: ${order.id}'); // Assuming you have an order ID
-      for (final item in order.items) {
-        final productName = item.product.target?.name ?? 'Unknown Product';
-        final itemTotal = calculateItemTotal(item);
-        receipt.writeln(
-            '${item.quantity} x $productName: \$${itemTotal.toStringAsFixed(2)}');
-      }
-      final orderTotal = order.items
-          .fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
-      receipt.writeln('---------------------------');
-      receipt.writeln('Total: \$${orderTotal.toStringAsFixed(2)}');
-      receipt.writeln('---------------------------');
-
-      // Add line feed and form feed for ejecting the paper
-      receipt.writeln('\n\n\n');
-
-      socket.write(receipt.toString());
-      await socket.flush();
-      await socket.close();
-
-      print('Receipt sent successfully.');
-    } on SocketException catch (e) {
-      print('Error connecting to printer: $e');
-    } catch (e) {
-      print('An error occurred: $e');
+    if (printerConfig == null) {
+      print('Printer configuration not found');
+      return;
     }
+
+    final profile = await CapabilityProfile.load();
+    final printer = NetworkPrinter(PaperSize.mm80, profile);
+
+    final res = await printer.connect('192.168.123.100', port: 9100);
+
+    if (res != PosPrintResult.success) {
+      print('Could not connect to printer: $res');
+      return;
+    }
+
+    printer.setStyles(PosStyles(align: PosAlign.center, bold: true));
+    printer.text('------ Order Receipt ------');
+    printer.text('Order ID: ${order.id}');
+    printer.feed(1);
+
+    for (final item in order.items) {
+      final name = item.product.target?.name ?? 'Unknown';
+      final price = calculateItemTotal(item).toStringAsFixed(2);
+      printer.text('${item.quantity} x $name: \$${price}');
+    }
+
+    final total = order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
+    printer.feed(1);
+    printer.text('---------------------------');
+    printer.text('Total: \$${total.toStringAsFixed(2)}');
+    printer.text('---------------------------');
+    printer.feed(3);
+    printer.cut();
+    printer.disconnect();
+    print('Receipt sent successfully.');
   }
 }

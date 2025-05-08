@@ -12,7 +12,12 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-
+  network_info_plus: ^5.0.2 # or latest version
+  esc_pos_printer: ^4.0.4
+  esc_pos_utils: ^1.1.0
+  charset_converter: ^2.0.2
+  
+  
   # ObjectBox
   objectbox: ^4.2.0
   objectbox_flutter_libs: ^4.2.0
@@ -31,3 +36,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+

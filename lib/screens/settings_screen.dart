@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 // settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:validators/validators.dart';
@@ -46,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
   }
+
 
   @override
   void dispose() {
@@ -108,6 +112,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: const Text('Save Configuration'),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: ElevatedButton(
+                  onPressed: _testPrinterConnection,
+                  child: const Text('Test Printer Connection'),
+                ),
+              ),
             ],
           ),
         ),
@@ -138,5 +149,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
     }
+  }
+  
+  Future<void> _testPrinterConnection() async {
+     if (_formKey.currentState!.validate()) {
+    try {
+      final ipAddress = _ipAddressController.text;
+      final port = int.parse(_portController.text);
+
+      final socket = await Socket.connect(ipAddress, port, timeout: const Duration(seconds: 5));
+
+      // ESC/POS command to print "Test Print" and cut the paper
+      final List<int> bytes = [
+        ...utf8.encode("Test Print\n\n\n"),
+        0x1B, 0x64, 0x02, // Feed 2 lines
+        0x1D, 0x56, 0x41, 0x10, // Partial cut
+      ];
+
+      socket.add(bytes);
+      await socket.flush();
+      await socket.close();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Test print sent to printer')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
   }
 }
