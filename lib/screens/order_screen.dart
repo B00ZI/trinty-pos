@@ -204,25 +204,85 @@ Future<void> _printReceipt(Ruci order) async {
       return;
     }
 
-    printer.setStyles(PosStyles(align: PosAlign.center, bold: true));
-    printer.text('------ Order Receipt ------');
-    printer.text('Order ID: ${order.id}');
-    printer.feed(1);
+      // Header - Business Name
+  printer.row([
+    PosColumn(
+      text: '------ Drywich ------',
+      width: 12,
+      styles: PosStyles(align: PosAlign.center, bold: true),
+    )
+  ]);
 
-    for (final item in order.items) {
-      final name = item.product.target?.name ?? 'Unknown';
-      final price = calculateItemTotal(item).toStringAsFixed(2);
-      printer.text('${item.quantity} x $name: \$${price}');
-    }
+  // Order ID
+  printer.row([
+    PosColumn(
+      text: 'Order ID: ${order.id}',
+      width: 12,
+      styles: PosStyles(align: PosAlign.center),
+    )
+  ]);
 
-    final total = order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
-    printer.feed(1);
-    printer.text('---------------------------');
-    printer.text('Total: \$${total.toStringAsFixed(2)}');
-    printer.text('---------------------------');
-    printer.feed(3);
-    printer.cut();
-    printer.disconnect();
-    print('Receipt sent successfully.');
+  printer.feed(1);
+
+  // Items List
+  for (final item in order.items) {
+    final name = item.product.target?.name ?? 'Unknown';
+    final quantity = item.quantity;
+    final price = calculateItemTotal(item).toStringAsFixed(2);
+
+    printer.row([
+      PosColumn(
+        text: '$quantity x $name',
+        width: 8,
+        styles: PosStyles(align: PosAlign.left),
+      ),
+      PosColumn(
+        text: '\$${price}',
+        width: 4,
+        styles: PosStyles(align: PosAlign.right),
+      ),
+    ]);
+  }
+
+  // Divider
+  printer.row([
+    PosColumn(
+      text: '----------------------------------------',
+      width: 12,
+      styles: PosStyles(align: PosAlign.center),
+    )
+  ]);
+
+  // Total Calculation
+  final total = order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
+
+  printer.row([
+    PosColumn(
+      text: 'TOTAL',
+      width: 8,
+      styles: PosStyles(align: PosAlign.left, bold: true),
+    ),
+    PosColumn(
+      text: '\$${total.toStringAsFixed(2)}',
+      width: 4,
+      styles: PosStyles(align: PosAlign.right, bold: true),
+    ),
+  ]);
+
+  // Divider
+  printer.row([
+    PosColumn(
+      text: '----------------------------------------',
+      width: 12,
+      styles: PosStyles(align: PosAlign.center),
+    )
+  ]);
+
+  printer.feed(3);
+  printer.cut();
+  printer.disconnect();
+
+  print('Receipt sent successfully.');
+
   }
 }
