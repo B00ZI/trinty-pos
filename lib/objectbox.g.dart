@@ -14,6 +14,7 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import 'models/order.dart';
 import 'models/order_item.dart';
 import 'models/printer_config.dart';
 import 'models/product.dart';
@@ -131,6 +132,34 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(4, 8743093086059233857),
+    name: 'Order',
+    lastPropertyId: const obx_int.IdUid(2, 7962593895875164527),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 8024876417859417182),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 7962593895875164527),
+        name: 'date',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[
+      obx_int.ModelRelation(
+        id: const obx_int.IdUid(1, 3063753525763394773),
+        name: 'items',
+        targetId: const obx_int.IdUid(2, 7719230692724575644),
+      ),
+    ],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -171,9 +200,9 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(3, 5101334298372515029),
+    lastEntityId: const obx_int.IdUid(4, 8743093086059233857),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
-    lastRelationId: const obx_int.IdUid(0, 0),
+    lastRelationId: const obx_int.IdUid(1, 3063753525763394773),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
     retiredIndexUids: const [],
@@ -351,6 +380,45 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    Order: obx_int.EntityDefinition<Order>(
+      model: _entities[3],
+      toOneRelations: (Order object) => [],
+      toManyRelations:
+          (Order object) => {
+            obx_int.RelInfo<Order>.toMany(1, object.id): object.items,
+          },
+      getId: (Order object) => object.id,
+      setId: (Order object, int id) {
+        object.id = id;
+      },
+      objectToFB: (Order object, fb.Builder fbb) {
+        fbb.startTable(3);
+        fbb.addInt64(0, object.id);
+        fbb.addInt64(1, object.date.millisecondsSinceEpoch);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final dateParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 6, 0),
+        );
+        final object = Order(id: idParam, date: dateParam);
+        obx_int.InternalToManyAccess.setRelInfo<Order>(
+          object.items,
+          store,
+          obx_int.RelInfo<Order>.toMany(1, object.id),
+        );
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -430,3 +498,16 @@ class PrinterConfig_ {
   );
 }
 
+/// [Order] entity fields to define ObjectBox queries.
+class Order_ {
+  /// See [Order.id].
+  static final id = obx.QueryIntegerProperty<Order>(_entities[3].properties[0]);
+
+  /// See [Order.date].
+  static final date = obx.QueryDateProperty<Order>(_entities[3].properties[1]);
+
+  /// see [Order.items]
+  static final items = obx.QueryRelationToMany<Order, OrderItem>(
+    _entities[3].relations[0],
+  );
+}

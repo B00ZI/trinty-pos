@@ -118,7 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _savePrinterConfig() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await _printerConfigBox.removeAll();
+        _printerConfigBox.removeAll();
         final config = PrinterConfig(
           ipAddress: _ipAddressController.text,
           port: int.parse(_portController.text),
