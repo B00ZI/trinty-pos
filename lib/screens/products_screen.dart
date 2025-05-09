@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:myApp/models/product.dart';
-import 'package:myApp/objectbox.dart';
-import 'package:myApp/widgets/product_item.dart';
+import 'package:Drywich/models/product.dart';
+import 'package:Drywich/objectbox.dart';
+import 'package:Drywich/widgets/product_item.dart';
 import 'package:objectbox/objectbox.dart';
-
-
 
 class ProductsScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -125,7 +123,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ],
       ),
       body: StreamBuilder<List<Product>>(
-        stream: _productBox.query()
+        stream: _productBox
+            .query()
             .watch(triggerImmediately: true)
             .map((query) => query.find()),
         builder: (context, snapshot) {

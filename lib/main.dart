@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:myApp/objectbox.dart';
-import 'package:myApp/screens/history_screen.dart';
-import 'package:myApp/screens/order_screen.dart';
-import 'package:myApp/screens/products_screen.dart';
-import 'package:myApp/screens/settings_screen.dart';
+import 'package:Drywich/objectbox.dart';
+import 'package:Drywich/screens/history_screen.dart';
+import 'package:Drywich/screens/order_screen.dart';
+import 'package:Drywich/screens/products_screen.dart';
+import 'package:Drywich/screens/settings_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final objectbox = await ObjectBox.create();
-  runApp(MyApp(objectbox: objectbox));
+  runApp(Drywich(objectbox: objectbox));
 }
 
-class MyApp extends StatelessWidget {
+class Drywich extends StatelessWidget {
   final ObjectBox objectbox;
-  const MyApp({super.key, required this.objectbox});
+  const Drywich({super.key, required this.objectbox});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MyApp',
+      title: 'Drywich',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -44,7 +44,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _widgetOptions = <Widget>[
-      OrderScreen(objectbox: widget.objectbox), 
+      OrderScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
       ProductsScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
@@ -61,7 +61,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MyApp'),
+        title: const Text('Drywich'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
@@ -82,8 +82,8 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.apps),
             label: 'Products',
-          ), 
-          BottomNavigationBarItem( 
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.settings), // Removed unnecessary const
             label: 'Settings',
           ),

@@ -43,7 +43,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final profile = await CapabilityProfile.load();
     final printer = NetworkPrinter(PaperSize.mm80, profile);
 
-    final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port);
+    final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port); // Changed line
 
     if (res != PosPrintResult.success) {
       print('Could not connect to printer: $res');

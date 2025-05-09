@@ -1,4 +1,4 @@
-name: myApp
+name: Drywich
 description: A new Flutter project.
 
 publish_to: 'none' # Remove this line if you plan to publish the package.
@@ -23,17 +23,25 @@ dependencies:
   objectbox_flutter_libs: ^4.2.0
   shared_preferences: ^2.5.3
   validators: ^3.0.0
+  
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+  
 
 
   # ObjectBox code generation
   build_runner: ^2.4.8
   objectbox_generator: ^4.2.0
 
+  flutter_launcher_icons: ^0.11.0
+
+flutter_icons:
+  android: true
+  ios: false
+  image_path: "lib/assets/icon.png"
+
 flutter:
   uses-material-design: true
-

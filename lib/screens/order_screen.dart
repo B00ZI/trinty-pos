@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../models/order_item.dart';
 import '../models/product.dart';
-import 'package:myApp/objectbox.dart';
+import 'package:Drywich/objectbox.dart';
 import '../widgets/product_item.dart'; // Import the ProductItem widget
 import 'package:objectbox/objectbox.dart';
 
@@ -174,6 +174,8 @@ class _OrderScreenState extends State<OrderScreen> {
     // 3. Store the order in the database (if necessary)
     // Assuming you have a Box<Order> called _orderBox
     final orderBox = widget.objectbox.store.box<Ruci>();
+    await Future.delayed(Duration(seconds: 0));
+    await _printReceipt(order);
     orderBox.put(order);
     // 4. Send the order as a receipt to the printer via TCP/IP
     await _printReceipt(order);
@@ -185,8 +187,8 @@ class _OrderScreenState extends State<OrderScreen> {
     // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ConfirmationScreen()));
   }
 
-Future<void> _printReceipt(Ruci order) async {
-  // Retrieve printer configuration from the database
+  Future<void> _printReceipt(Ruci order) async {
+    // Retrieve printer configuration from the database
     final printerConfig = _printerConfigBox.get(1);
 
     if (printerConfig == null) {
@@ -197,92 +199,100 @@ Future<void> _printReceipt(Ruci order) async {
     final profile = await CapabilityProfile.load();
     final printer = NetworkPrinter(PaperSize.mm80, profile);
 
-    final res = await printer.connect('192.168.123.100', port: 9100);
+    final res = await printer.connect(printerConfig.ipAddress,
+        port: printerConfig.port);
 
     if (res != PosPrintResult.success) {
       print('Could not connect to printer: $res');
       return;
     }
 
-      // Header - Business Name
-  printer.row([
-    PosColumn(
-      text: '------ Drywich ------',
-      width: 12,
-      styles: PosStyles(align: PosAlign.center, bold: true),
-    )
-  ]);
+    // Header - Business Name
+    printer.row([
+      PosColumn(
+        text: '------ Drywich ------',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center, bold: true),
+      )
+    ]);
 
-  // Order ID
-  printer.row([
-    PosColumn(
-      text: 'Order ID: ${order.id}',
-      width: 12,
-      styles: PosStyles(align: PosAlign.center),
-    )
-  ]);
+    // Order ID
+    printer.row([
+      PosColumn(
+        text: 'Order# ${order.id}',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center),
+      )
+    ]);
 
-  printer.feed(1);
+    printer.feed(1);
 
-  // Items List
-  for (final item in order.items) {
-    final name = item.product.target?.name ?? 'Unknown';
-    final quantity = item.quantity;
-    final price = calculateItemTotal(item).toStringAsFixed(2);
+    // Items List
+    for (final item in order.items) {
+      final name = item.product.target?.name ?? 'Unknown';
+      final quantity = item.quantity;
+      final price = calculateItemTotal(item).toStringAsFixed(2);
+
+      printer.row([
+        PosColumn(
+          text: '$quantity x $name',
+          width: 8,
+          styles: PosStyles(align: PosAlign.left),
+        ),
+        PosColumn(
+          text: '\$${price}',
+          width: 4,
+          styles: PosStyles(align: PosAlign.right),
+        ),
+      ]);
+    }
+
+    // Divider
+    printer.row([
+      PosColumn(
+        text: '----------------------------------------',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center),
+      )
+    ]);
+
+    // Total Calculation
+    final total = order.items
+        .fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
 
     printer.row([
       PosColumn(
-        text: '$quantity x $name',
+        text: 'TOTAL',
         width: 8,
-        styles: PosStyles(align: PosAlign.left),
+        styles: PosStyles(align: PosAlign.left, bold: true),
       ),
       PosColumn(
-        text: '\$${price}',
+        text: '\$${total.toStringAsFixed(2)}',
         width: 4,
-        styles: PosStyles(align: PosAlign.right),
+        styles: PosStyles(align: PosAlign.right, bold: true),
       ),
     ]);
-  }
 
-  // Divider
-  printer.row([
-    PosColumn(
-      text: '----------------------------------------',
-      width: 12,
-      styles: PosStyles(align: PosAlign.center),
-    )
-  ]);
+    // Divider
+    printer.row([
+      PosColumn(
+        text: '----------------------------------------',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center),
+      )
+    ]);
+     printer.row([
+      PosColumn(
+        text: 'thank you for your order!',
+        width: 12,
+        styles: PosStyles(align: PosAlign.center),
+      )
+    ]);
 
-  // Total Calculation
-  final total = order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
+    printer.feed(3);
+    printer.cut();
+    printer.disconnect();
 
-  printer.row([
-    PosColumn(
-      text: 'TOTAL',
-      width: 8,
-      styles: PosStyles(align: PosAlign.left, bold: true),
-    ),
-    PosColumn(
-      text: '\$${total.toStringAsFixed(2)}',
-      width: 4,
-      styles: PosStyles(align: PosAlign.right, bold: true),
-    ),
-  ]);
-
-  // Divider
-  printer.row([
-    PosColumn(
-      text: '----------------------------------------',
-      width: 12,
-      styles: PosStyles(align: PosAlign.center),
-    )
-  ]);
-
-  printer.feed(3);
-  printer.cut();
-  printer.disconnect();
-
-  print('Receipt sent successfully.');
-
+    print('Receipt sent successfully.');
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:myApp/main.dart';
-import 'package:myApp/objectbox.dart';
+import 'package:Drywich/main.dart';
+import 'package:Drywich/objectbox.dart';
 
 void main() {
   testWidgets('App launches without crashing', (WidgetTester tester) async {
@@ -8,12 +8,11 @@ void main() {
     final objectbox = await ObjectBox.create();
 
     // Build the app
-    await tester.pumpWidget(MyApp(objectbox: objectbox));
+    await tester.pumpWidget(Drywich(objectbox: objectbox));
 
     // Verify that the app title is found
-    expect(find.text('MyApp'), findsOneWidget);
+    expect(find.text('Drywich'), findsOneWidget);
 
     // Optional: Close the store after the test
-   
   });
 }
