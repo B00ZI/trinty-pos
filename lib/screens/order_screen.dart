@@ -1,3 +1,5 @@
+// Suggested code may be subject to a license. Learn more: ~LicenseLog:3632800846.
+// Suggested code may be subject to a license. Learn more: ~LicenseLog:2817509952.
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:1286985924.
 import 'dart:async';
 import '../models/printer_config.dart';
@@ -10,6 +12,7 @@ import '../models/product.dart';
 import 'package:Drywich/objectbox.dart';
 import '../widgets/product_item.dart'; // Import the ProductItem widget
 import 'package:objectbox/objectbox.dart';
+import '../models/order_counter.dart'; // Import OrderCounter
 
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -23,12 +26,14 @@ class _OrderScreenState extends State<OrderScreen> {
   final List<OrderItem> _cart = [];
   late final Box<Product> _productBox;
   late final Box<PrinterConfig> _printerConfigBox;
+  late final Box<OrderCounter> _orderCounterBox;
 
   @override
   void initState() {
     super.initState();
     _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
     _productBox = widget.objectbox.store.box<Product>();
+    _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
   }
 
   void _addToCart(Product product) {
@@ -96,13 +101,30 @@ class _OrderScreenState extends State<OrderScreen> {
                     }
 
                     final products = snapshot.data!;
-                    return ListView.builder(
+                    // Display products in a grid of 2
+                    return GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, // 2 products per row
+                          crossAxisSpacing: 8.0,
+                          mainAxisSpacing: 8.0,
+                          childAspectRatio: 1.8, // Adjust as needed
+                        ),
                       itemCount: products.length,
-                      itemBuilder: (context, index) => ProductItem(
-                        product: products[index],
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return ProductItem(
+                            product: product,
                         onAddToCart: _addToCart,
-                      ),
-                    );
+                          );
+                        });
+                    // return ListView.builder(
+                    //   itemCount: products.length,
+                    //   itemBuilder: (context, index) => ProductItem(
+                    //     product: products[index],
+                    //     onAddToCart: _addToCart,
+                    //   ),
+                    // );
                   },
                 ),
               ),
@@ -165,20 +187,29 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   void _createOrder() async {
+    // 1. Access the OrderCounter box
+    final orderCounter = _orderCounterBox.getAll().first;
+
     // 1. Create an order object
-    final order = Ruci(date: DateTime.now());
+    final order = Ruci(
+      date: DateTime.now(),
+      orderNumber: orderCounter.value, // 3. Assign counter value to orderNumber
+    );
     // 2. Add the order items to the order
     for (final item in _cart) {
       order.items.add(item);
     }
-    // 3. Store the order in the database (if necessary)
+    // 4. Store the order in the database
     // Assuming you have a Box<Order> called _orderBox
     final orderBox = widget.objectbox.store.box<Ruci>();
     orderBox.put(order);
+    // 5. Increment the counter value
+    orderCounter.value += 1;
+    _orderCounterBox.put(orderCounter);
     // 4. Send the order as a receipt to the printer via TCP/IP
     await _printReceipt(order);
 
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(Duration(seconds:1 ));
     await _printReceipt(order);
     // 5. Clear the cart
     setState(() {

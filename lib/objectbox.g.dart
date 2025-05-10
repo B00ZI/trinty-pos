@@ -15,6 +15,7 @@ import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'models/order.dart';
+import 'models/order_counter.dart';
 import 'models/order_item.dart';
 import 'models/printer_config.dart';
 import 'models/product.dart';
@@ -135,7 +136,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(5, 459141988423342695),
     name: 'Ruci',
-    lastPropertyId: const obx_int.IdUid(2, 3448860529002648996),
+    lastPropertyId: const obx_int.IdUid(3, 5362303099465410369),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -150,6 +151,12 @@ final _entities = <obx_int.ModelEntity>[
         type: 10,
         flags: 0,
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 5362303099465410369),
+        name: 'orderNumber',
+        type: 6,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[
       obx_int.ModelRelation(
@@ -158,6 +165,28 @@ final _entities = <obx_int.ModelEntity>[
         targetId: const obx_int.IdUid(2, 7719230692724575644),
       ),
     ],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(6, 2902252270267550097),
+    name: 'OrderCounter',
+    lastPropertyId: const obx_int.IdUid(2, 8747203985801045116),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 5475036839918532011),
+        name: 'id',
+        type: 6,
+        flags: 129,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 8747203985801045116),
+        name: 'value',
+        type: 6,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
 ];
@@ -200,7 +229,7 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(5, 459141988423342695),
+    lastEntityId: const obx_int.IdUid(6, 2902252270267550097),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
     lastRelationId: const obx_int.IdUid(2, 4326529116841583281),
     lastSequenceId: const obx_int.IdUid(0, 0),
@@ -394,9 +423,56 @@ obx_int.ModelDefinition getObjectBoxModel() {
         object.id = id;
       },
       objectToFB: (Ruci object, fb.Builder fbb) {
-        fbb.startTable(3);
+        fbb.startTable(4);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.date.millisecondsSinceEpoch);
+        fbb.addInt64(2, object.orderNumber);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final orderNumberParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final dateParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 6, 0),
+        );
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final object = Ruci(
+          orderNumber: orderNumberParam,
+          date: dateParam,
+          id: idParam,
+        );
+        obx_int.InternalToManyAccess.setRelInfo<Ruci>(
+          object.items,
+          store,
+          obx_int.RelInfo<Ruci>.toMany(2, object.id),
+        );
+        return object;
+      },
+    ),
+    OrderCounter: obx_int.EntityDefinition<OrderCounter>(
+      model: _entities[4],
+      toOneRelations: (OrderCounter object) => [],
+      toManyRelations: (OrderCounter object) => {},
+      getId: (OrderCounter object) => object.id,
+      setId: (OrderCounter object, int id) {
+        object.id = id;
+      },
+      objectToFB: (OrderCounter object, fb.Builder fbb) {
+        fbb.startTable(3);
+        fbb.addInt64(0, object.id);
+        fbb.addInt64(1, object.value);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -409,15 +485,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
           4,
           0,
         );
-        final dateParam = DateTime.fromMillisecondsSinceEpoch(
-          const fb.Int64Reader().vTableGet(buffer, rootOffset, 6, 0),
+        final valueParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          6,
+          0,
         );
-        final object = Ruci(id: idParam, date: dateParam);
-        obx_int.InternalToManyAccess.setRelInfo<Ruci>(
-          object.items,
-          store,
-          obx_int.RelInfo<Ruci>.toMany(2, object.id),
-        );
+        final object = OrderCounter(id: idParam, value: valueParam);
+
         return object;
       },
     ),
@@ -508,8 +583,26 @@ class Ruci_ {
   /// See [Ruci.date].
   static final date = obx.QueryDateProperty<Ruci>(_entities[3].properties[1]);
 
+  /// See [Ruci.orderNumber].
+  static final orderNumber = obx.QueryIntegerProperty<Ruci>(
+    _entities[3].properties[2],
+  );
+
   /// see [Ruci.items]
   static final items = obx.QueryRelationToMany<Ruci, OrderItem>(
     _entities[3].relations[0],
+  );
+}
+
+/// [OrderCounter] entity fields to define ObjectBox queries.
+class OrderCounter_ {
+  /// See [OrderCounter.id].
+  static final id = obx.QueryIntegerProperty<OrderCounter>(
+    _entities[4].properties[0],
+  );
+
+  /// See [OrderCounter.value].
+  static final value = obx.QueryIntegerProperty<OrderCounter>(
+    _entities[4].properties[1],
   );
 }

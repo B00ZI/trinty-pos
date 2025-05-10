@@ -100,7 +100,7 @@
     },
     {
       "id": "5:459141988423342695",
-      "lastPropertyId": "2:3448860529002648996",
+      "lastPropertyId": "3:5362303099465410369",
       "name": "Ruci",
       "properties": [
         {
@@ -113,6 +113,11 @@
           "id": "2:3448860529002648996",
           "name": "date",
           "type": 10
+        },
+        {
+          "id": "3:5362303099465410369",
+          "name": "orderNumber",
+          "type": 6
         }
       ],
       "relations": [
@@ -122,9 +127,28 @@
           "targetId": "2:7719230692724575644"
         }
       ]
+    },
+    {
+      "id": "6:2902252270267550097",
+      "lastPropertyId": "2:8747203985801045116",
+      "name": "OrderCounter",
+      "properties": [
+        {
+          "id": "1:5475036839918532011",
+          "name": "id",
+          "type": 6,
+          "flags": 129
+        },
+        {
+          "id": "2:8747203985801045116",
+          "name": "value",
+          "type": 6
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "5:459141988423342695",
+  "lastEntityId": "6:2902252270267550097",
   "lastIndexId": "1:4823262623031552778",
   "lastRelationId": "2:4326529116841583281",
   "lastSequenceId": "0:0",

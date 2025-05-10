@@ -3,14 +3,20 @@ import 'package:Drywich/objectbox.dart';
 import 'package:Drywich/screens/history_screen.dart';
 import 'package:Drywich/screens/order_screen.dart';
 import 'package:Drywich/screens/products_screen.dart';
+import 'package:Drywich/models/order_counter.dart';
 import 'package:Drywich/screens/settings_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final objectbox = await ObjectBox.create();
+  final counterBox = objectbox.store.box<OrderCounter>();
+  if (counterBox.isEmpty()) {
+    counterBox.put(OrderCounter(value: 1));
+  }
+
+
   runApp(Drywich(objectbox: objectbox));
 }
-
 class Drywich extends StatelessWidget {
   final ObjectBox objectbox;
   const Drywich({super.key, required this.objectbox});

@@ -3,12 +3,13 @@ import 'order_item.dart';
 
 @Entity()
 class Ruci {
-  @Id()
-  int id;
+  int id = 0;
+
+  int orderNumber;
 
   DateTime date;
 
   final items = ToMany<OrderItem>();
 
-  Ruci({this.id = 0, required this.date});
+  Ruci({required this.orderNumber, required this.date, this.id = 0});
 }

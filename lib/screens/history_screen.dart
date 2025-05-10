@@ -10,6 +10,7 @@ import '../objectbox.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/order.dart';
 import '../models/printer_config.dart';
+import '../models/order_counter.dart'; // Import OrderCounter
 
 
 class HistoryScreen extends StatefulWidget {
@@ -23,12 +24,60 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   late final Box<Ruci> _orderBox;
   late final Box<PrinterConfig> _printerConfigBox;
+  late final Box<OrderCounter> _orderCounterBox; // Declare OrderCounter box
 
   @override
   void initState() {
     super.initState();
     _orderBox = widget.objectbox.store.box<Ruci>();
     _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
+    _orderCounterBox = widget.objectbox.store.box<OrderCounter>(); // Initialize OrderCounter box
+  }
+
+ Future<void> _archiveAndReset() async {
+    final allOrders = _orderBox.getAll();
+    if (allOrders.isEmpty) {
+      print('No orders to archive.');
+      return;
+    }
+
+    // 1. Generate summary
+    int totalOrders = allOrders.length;
+    double totalRevenue = allOrders.fold<double>(
+        0,
+        (sum, order) =>
+            sum +
+            order.items.fold<double>(
+                0, (itemSum, item) => itemSum + calculateItemTotal(item)));
+
+    // 2. Print summary
+    final printerConfig = _printerConfigBox.get(1);
+    if (printerConfig != null) {
+      final profile = await CapabilityProfile.load();
+      final printer = NetworkPrinter(PaperSize.mm80, profile);
+      final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port);
+
+      if (res == PosPrintResult.success) {
+        printer.text('--- Order Summary ---', styles: PosStyles(align: PosAlign.center, bold: true));
+        printer.feed(1);
+        printer.text('Total Orders: $totalOrders');
+        printer.text('Total Revenue: \$${totalRevenue.toStringAsFixed(2)}');
+        printer.feed(2);
+        printer.cut();
+        printer.disconnect();
+        print('Order summary printed.');
+      } else {
+        print('Could not connect to printer for summary: $res');
+      }
+    } else {
+      print('Printer configuration not found, cannot print summary.');
+    }
+
+    // 3. Clear history
+    _orderBox.removeAll();
+
+    // 4. Reset OrderCounter
+    _resetOrderCounter();
   }
 
   Future<void> _printOrder(Ruci order) async {
@@ -43,7 +92,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final profile = await CapabilityProfile.load();
     final printer = NetworkPrinter(PaperSize.mm80, profile);
 
-    final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port); // Changed line
+ final res =
+        await printer.connect(printerConfig.ipAddress, port: printerConfig.port); // Changed line
 
     if (res != PosPrintResult.success) {
       print('Could not connect to printer: $res');
@@ -63,8 +113,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     printer.row([
       PosColumn(
         text: 'Order ID: ${order.id}',
-        width: 12,
-        styles: PosStyles(align: PosAlign.center),
+        styles: PosStyles(align: PosAlign.center, bold: true),
       )
     ]);
 
@@ -132,6 +181,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     print('Receipt sent successfully.');
   }
 
+  void _resetOrderCounter() {
+    // Retrieve the OrderCounter object
+    OrderCounter? orderCounter = _orderCounterBox.get(1);
+    if (orderCounter == null) {
+      orderCounter = OrderCounter();
+    }
+    orderCounter.value = 1;
+    _orderCounterBox.put(orderCounter);
+  }
+
   double calculateItemTotal(OrderItem item) {
     return item.quantity * (item.product.target?.price ?? 0).toDouble();
   }
@@ -141,6 +200,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Order History'),
+        actions: [
+          // Add the button to the AppBar
+          IconButton(onPressed: _archiveAndReset, icon: const Icon(Icons.archive)),
+        ],
       ),
       body: StreamBuilder<List<Ruci>>(
         stream: _orderBox
@@ -169,7 +232,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Order ID: ${order.id}',
+ 'Order Number: ${order.orderNumber}',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 18),
                       ),
