@@ -174,10 +174,11 @@ class _OrderScreenState extends State<OrderScreen> {
     // 3. Store the order in the database (if necessary)
     // Assuming you have a Box<Order> called _orderBox
     final orderBox = widget.objectbox.store.box<Ruci>();
-    await Future.delayed(Duration(seconds: 0));
-    await _printReceipt(order);
     orderBox.put(order);
     // 4. Send the order as a receipt to the printer via TCP/IP
+    await _printReceipt(order);
+
+    await Future.delayed(Duration(seconds: 1));
     await _printReceipt(order);
     // 5. Clear the cart
     setState(() {
