@@ -35,6 +35,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
  Future<void> _archiveAndReset() async {
+    // Suggested code may be subject to a license. Learn more: ~LicenseLog:912966895.
     final allOrders = _orderBox.getAll();
     if (allOrders.isEmpty) {
       print('No orders to archive.');
@@ -61,7 +62,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         printer.text('--- Order Summary ---', styles: PosStyles(align: PosAlign.center, bold: true));
         printer.feed(1);
         printer.text('Total Orders: $totalOrders');
-        printer.text('Total Revenue: \$${totalRevenue.toStringAsFixed(2)}');
+        printer.text('Total Revenue: ${totalRevenue.toStringAsFixed(2)} DH');
         printer.feed(2);
         printer.cut();
         printer.disconnect();
@@ -81,104 +82,123 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _printOrder(Ruci order) async {
-    // Retrieve printer configuration from the database
-    final printerConfig = _printerConfigBox.get(1);
+    try {
+      // Retrieve printer configuration from the database
+      final printerConfig = _printerConfigBox.get(1);
 
-    if (printerConfig == null) {
-      print('Printer configuration not found');
-      return;
-    }
+      if (printerConfig == null) {
+        print('Printer configuration not found');
+        _showSnackBar('Printer configuration not found');
+        return;
+      }
 
-    final profile = await CapabilityProfile.load();
-    final printer = NetworkPrinter(PaperSize.mm80, profile);
+      final profile = await CapabilityProfile.load();
+      final printer = NetworkPrinter(PaperSize.mm80, profile);
 
- final res =
-        await printer.connect(printerConfig.ipAddress, port: printerConfig.port); // Changed line
+      final res =
+          await printer.connect(printerConfig.ipAddress, port: printerConfig.port); // Changed line
 
-    if (res != PosPrintResult.success) {
-      print('Could not connect to printer: $res');
-      return;
-    }
+      if (res != PosPrintResult.success) {
+        print('Could not connect to printer: $res');
+        _showSnackBar('Could not connect to printer: $res');
+        return;
+      }
 
-    // Header - Business Name
-    printer.row([
-      PosColumn(
-        text: '------ Drywich ------',
-        width: 12,
-        styles: PosStyles(align: PosAlign.center, bold: true),
-      )
-    ]);
+      // Header - Business Name
+      printer.row([
+        PosColumn(
+          text: '------ Drywich ------',
+          width: 12,
+          styles: PosStyles(align: PosAlign.center, bold: true),
+        )
+      ]);
 
-    // Order ID
-    printer.row([
-      PosColumn(
-        text: 'Order ID: ${order.id}',
-        styles: PosStyles(align: PosAlign.center, bold: true),
-      )
-    ]);
+      // Order ID
+      printer.row([
+        PosColumn(
+          text: 'Order ID: ${order.orderNumber}',
+          width: 12,
+          styles: PosStyles(align: PosAlign.center, bold: true),
+        )
+      ]);
 
-    printer.feed(1);
+      printer.feed(1);
 
-    // Items List
-    for (final item in order.items) {
-      final name = item.product.target?.name ?? 'Unknown';
-      final quantity = item.quantity;
-      final price = calculateItemTotal(item).toStringAsFixed(2);
+      // Items List
+      for (final item in order.items) {
+        final name = item.product.target?.name ?? 'Unknown';
+        final quantity = item.quantity;
+        final price = calculateItemTotal(item).toStringAsFixed(2);
+
+        printer.row([
+          PosColumn(
+            text: '$quantity x $name',
+            width: 8,
+            styles: PosStyles(align: PosAlign.left),
+          ),
+          PosColumn(
+            text: '$price DH',
+            width: 4,
+            styles: PosStyles(align: PosAlign.right),
+          ),
+        ]);
+      }
+
+      // Divider
+      printer.row([
+        PosColumn(
+          text: '----------------------------------------',
+          width: 12,
+          styles: PosStyles(align: PosAlign.center),
+        )
+      ]);
+
+      // Total Calculation
+      final total = order.items
+          .fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
 
       printer.row([
         PosColumn(
-          text: '$quantity x $name',
+          text: 'TOTAL',
           width: 8,
-          styles: PosStyles(align: PosAlign.left),
+          styles: PosStyles(align: PosAlign.left, bold: true),
         ),
         PosColumn(
-          text: '\$$price',
+          text: '${total.toStringAsFixed(2)} DH',
           width: 4,
-          styles: PosStyles(align: PosAlign.right),
+          styles: PosStyles(align: PosAlign.right, bold: true),
         ),
       ]);
+
+      // Divider
+      printer.row([
+        PosColumn(
+          text: '----------------------------------------',
+          width: 12,
+          styles: PosStyles(align: PosAlign.center),
+        )
+      ]);
+
+      printer.feed(3);
+      printer.cut();
+      printer.disconnect();
+
+      print('Receipt sent successfully.');
+      _showSnackBar('Receipt sent successfully.');
+
+    } catch (e) {
+      print('Error during printing: $e');
+      _showSnackBar('Error during printing: ${e.toString()}');
     }
+  }
 
-    // Divider
-    printer.row([
-      PosColumn(
-        text: '----------------------------------------',
-        width: 12,
-        styles: PosStyles(align: PosAlign.center),
-      )
-    ]);
-
-    // Total Calculation
-    final total = order.items
-        .fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
-
-    printer.row([
-      PosColumn(
-        text: 'TOTAL',
-        width: 8,
-        styles: PosStyles(align: PosAlign.left, bold: true),
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
       ),
-      PosColumn(
-        text: '${total.toStringAsFixed(2)} DH',
-        width: 4,
-        styles: PosStyles(align: PosAlign.right, bold: true),
-      ),
-    ]);
-
-    // Divider
-    printer.row([
-      PosColumn(
-        text: '----------------------------------------',
-        width: 12,
-        styles: PosStyles(align: PosAlign.center),
-      )
-    ]);
-
-    printer.feed(3);
-    printer.cut();
-    printer.disconnect();
-
-    print('Receipt sent successfully.');
+    );
   }
 
   void _resetOrderCounter() {
@@ -232,7 +252,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
- 'Order Number: ${order.orderNumber}',
+                            'Order Number: ${order.orderNumber}',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 18),
                       ),
