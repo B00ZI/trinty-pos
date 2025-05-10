@@ -251,7 +251,7 @@ class _OrderScreenState extends State<OrderScreen> {
     // Order ID
     printer.row([
       PosColumn(
-        text: 'Order# ${order.id}',
+        text: 'Order# ${order.orderNumber}',
         width: 12,
         styles: PosStyles(align: PosAlign.center),
       )
@@ -272,7 +272,7 @@ class _OrderScreenState extends State<OrderScreen> {
           styles: PosStyles(align: PosAlign.left),
         ),
         PosColumn(
-          text: '\$${price}',
+          text: '${price}DH',
           width: 4,
           styles: PosStyles(align: PosAlign.right),
         ),
@@ -299,7 +299,7 @@ class _OrderScreenState extends State<OrderScreen> {
         styles: PosStyles(align: PosAlign.left, bold: true),
       ),
       PosColumn(
-        text: '\$${total.toStringAsFixed(2)}',
+        text: '${total.toStringAsFixed(2)} DH',
         width: 4,
         styles: PosStyles(align: PosAlign.right, bold: true),
       ),

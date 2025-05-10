@@ -159,7 +159,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         styles: PosStyles(align: PosAlign.left, bold: true),
       ),
       PosColumn(
-        text: '\$${total.toStringAsFixed(2)}',
+        text: '${total.toStringAsFixed(2)} DH',
         width: 4,
         styles: PosStyles(align: PosAlign.right, bold: true),
       ),
