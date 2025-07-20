@@ -75,100 +75,127 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Order'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: StreamBuilder<List<Product>>(
-                  stream: _productBox
-                      .query()
-                      .watch(triggerImmediately: true)
-                      .map((query) => query.find()),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final products = snapshot.data!;
-                    // Display products in a grid of 2
-                    return GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, // 2 products per row
-                          crossAxisSpacing: 8.0,
-                          mainAxisSpacing: 8.0,
-                          childAspectRatio: 1.8, // Adjust as needed
-                        ),
-                      itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-                          return ProductItem(
-                            product: product,
-                        onAddToCart: _addToCart,
-                          );
-                        });
-                    // return ListView.builder(
-                    //   itemCount: products.length,
-                    //   itemBuilder: (context, index) => ProductItem(
-                    //     product: products[index],
-                    //     onAddToCart: _addToCart,
-                    //   ),
-                    // );
-                  },
-                ),
+        appBar: AppBar(
+          title: const Text('Order'),
+        ),
+        body: OrientationBuilder(builder: (context, orientation) {
+          if (orientation == Orientation.landscape) {
+            return Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3, // Product grid takes 3 parts of the space
+                    child: _buildProductGrid(),
+                  ),
+                  const SizedBox(width: 8.0), // Space between grid and summary
+                  Expanded(
+                    flex: 1, // Order summary takes 1 part of the space
+                    child: _buildOrderSummary(),
+                  ),
+                ],
               ),
-            ),
-            const Text('Order Summary',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Expanded(
-              child: _cart.isEmpty
-                  ? const Center(child: Text('Your cart is empty'))
-                  : ListView.builder(
-                      itemCount: _cart.length,
-                      itemBuilder: (context, index) {
-                        final item = _cart[index];
-                        return ListTile(
-                          leading: Text(item.quantity.toString(),
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold)),
-                          title: Text(getProductName(item)),
-                          trailing: SizedBox(
-                            // Use a SizedBox to hold multiple widgets in the trailing area
-                            width: 100, // Adjust width as needed
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment
-                                  .spaceBetween, // Distribute space
-                              children: [
-                                Text(
-                                    '\$${calculateItemTotal(item).toStringAsFixed(2)}'), // The price
-                                IconButton(
-                                    onPressed: () => _removeItem(index),
-                                    icon: const Icon(
-                                        Icons.close)), // The delete button
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-            ),
-            if (_cart.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Center(
+            );
+          } else {
+            // Portrait mode
+            return Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildProductGrid(),
+                  ),
+                  const SizedBox(height: 8.0), // Space between grid and summary
+                  const Text('Order Summary',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: _buildOrderSummary(),
+                  ),
+                ],
+              ),
+            );
+          }
+        }));
+  }
+
+  Widget _buildProductGrid() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0),
+      child: StreamBuilder<List<Product>>(
+        stream: _productBox
+            .query()
+            .watch(triggerImmediately: true)
+            .map((query) => query.find()),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final products = snapshot.data!;
+          return GridView.builder(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 200,
+                crossAxisSpacing: 8.0,
+                mainAxisSpacing: 8.0,
+                childAspectRatio: 1.8,
+              ),
+                      itemCount: products.length,
+                          itemBuilder: (context, index) {
+                            final product = products[index];
+                            return ProductItem(
+                              product: product,
+                              onAddToCart: _addToCart,
+                            );
+                          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildOrderSummary() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _cart.isEmpty
+              ? const Center(child: Text('Your cart is empty'))
+              : ListView.builder(
+                  itemCount: _cart.length,
+                  itemBuilder: (context, index) {
+                    final item = _cart[index];
+                    return ListTile(
+                      leading: Text(item.quantity.toString(),
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      title: Text(getProductName(item)),
+                      trailing: SizedBox(
+                        width: 100,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('\$${calculateItemTotal(item).toStringAsFixed(2)}'),
+                            IconButton(
+                                onPressed: () => _removeItem(index),
+                                icon: const Icon(Icons.close)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+        ),
+        if (_cart.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Center(
                   child: ElevatedButton(
                     onPressed: () {
-                      // Handle order creation logic here
                       _createOrder();
                     },
                     style: ElevatedButton.styleFrom(
@@ -181,8 +208,8 @@ class _OrderScreenState extends State<OrderScreen> {
                 ),
               ),
           ],
-        ),
-      ),
+       
+      
     );
   }
 
@@ -209,7 +236,7 @@ class _OrderScreenState extends State<OrderScreen> {
     // 4. Send the order as a receipt to the printer via TCP/IP
     await _printReceipt(order);
 
-    await Future.delayed(Duration(seconds:1 ));
+    await Future.delayed(Duration(seconds:1));
     await _printReceipt(order);
     // 5. Clear the cart
     setState(() {
@@ -225,6 +252,9 @@ class _OrderScreenState extends State<OrderScreen> {
 
     if (printerConfig == null) {
       print('Printer configuration not found');
+      ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Printer configuration not found')),
+);
       return;
     }
 
@@ -236,6 +266,9 @@ class _OrderScreenState extends State<OrderScreen> {
 
     if (res != PosPrintResult.success) {
       print('Could not connect to printer: $res');
+      ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(content: Text('Could not connect to printer: $res')),
+);
       return;
     }
 

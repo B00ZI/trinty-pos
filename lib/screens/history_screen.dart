@@ -39,6 +39,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final allOrders = _orderBox.getAll();
     if (allOrders.isEmpty) {
       print('No orders to archive.');
+      _showSnackBar('No orders to archive.');
       return;
     }
 
@@ -67,11 +68,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         printer.cut();
         printer.disconnect();
         print('Order summary printed.');
+        _showSnackBar('Order summary printed.');
       } else {
         print('Could not connect to printer for summary: $res');
+        _showSnackBar('Could not connect to printer for summary: $res');
       }
     } else {
       print('Printer configuration not found, cannot print summary.');
+      _showSnackBar('Printer configuration not found, cannot print summary.');
     }
 
     // 3. Clear history
@@ -196,20 +200,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 10),
       ),
     );
   }
 
   void _resetOrderCounter() {
-    // Retrieve the OrderCounter object
-    OrderCounter? orderCounter = _orderCounterBox.get(1);
-    if (orderCounter == null) {
-      orderCounter = OrderCounter();
-    }
+  OrderCounter? orderCounter = _orderCounterBox.get(1);
+  if (orderCounter == null) {
+    orderCounter = OrderCounter(id: 1, value: 1); // ✅ Ensure id is set
+  } else {
     orderCounter.value = 1;
-    _orderCounterBox.put(orderCounter);
   }
+  _orderCounterBox.put(orderCounter); // ✅ Explicitly store it under key 1
+}
 
   double calculateItemTotal(OrderItem item) {
     return item.quantity * (item.product.target?.price ?? 0).toDouble();
