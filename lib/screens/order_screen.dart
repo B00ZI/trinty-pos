@@ -236,7 +236,7 @@ class _OrderScreenState extends State<OrderScreen> {
     // 4. Send the order as a receipt to the printer via TCP/IP
     await _printReceipt(order);
 
-    await Future.delayed(Duration(seconds:1));
+    await Future.delayed(const Duration(seconds:1));
     await _printReceipt(order);
     // 5. Clear the cart
     setState(() {
@@ -253,7 +253,7 @@ class _OrderScreenState extends State<OrderScreen> {
     if (printerConfig == null) {
       print('Printer configuration not found');
       ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Printer configuration not found')),
+      const SnackBar(content: Text('Printer configuration not found')),
 );
       return;
     }
@@ -277,7 +277,7 @@ class _OrderScreenState extends State<OrderScreen> {
       PosColumn(
         text: '------ Drywich ------',
         width: 12,
-        styles: PosStyles(align: PosAlign.center, bold: true),
+        styles: const PosStyles(align: PosAlign.center, bold: true),
       )
     ]);
 
@@ -286,7 +286,7 @@ class _OrderScreenState extends State<OrderScreen> {
       PosColumn(
         text: 'Order# ${order.orderNumber}',
         width: 12,
-        styles: PosStyles(align: PosAlign.center),
+        styles: const PosStyles(align: PosAlign.center),
       )
     ]);
 
@@ -302,12 +302,12 @@ class _OrderScreenState extends State<OrderScreen> {
         PosColumn(
           text: '$quantity x $name',
           width: 8,
-          styles: PosStyles(align: PosAlign.left),
+          styles: const PosStyles(align: PosAlign.left),
         ),
         PosColumn(
           text: '${price}DH',
           width: 4,
-          styles: PosStyles(align: PosAlign.right),
+          styles: const PosStyles(align: PosAlign.right),
         ),
       ]);
     }
@@ -317,7 +317,7 @@ class _OrderScreenState extends State<OrderScreen> {
       PosColumn(
         text: '----------------------------------------',
         width: 12,
-        styles: PosStyles(align: PosAlign.center),
+        styles: const PosStyles(align: PosAlign.center),
       )
     ]);
 
@@ -329,12 +329,12 @@ class _OrderScreenState extends State<OrderScreen> {
       PosColumn(
         text: 'TOTAL',
         width: 8,
-        styles: PosStyles(align: PosAlign.left, bold: true),
+        styles: const PosStyles(align: PosAlign.left, bold: true),
       ),
       PosColumn(
         text: '${total.toStringAsFixed(2)} DH',
         width: 4,
-        styles: PosStyles(align: PosAlign.right, bold: true),
+        styles: const PosStyles(align: PosAlign.right, bold: true),
       ),
     ]);
 
@@ -343,14 +343,14 @@ class _OrderScreenState extends State<OrderScreen> {
       PosColumn(
         text: '----------------------------------------',
         width: 12,
-        styles: PosStyles(align: PosAlign.center),
+        styles: const PosStyles(align: PosAlign.center),
       )
     ]);
      printer.row([
       PosColumn(
         text: 'thank you for your order!',
         width: 12,
-        styles: PosStyles(align: PosAlign.center),
+        styles: const PosStyles(align: PosAlign.center),
       )
     ]);
 

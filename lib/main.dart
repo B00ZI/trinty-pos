@@ -5,6 +5,7 @@ import 'package:Drywich/screens/order_screen.dart';
 import 'package:Drywich/screens/products_screen.dart';
 import 'package:Drywich/models/order_counter.dart';
 import 'package:Drywich/screens/settings_screen.dart';
+import 'package:Drywich/screens/dashboard_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ class _MainScreenState extends State<MainScreen> {
     _widgetOptions = <Widget>[
       OrderScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
+      DashboardScreen(),
       ProductsScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
     ];
@@ -84,6 +86,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
             label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.apps),

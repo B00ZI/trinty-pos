@@ -42,6 +42,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _showSnackBar('No orders to archive.');
       return;
     }
+    //delete order
+   
 
     // 1. Generate summary
     int totalOrders = allOrders.length;
@@ -60,7 +62,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port);
 
       if (res == PosPrintResult.success) {
-        printer.text('--- Order Summary ---', styles: PosStyles(align: PosAlign.center, bold: true));
+        printer.text('--- Order Summary ---', styles: const PosStyles(align: PosAlign.center, bold: true));
         printer.feed(1);
         printer.text('Total Orders: $totalOrders');
         printer.text('Total Revenue: ${totalRevenue.toStringAsFixed(2)} DH');
@@ -84,7 +86,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     // 4. Reset OrderCounter
     _resetOrderCounter();
   }
-
+ Future<void> _deleteOrder(Ruci order) async {
+      _orderBox.remove(order.id);
+    }
   Future<void> _printOrder(Ruci order) async {
     try {
       // Retrieve printer configuration from the database
@@ -113,7 +117,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         PosColumn(
           text: '------ Drywich ------',
           width: 12,
-          styles: PosStyles(align: PosAlign.center, bold: true),
+          styles: const PosStyles(align: PosAlign.center, bold: true),
         )
       ]);
 
@@ -122,7 +126,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         PosColumn(
           text: 'Order ID: ${order.orderNumber}',
           width: 12,
-          styles: PosStyles(align: PosAlign.center, bold: true),
+          styles: const PosStyles(align: PosAlign.center, bold: true),
         )
       ]);
 
@@ -138,12 +142,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
           PosColumn(
             text: '$quantity x $name',
             width: 8,
-            styles: PosStyles(align: PosAlign.left),
+            styles: const PosStyles(align: PosAlign.left),
           ),
           PosColumn(
             text: '$price DH',
             width: 4,
-            styles: PosStyles(align: PosAlign.right),
+            styles: const PosStyles(align: PosAlign.right),
           ),
         ]);
       }
@@ -153,7 +157,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         PosColumn(
           text: '----------------------------------------',
           width: 12,
-          styles: PosStyles(align: PosAlign.center),
+          styles: const PosStyles(align: PosAlign.center),
         )
       ]);
 
@@ -165,12 +169,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
         PosColumn(
           text: 'TOTAL',
           width: 8,
-          styles: PosStyles(align: PosAlign.left, bold: true),
+          styles: const PosStyles(align: PosAlign.left, bold: true),
         ),
         PosColumn(
           text: '${total.toStringAsFixed(2)} DH',
           width: 4,
-          styles: PosStyles(align: PosAlign.right, bold: true),
+          styles: const PosStyles(align: PosAlign.right, bold: true),
         ),
       ]);
 
@@ -179,7 +183,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         PosColumn(
           text: '----------------------------------------',
           width: 12,
-          styles: PosStyles(align: PosAlign.center),
+          styles: const PosStyles(align: PosAlign.center),
         )
       ]);
 
@@ -205,15 +209,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  void _resetOrderCounter() {
+ void _resetOrderCounter() {
   OrderCounter? orderCounter = _orderCounterBox.get(1);
   if (orderCounter == null) {
-    orderCounter = OrderCounter(id: 1, value: 1); // ✅ Ensure id is set
+    orderCounter = OrderCounter(id: 1, value: 1);
   } else {
     orderCounter.value = 1;
   }
-  _orderCounterBox.put(orderCounter); // ✅ Explicitly store it under key 1
+  _orderCounterBox.put(orderCounter);
 }
+
 
   double calculateItemTotal(OrderItem item) {
     return item.quantity * (item.product.target?.price ?? 0).toDouble();
@@ -255,10 +260,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Text(
                             'Order Number: ${order.orderNumber}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 18),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () {
+                             _deleteOrder(order);
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -266,7 +283,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const SizedBox(height: 4),
                       Text('Total Items: ${order.items.length}'),
                       const SizedBox(height: 4),
-                      Text('Items:'),
+                      const Text('Items:'),
                       for (final item in order.items)
                         Padding(
                           padding: const EdgeInsets.only(left: 16.0),
