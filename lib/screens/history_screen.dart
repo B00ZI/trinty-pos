@@ -35,65 +35,86 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
  Future<void> _archiveAndReset() async {
-    // Suggested code may be subject to a license. Learn more: ~LicenseLog:912966895.
-    final allOrders = _orderBox.getAll();
-    if (allOrders.isEmpty) {
-      print('No orders to archive.');
-      _showSnackBar('No orders to archive.');
-      return;
-    }
-    //delete order
-   
-
-    // 1. Generate summary
-    int totalOrders = allOrders.length;
-    double totalRevenue = allOrders.fold<double>(
-        0,
-        (sum, order) =>
-            sum +
-            order.items.fold<double>(
-                0, (itemSum, item) => itemSum + calculateItemTotal(item)));
-
-    // 2. Print summary
-    final printerConfig = _printerConfigBox.get(1);
-    if (printerConfig != null) {
-      final profile = await CapabilityProfile.load();
-      final printer = NetworkPrinter(PaperSize.mm80, profile);
-      final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port);
-
-      if (res == PosPrintResult.success) {
-        printer.text('--- Order Summary ---', styles: const PosStyles(align: PosAlign.center, bold: true));
-        printer.feed(1);
-        printer.text('Total Orders: $totalOrders');
-        printer.text('Total Revenue: ${totalRevenue.toStringAsFixed(2)} DH');
-        printer.feed(2);
-        printer.cut();
-        printer.disconnect();
-        print('Order summary printed.');
-        _showSnackBar('Order summary printed.');
-      } else {
-        print('Could not connect to printer for summary: $res');
-        _showSnackBar('Could not connect to printer for summary: $res');
-      }
-    } else {
-      print('Printer configuration not found, cannot print summary.');
-      _showSnackBar('Printer configuration not found, cannot print summary.');
-    }
-
-    // 3. Clear history
-    _orderBox.removeAll();
-
-    // 4. Reset OrderCounter
-    _resetOrderCounter();
+  final allOrders = _orderBox.getAll();
+  if (allOrders.isEmpty) {
+    print('No orders to archive.');
+    _showSnackBar('No orders to archive.');
+    return;
   }
+
+  // 1. Generate summary
+  int totalOrders = allOrders.length;
+  double totalRevenue = allOrders.fold<double>(
+    0,
+    (sum, order) => sum + order.items.fold<double>(
+      0, (itemSum, item) => itemSum + calculateItemTotal(item)
+    )
+  );
+
+  // Count total units sold per product
+  final Map<String, int> productUnitsSold = {};
+  for (final order in allOrders) {
+    for (final item in order.items) {
+      final productName = item.product.target?.name ?? 'Unknown Product';
+      productUnitsSold[productName] = (productUnitsSold[productName] ?? 0) + item.quantity;
+    }
+  }
+
+  // 2. Print summary
+  final printerConfig = _printerConfigBox.getAll().first;
+  // ignore: unnecessary_null_comparison
+  if (printerConfig != null) {
+    final profile = await CapabilityProfile.load();
+    final printer = NetworkPrinter(PaperSize.mm80, profile);
+    final res = await printer.connect(printerConfig.ipAddress, port: printerConfig.port);
+
+    if (res == PosPrintResult.success) {
+      printer.text('--- Order Summary ---', styles: const PosStyles(align: PosAlign.center, bold: true));
+      printer.feed(1);
+      printer.text('Total Orders: $totalOrders');
+      // Print units sold per product
+      printer.text('Units Sold per Product:', styles: const PosStyles(bold: true));
+      productUnitsSold.forEach((product, units) {
+        printer.text('- $product: $units');
+      });
+
+      printer.text('Total Revenue: ${totalRevenue.toStringAsFixed(2)} DH');
+      printer.feed(1);
+
+      
+      printer.feed(2);
+      printer.cut();
+      printer.disconnect();
+
+      print('Order summary printed.');
+      _showSnackBar('Order summary printed.');
+    } else {
+      print('Could not connect to printer for summary: $res');
+      _showSnackBar('Could not connect to printer for summary: $res');
+    }
+  } else {
+    print('Printer configuration not found, cannot print summary.');
+    _showSnackBar('Printer configuration not found, cannot print summary.');
+  }
+
+  // 3. Clear history
+  _orderBox.removeAll();
+
+  // 4. Reset OrderCounter
+  _resetOrderCounter();
+}
+
+ 
+
  Future<void> _deleteOrder(Ruci order) async {
       _orderBox.remove(order.id);
     }
   Future<void> _printOrder(Ruci order) async {
     try {
       // Retrieve printer configuration from the database
-      final printerConfig = _printerConfigBox.get(1);
+      final printerConfig = _printerConfigBox.getAll().first;
 
+      // ignore: unnecessary_null_comparison
       if (printerConfig == null) {
         print('Printer configuration not found');
         _showSnackBar('Printer configuration not found');

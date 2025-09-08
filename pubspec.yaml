@@ -23,6 +23,7 @@ dependencies:
   objectbox_flutter_libs: ^4.2.0
   shared_preferences: ^2.5.3
   validators: ^3.0.0
+  mrx_charts: ^0.1.3
   
 
 dev_dependencies:

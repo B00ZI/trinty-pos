@@ -248,8 +248,9 @@ class _OrderScreenState extends State<OrderScreen> {
 
   Future<void> _printReceipt(Ruci order) async {
     // Retrieve printer configuration from the database
-    final printerConfig = _printerConfigBox.get(1);
+    final printerConfig = _printerConfigBox.getAll().first;
 
+    // ignore: unnecessary_null_comparison
     if (printerConfig == null) {
       print('Printer configuration not found');
       ScaffoldMessenger.of(context).showSnackBar(
