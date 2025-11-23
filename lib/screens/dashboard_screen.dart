@@ -2,50 +2,171 @@ import 'package:Drywich/widgets/expenceTracking.dart';
 import 'package:flutter/material.dart';
 import 'package:Drywich/widgets/insight_item.dart';
 import '../widgets/charts.dart';
-import '../widgets/bestSellr.dart';
-import '../widgets/bestSellr.dart';
+import '../widgets/bestSellr.dart' as best_seller;
+import '../models/product.dart' as product_model;
+import '../models/order.dart' as order_model;
+import '../models/order_item.dart';
+import '../objectbox.g.dart';
+import '../objectbox.dart';
+import 'package:objectbox/objectbox.dart';
+import '../models/expence.dart';
+import 'package:flutter/scheduler.dart';
 
-class DashboardScreen extends StatelessWidget {
-  final List<Product> myProducts = [
-  Product(
-    title: 'Wireless Headphones',
-    price: '\$79.99',
-    rank: '#1',
-    rankColor: Colors.amber,
-   
-  ),
-  Product(
-    title: 'Smart Watch Series 5',
-    price: '\$199.99',
-    rank: '#2',
-    rankColor: Colors.blue,
-    
-  ),
-  Product(
-    title: 'Bluetooth Speaker',
-    price: '\$49.99',
-    rank: '#3',
-    rankColor: Colors.green,
-  ),
-  Product(
-    title: 'Phone Case',
-    price: '\$24.99',
-    rank: '#4',
-    rankColor: Colors.purple,
-  ),
-];
-  final List<SalesData> mySalesData;
+class DashboardScreen extends StatefulWidget {
+  final ObjectBox objectbox;
+  final List<product_model.Product> myProducts;
 
-  // Remove 'const' from constructor since we have non-constant data
-  DashboardScreen({super.key}) : 
-    mySalesData = [
-      SalesData(month: 'Jan', sales: 5000),
-      SalesData(month: 'Feb', sales: 7500),
-      SalesData(month: 'Mar', sales: 6200),
-      SalesData(month: 'Apr', sales: 8900),
-      SalesData(month: 'May', sales: 11000),
-    ];
-    
+  DashboardScreen({super.key, required this.objectbox})
+      : myProducts = [
+          product_model.Product(
+            name: 'Wireless Headphones',
+            price: 79.99,
+            isAvailable: true,
+          ),
+          product_model.Product(
+            name: 'Smart Watch Series 5',
+            price: 199.99,
+            isAvailable: true,
+          ),
+          product_model.Product(
+            name: 'Bluetooth Speaker',
+            price: 49.99,
+            isAvailable: true,
+          ),
+          product_model.Product(
+            name: 'Phone Case',
+            price: 24.99,
+            isAvailable: true,
+          ),
+        ];
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  double _todayRevenue = 0.0;
+  double _todayOrderCount = 0.0;
+  double _todayExpenses = 0.0;
+  double _todayProfit = 0.0;
+  late final Box<order_model.Ruci> _ruciBox;
+  Box<expence>? _expenceBox; // Change to nullable
+
+  @override
+  void initState() {
+    super.initState();
+    _ruciBox = widget.objectbox.store.box<order_model.Ruci>();
+    _expenceBox = widget.objectbox.store.box<expence>(); // Initialize
+    _calculateRevenue();
+    _calculateOrderCount();
+    _calculateExpense(); // Calculate expenses
+    _calculateProfit(); // Calculate profit
+  }
+
+  Future<void> _calculateProfit() async {
+    try {
+      final profit = _todayRevenue - _todayExpenses;
+      debugPrint('Today\'s total profit: \$${profit.toStringAsFixed(2)}');
+      if (mounted) {
+        setState(() {
+          // Assuming you want to store profit somewhere
+          _todayProfit = profit; // Uncomment and define _todayProfit if needed
+        });
+      }
+    } catch (e) {
+      debugPrint('Error calculating profit: $e');
+    }
+  }
+
+  Future<void> _calculateExpense() async {
+    try {
+      final DateTime todayStart = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
+      final query = _expenceBox!
+          .query(expence_.date.between(
+            todayStart.millisecondsSinceEpoch,
+            todayEnd.millisecondsSinceEpoch,
+          ))
+          .build();
+      final todayExpenses = query.find();
+      query.close();
+      double totalExpenses = 0.0;
+      for (final exp in todayExpenses) {
+        totalExpenses += exp.amount;
+      }
+      debugPrint(
+          'Today\'s total expenses: \$${totalExpenses.toStringAsFixed(2)}');
+      if (mounted) {
+        setState(() {
+          // Assuming you want to store expenses in _todayRevenue for now
+          _todayExpenses = totalExpenses; // Subtract expenses from revenue
+        });
+      }
+    } catch (e) {
+      debugPrint('Error calculating expenses: $e');
+    }
+  }
+
+  Future<void> _calculateOrderCount() async {
+    try {
+      final DateTime todayStart = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
+      final query = _ruciBox
+          .query(Ruci_.date.between(
+            todayStart.millisecondsSinceEpoch,
+            todayEnd.millisecondsSinceEpoch,
+          ))
+          .build();
+      final todayOrders = query.find();
+      query.close();
+      int orderCount = todayOrders.length;
+      debugPrint('Today\'s total orders: $orderCount');
+      if (mounted) {
+        setState(() {
+          _todayOrderCount = orderCount.toDouble();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error calculating order count: $e');
+    }
+  }
+
+  double calculateItemTotal(OrderItem item) {
+    return item.quantity * (item.product.target?.price ?? 0.0);
+  }
+
+  Future<void> _calculateRevenue() async {
+    try {
+      final DateTime todayStart = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
+      final query = _ruciBox
+          .query(Ruci_.date.between(
+            todayStart.millisecondsSinceEpoch,
+            todayEnd.millisecondsSinceEpoch,
+          ))
+          .build();
+      final todayOrders = query.find();
+      query.close();
+      double totalRevenue = 0.0;
+      for (final ruci in todayOrders) {
+        for (final orderItem in ruci.items) {
+          totalRevenue += calculateItemTotal(orderItem);
+        }
+      }
+      debugPrint(
+          'Today\'s total revenue: \$${totalRevenue.toStringAsFixed(2)}');
+      if (mounted) {
+        setState(() {
+          _todayRevenue = totalRevenue;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error calculating revenue: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,81 +178,123 @@ class DashboardScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-           
-            
+            const SizedBox(height: 10),
+
             // Info Cards in a row
             Row(
               children: [
                 Expanded(
                   child: InfoCard(
-                    title: 'Revenue', 
-                    value: '12,345 DH', 
-                    icon: Icons.attach_money, 
-                    color: Colors.green
+                    title: "Today's Revenue",
+                    value: '${_todayRevenue.toStringAsFixed(2)} DH',
+                    icon: Icons.attach_money,
+                    color: Colors.green,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: InfoCard(
-                    title: 'Orders', 
-                    value: '150', 
-                    icon: Icons.shopping_cart, 
-                    color: Colors.blue
+                    title: 'Orders',
+                    value: '${_todayOrderCount.toInt()}',
+                    icon: Icons.shopping_cart,
+                    color: Colors.blue,
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 10),
-            
+
             Row(
               children: [
                 Expanded(
                   child: InfoCard(
-                    title: 'Expenses', 
-                    value: '5,000 DH', 
-                    icon: Icons.money_off, 
-                    color: Colors.red
+                    title: 'Expenses',
+                    value: '${_todayExpenses.toInt()} DH',
+                    icon: Icons.money_off,
+                    color: Colors.red,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: InfoCard(
-                    title: 'Profit', 
-                    value: '7,345 DH', 
-                    icon: Icons.trending_up, 
-                    color: Colors.green
+                    title: 'Profit',
+                    value: '${_todayProfit.toStringAsFixed(2)} DH',
+                    icon: Icons.trending_up,
+                    color: Colors.green,
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 20),
-            
-            // Chart - make sure it has enough height
+
+            // Chart
             Container(
               height: 300,
-              child: SalesChartWidget(salesData: mySalesData),
+              child: WeeklyPerformanceChart(
+                store: widget.objectbox.store,
+                title: 'Weekly Sales & Orders',
+                maxYValue: 2000.0,
+              ),
             ),
+
             const SizedBox(height: 20),
+
             // Best Sellers Section
             Container(
               height: 200,
-              child: ProductCardsRow(
-                products: myProducts,
+              child: best_seller.ProductCardsRow(
+                products: widget.myProducts
+                    .map((p) => best_seller.Product(
+                          title: p.name,
+                          price: '\$${p.price.toStringAsFixed(2)}',
+                          rank: '#${widget.myProducts.indexOf(p) + 1}',
+                          rankColor:
+                              _getRankColor(widget.myProducts.indexOf(p)),
+                        ))
+                    .toList(),
                 sectionTitle: 'Best Sellers',
                 scrollable: true,
               ),
             ),
+
             const SizedBox(height: 20),
-            // Add more sections as needed
-           Container(
-            height: 200,
-            child: AddableListWidget(),
-           )
+
+            // Expense Tracking Section - Only show if _expenceBox is initialized
+            if (_expenceBox != null)
+              Container(
+                height: 200,
+                child: AddableListWidget(
+                  expenceBox: _expenceBox!,
+                  onListChanged: (newExpenses) {
+                    SchedulerBinding.instance.addPostFrameCallback((_) {
+                      _calculateExpense();
+                      _calculateProfit();
+                    });
+                  },
+                ),
+              )
+            else
+              Container(
+                height: 200,
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Color _getRankColor(int index) {
+    final colors = [Colors.amber, Colors.blue, Colors.green, Colors.purple];
+    return colors[index % colors.length];
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }

@@ -1,5 +1,4 @@
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:912966895.
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:453303779.
+
 
 import 'dart:async';
 import 'package:flutter/material.dart';

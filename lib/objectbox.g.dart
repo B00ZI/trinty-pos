@@ -14,6 +14,7 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import 'models/expence.dart';
 import 'models/order.dart';
 import 'models/order_counter.dart';
 import 'models/order_item.dart';
@@ -189,6 +190,40 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(7, 398202118687831166),
+    name: 'expence',
+    lastPropertyId: const obx_int.IdUid(4, 934848137971524454),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 4185965262833919473),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 9131188227983440530),
+        name: 'title',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 8268992687149545487),
+        name: 'amount',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 934848137971524454),
+        name: 'date',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -229,7 +264,7 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(6, 2902252270267550097),
+    lastEntityId: const obx_int.IdUid(7, 398202118687831166),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
     lastRelationId: const obx_int.IdUid(2, 4326529116841583281),
     lastSequenceId: const obx_int.IdUid(0, 0),
@@ -262,10 +297,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameOffset = fbb.writeString(object.name);
         final categoryOffset =
             object.category == null ? null : fbb.writeString(object.category!);
-        final descriptionOffset =
-            object.description == null
-                ? null
-                : fbb.writeString(object.description!);
+        final descriptionOffset = object.description == null
+            ? null
+            : fbb.writeString(object.description!);
         final imageUrlOffset =
             object.imageUrl == null ? null : fbb.writeString(object.imageUrl!);
         fbb.startTable(12);
@@ -414,10 +448,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
     Ruci: obx_int.EntityDefinition<Ruci>(
       model: _entities[3],
       toOneRelations: (Ruci object) => [],
-      toManyRelations:
-          (Ruci object) => {
-            obx_int.RelInfo<Ruci>.toMany(2, object.id): object.items,
-          },
+      toManyRelations: (Ruci object) => {
+        obx_int.RelInfo<Ruci>.toMany(2, object.id): object.items,
+      },
       getId: (Ruci object) => object.id,
       setId: (Ruci object, int id) {
         object.id = id;
@@ -492,6 +525,55 @@ obx_int.ModelDefinition getObjectBoxModel() {
           0,
         );
         final object = OrderCounter(id: idParam, value: valueParam);
+
+        return object;
+      },
+    ),
+    expence: obx_int.EntityDefinition<expence>(
+      model: _entities[5],
+      toOneRelations: (expence object) => [],
+      toManyRelations: (expence object) => {},
+      getId: (expence object) => object.id,
+      setId: (expence object, int id) {
+        object.id = id;
+      },
+      objectToFB: (expence object, fb.Builder fbb) {
+        final titleOffset = fbb.writeString(object.title);
+        fbb.startTable(5);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, titleOffset);
+        fbb.addFloat64(2, object.amount);
+        fbb.addInt64(3, object.date.millisecondsSinceEpoch);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final titleParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final amountParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final dateParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
+        );
+        final object = expence(
+          id: idParam,
+          title: titleParam,
+          amount: amountParam,
+          date: dateParam,
+        );
 
         return object;
       },
@@ -604,5 +686,28 @@ class OrderCounter_ {
   /// See [OrderCounter.value].
   static final value = obx.QueryIntegerProperty<OrderCounter>(
     _entities[4].properties[1],
+  );
+}
+
+/// [expence] entity fields to define ObjectBox queries.
+class expence_ {
+  /// See [expence.id].
+  static final id = obx.QueryIntegerProperty<expence>(
+    _entities[5].properties[0],
+  );
+
+  /// See [expence.title].
+  static final title = obx.QueryStringProperty<expence>(
+    _entities[5].properties[1],
+  );
+
+  /// See [expence.amount].
+  static final amount = obx.QueryDoubleProperty<expence>(
+    _entities[5].properties[2],
+  );
+
+  /// See [expence.date].
+  static final date = obx.QueryDateProperty<expence>(
+    _entities[5].properties[3],
   );
 }

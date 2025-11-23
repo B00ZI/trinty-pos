@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../models/expence.dart';
+import 'package:objectbox/objectbox.dart';
+import '../objectbox.g.dart';
 
 class ListItem {
   final String title;
@@ -16,18 +19,20 @@ class ListItem {
 }
 
 class AddableListWidget extends StatefulWidget {
+  final Box<expence> expenceBox;
   final String buttonText;
   final String dialogTitle;
   final String emptyListMessage;
   final Color? buttonColor;
   final TextStyle? buttonTextStyle;
-  final ValueChanged<List<ListItem>>? onListChanged;
+  final ValueChanged<List<expence>>? onListChanged;
 
   const AddableListWidget({
     super.key,
-    this.buttonText = 'Add Item',
-    this.dialogTitle = 'Add New Item',
-    this.emptyListMessage = 'No items added yet',
+    required this.expenceBox,
+    this.buttonText = 'Add expense',
+    this.dialogTitle = 'Add New expense',
+    this.emptyListMessage = 'No expenses added yet',
     this.buttonColor,
     this.buttonTextStyle,
     this.onListChanged,
@@ -38,9 +43,40 @@ class AddableListWidget extends StatefulWidget {
 }
 
 class _AddableListWidgetState extends State<AddableListWidget> {
-  final List<ListItem> _items = [];
+  final List<expence> _todayExpenses =
+      []; // Store expence objects from database
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodayExpenses(); // Load today's expenses on initialization
+  }
+
+  // Load expenses from database for today
+  void _loadTodayExpenses() {
+    final DateTime todayStart =
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final DateTime todayEnd = todayStart.add(const Duration(days: 1));
+
+    // Query expenses for today
+    final query = widget.expenceBox
+        .query(expence_.date.between(
+          todayStart.millisecondsSinceEpoch,
+          todayEnd.millisecondsSinceEpoch,
+        ))
+        .build();
+    final expenses = query.find();
+    query.close();
+    setState(() {
+      _todayExpenses.clear();
+      _todayExpenses.addAll(expenses);
+    });
+
+    // Notify parent if callback exists
+    widget.onListChanged?.call(_todayExpenses);
+  }
 
   void _showAddDialog() {
     showDialog(
@@ -107,10 +143,17 @@ class _AddableListWidgetState extends State<AddableListWidget> {
       return;
     }
 
-    setState(() {
-      _items.add(ListItem(title: title, amount: amount));
-      widget.onListChanged?.call(_items);
-    });
+    // Create and save new expense
+    final newexpence = expence(
+      title: title,
+      amount: amount,
+      date: DateTime.now(),
+    );
+
+    widget.expenceBox.put(newexpence);
+
+    // Reload today's expenses
+    _loadTodayExpenses();
 
     _titleController.clear();
     _amountController.clear();
@@ -118,10 +161,9 @@ class _AddableListWidgetState extends State<AddableListWidget> {
   }
 
   void _removeItem(int index) {
-    setState(() {
-      _items.removeAt(index);
-      widget.onListChanged?.call(_items);
-    });
+    final expenseToRemove = _todayExpenses[index];
+    widget.expenceBox.remove(expenseToRemove.id); // Remove from database
+    _loadTodayExpenses(); // Reload the list
   }
 
   @override
@@ -140,22 +182,24 @@ class _AddableListWidgetState extends State<AddableListWidget> {
         ElevatedButton(
           onPressed: _showAddDialog,
           style: ElevatedButton.styleFrom(
-            backgroundColor: widget.buttonColor ?? Theme.of(context).primaryColor,
+            backgroundColor:
+                widget.buttonColor ?? Theme.of(context).primaryColor,
           ),
           child: Text(
             widget.buttonText,
-            style: widget.buttonTextStyle ?? const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: widget.buttonTextStyle ??
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ),
 
         const SizedBox(height: 16),
 
-        // Items List
+        // Items List - Show today's expenses from database
         Expanded(
-          child: _items.isEmpty
+          child: _todayExpenses.isEmpty
               ? Center(
                   child: Text(
                     widget.emptyListMessage,
@@ -166,11 +210,15 @@ class _AddableListWidgetState extends State<AddableListWidget> {
                   ),
                 )
               : ListView.builder(
-                  itemCount: _items.length,
+                  itemCount: _todayExpenses.length,
                   itemBuilder: (context, index) {
-                    final item = _items[index];
+                    final expense = _todayExpenses[index];
                     return _ListItemCard(
-                      item: item,
+                      item: ListItem(
+                        title: expense.title,
+                        amount: expense.amount,
+                        createdAt: expense.date,
+                      ),
                       onDelete: () => _removeItem(index),
                     );
                   },
@@ -225,6 +273,6 @@ class _ListItemCard extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

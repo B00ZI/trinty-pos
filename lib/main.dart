@@ -53,7 +53,7 @@ class _MainScreenState extends State<MainScreen> {
     _widgetOptions = <Widget>[
       OrderScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
-       DashboardScreen(),
+       DashboardScreen(objectbox: widget.objectbox),
       ProductsScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
     ];
