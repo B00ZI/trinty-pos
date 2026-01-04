@@ -115,8 +115,8 @@ class ReceiptItem {
 
 class PrinterHelper {
   static Future<NetworkPrinter> connectToPrinter(ObjectBox objectbox) async {
-    final _printerConfigBox = objectbox.store.box<PrinterConfig>();
-    final printerConfig = _printerConfigBox.getAll().first;
+    final printerConfigBox = objectbox.store.box<PrinterConfig>();
+    final printerConfig = printerConfigBox.getAll().first;
     // final ipAddress = prefs.getString('printer_ip') ?? '';
     // final port = prefs.getInt('printer_port') ?? 9100;
 

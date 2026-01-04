@@ -2,10 +2,9 @@
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:2817509952.
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:1286985924.
 import 'dart:async';
-import 'dart:convert';
 import '../models/printer_config.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart'; // Import esc_pos_utils
-import 'package:esc_pos_printer/esc_pos_printer.dart'; // Import esc_pos_printer
+// Import esc_pos_utils
+// Import esc_pos_printer
 import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../models/order_item.dart';

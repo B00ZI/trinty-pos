@@ -70,7 +70,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Easify'),
-        backgroundColor: Colors.orangeAccent,
+        backgroundColor: Colors.white,
         foregroundColor: Colors.black,
       ),
       body: Center(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/expence.dart';
-import 'package:objectbox/objectbox.dart';
 import '../objectbox.g.dart';
 
 class ListItem {

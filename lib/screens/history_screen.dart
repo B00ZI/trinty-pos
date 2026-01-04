@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:esc_pos_printer/esc_pos_printer.dart';
 import '../models/order_item.dart';
 import '../objectbox.dart';
 import 'package:objectbox/objectbox.dart';

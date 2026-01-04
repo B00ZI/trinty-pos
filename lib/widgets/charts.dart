@@ -152,7 +152,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     if (validWeeklyData.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16.0),
-        child: Center(
+        child: const Center(
           child: Text('No valid data to display',
               style: TextStyle(color: Colors.grey)),
         ),

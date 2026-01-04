@@ -18,7 +18,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: dailyData.isEmpty
               ? const Center(
@@ -298,15 +298,9 @@ Future<double> _getDayExpenses(
   for (final e in sameDayExpenses) {
     final amt = e.amount;
     if (amt is Future<double>) {
-      total += await amt;
-    } else if (amt is double) {
       total += amt;
-    } else if (amt is num) {
-      total += amt.toDouble();
-    } else {
-      // fallback: attempt to parse or ignore invalid values
-      total += double.tryParse('$amt') ?? 0.0;
-    }
+    } else    total += amt;
+  
   }
 
   return total;
