@@ -1,4 +1,4 @@
-# Drywich
+# Easify
 
 A new Flutter project.
 

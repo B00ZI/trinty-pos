@@ -183,7 +183,7 @@ class _AddableListWidgetState extends State<AddableListWidget> {
           onPressed: _showAddDialog,
           style: ElevatedButton.styleFrom(
             backgroundColor:
-                widget.buttonColor ?? Theme.of(context).primaryColor,
+                Colors.orangeAccent, // Use provided button color or default
           ),
           child: Text(
             widget.buttonText,

@@ -1,6 +1,6 @@
-import 'package:Drywich/widgets/expenceTracking.dart';
+import 'package:Easify/widgets/expenceTracking.dart';
 import 'package:flutter/material.dart';
-import 'package:Drywich/widgets/insight_item.dart';
+import 'package:Easify/widgets/insight_item.dart';
 import '../widgets/charts.dart';
 import '../widgets/bestSellr.dart' as best_seller;
 import '../models/product.dart' as product_model;
@@ -242,22 +242,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 20),
 
             // Best Sellers Section
-            Container(
-              height: 200,
-              child: best_seller.ProductCardsRow(
-                products: widget.myProducts
-                    .map((p) => best_seller.Product(
-                          title: p.name,
-                          price: '\$${p.price.toStringAsFixed(2)}',
-                          rank: '#${widget.myProducts.indexOf(p) + 1}',
-                          rankColor:
-                              _getRankColor(widget.myProducts.indexOf(p)),
-                        ))
-                    .toList(),
-                sectionTitle: 'Best Sellers',
-                scrollable: true,
-              ),
-            ),
+            // Container(
+            //   height: 200,
+            //   child: best_seller.ProductCardsRow(
+            //     products: widget.myProducts
+            //         .map((p) => best_seller.Product(
+            //               title: p.name,
+            //               price: '\$${p.price.toStringAsFixed(2)}',
+            //               rank: '#${widget.myProducts.indexOf(p) + 1}',
+            //               rankColor:
+            //                   _getRankColor(widget.myProducts.indexOf(p)),
+            //             ))
+            //         .toList(),
+            //     sectionTitle: 'Best Sellers',
+            //     scrollable: true,
+            //   ),
+            // ),
 
             const SizedBox(height: 20),
 

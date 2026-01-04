@@ -141,6 +141,13 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
       return validRevenue && validOrders;
     }).toList();
 
+    // Calculate weekly revenue for max Y value
+    double weeklyRevenue = 0;
+    for (final data in validWeeklyData) {
+      weeklyRevenue += data.revenue;
+    }
+    final double maxYValue = weeklyRevenue + 200;
+
     // If no valid data, show a placeholder
     if (validWeeklyData.isEmpty) {
       return Container(
@@ -249,9 +256,9 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                     ),
                     y: ChartAxisSettingsAxis(
                       frequency: 400.0,
-                      max: widget.maxYValue.isNaN || widget.maxYValue.isInfinite
+                      max: maxYValue.isNaN || maxYValue.isInfinite
                           ? 2000.0
-                          : widget.maxYValue,
+                          : maxYValue,
                       min: 0.0,
                       textStyle: const TextStyle(
                         color: Colors.black,

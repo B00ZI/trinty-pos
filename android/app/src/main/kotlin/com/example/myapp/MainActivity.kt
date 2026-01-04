@@ -1,4 +1,4 @@
-package com.example.Drywich
+package com.example.Easify
 
 import io.flutter.embedding.android.FlutterActivity
 

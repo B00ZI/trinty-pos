@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:Drywich/models/product.dart';
-import 'package:Drywich/objectbox.dart';
-import 'package:Drywich/widgets/product_item.dart';
+import 'package:Easify/models/product.dart';
+import 'package:Easify/objectbox.dart';
+import 'package:Easify/widgets/product_item.dart';
 import 'package:objectbox/objectbox.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -94,16 +94,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black45)),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orangeAccent,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               if (_formKey.currentState!.validate()) {
                 _addProduct();
                 Navigator.of(ctx).pop();
               }
             },
-            child: const Text('Add'),
+            child: const Text('Add', style: TextStyle(color: Colors.black45)),
           ),
         ],
       ),
@@ -115,12 +119,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Product Management'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showAddProductDialog(context),
-          ),
-        ],
+        // Removed the IconButton from actions
       ),
       body: StreamBuilder<List<Product>>(
         stream: _productBox
@@ -155,6 +154,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                 );
         },
+      ),
+      // Add Floating Action Button at bottom right with orange accent
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddProductDialog(context),
+        backgroundColor: Colors.orangeAccent,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
     );
   }

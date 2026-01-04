@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Drywich/models/product.dart';
+import 'package:Easify/models/product.dart';
 
 class ProductItem extends StatelessWidget {
   final Product product;

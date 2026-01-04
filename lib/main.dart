@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:Drywich/objectbox.dart';
-import 'package:Drywich/screens/history_screen.dart';
-import 'package:Drywich/screens/order_screen.dart';
-import 'package:Drywich/screens/products_screen.dart';
-import 'package:Drywich/models/order_counter.dart';
-import 'package:Drywich/screens/settings_screen.dart';
-import 'package:Drywich/screens/dashboard_screen.dart';
+import 'package:Easify/objectbox.dart';
+import 'package:Easify/screens/history_screen.dart';
+import 'package:Easify/screens/order_screen.dart';
+import 'package:Easify/screens/products_screen.dart';
+import 'package:Easify/models/order_counter.dart';
+import 'package:Easify/screens/settings_screen.dart';
+import 'package:Easify/screens/dashboard_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,17 +15,17 @@ Future<void> main() async {
     counterBox.put(OrderCounter(value: 1));
   }
 
-
-  runApp(Drywich(objectbox: objectbox));
+  runApp(Easify(objectbox: objectbox));
 }
-class Drywich extends StatelessWidget {
+
+class Easify extends StatelessWidget {
   final ObjectBox objectbox;
-  const Drywich({super.key, required this.objectbox});
+  const Easify({super.key, required this.objectbox});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Drywich',
+      title: 'Easify',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -53,7 +53,7 @@ class _MainScreenState extends State<MainScreen> {
     _widgetOptions = <Widget>[
       OrderScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
-       DashboardScreen(objectbox: widget.objectbox),
+      DashboardScreen(objectbox: widget.objectbox),
       ProductsScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
     ];
@@ -69,15 +69,16 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Drywich'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: const Text('Easify'),
+        backgroundColor: Colors.orangeAccent,
+        foregroundColor: Colors.black,
       ),
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
@@ -101,7 +102,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
+        selectedItemColor: Colors.black45,
         onTap: _onItemTapped,
       ),
     );

@@ -108,15 +108,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orangeAccent,
+                  ),
                   onPressed: _savePrinterConfig,
-                  child: const Text('Save Configuration'),
+                  child: const Text('Save Configuration', style: TextStyle(color: Colors.black45)),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orangeAccent,
+                  ),
                   onPressed: _testPrinterConnection,
-                  child: const Text('Test Printer Connection'),
+                  child: const Text('Test Printer Connection', style: TextStyle(color: Colors.black45)),
                 ),
               ),
             ],
