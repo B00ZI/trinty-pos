@@ -27,8 +27,95 @@ class Easify extends StatelessWidget {
     return MaterialApp(
       title: 'Easify',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: const ColorScheme(
+          brightness: Brightness.light,
+          primary: Color(0xFF2D7DD2), // Steel Blue
+          onPrimary: Color(0xFFFFFFFF), // White
+          secondary: Color(0xFF2D7DD2), // Steel Blue (Highlights/Accents)
+          onSecondary: Color(0xFFFFFFFF),
+          primaryContainer: Color(0xFFEDF5FC), // Alice Blue (Containers/Inputs)
+          onPrimaryContainer: Color(0xFF210124), // Midnight Violet
+          surface: Color(0xFFFFFFFF), // White (Main Background)
+          onSurface: Color(0xFF210124), // Midnight Violet (Primary Text)
+          surfaceContainer: Color(0xFFEDF5FC), // Alice Blue (Secondary Background)
+          error: Color(0xFFD32F2F), // Standard Red for Error/Delete
+          onError: Color(0xFFFFFFFF),
+          background: Color(0xFFFFFFFF),
+          onBackground: Color(0xFF210124),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFFFFFFF),
+          foregroundColor: Color(0xFF210124),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          iconTheme: IconThemeData(color: Color(0xFF2D7DD2)), // Steel Blue Icons
+          titleTextStyle: TextStyle(
+            color: Color(0xFF210124),
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFFEDF5FC), // Alice Blue Cards
+          elevation: 0, // "No heavy borders", "Elevation via soft shadow only"
+          shadowColor: const Color(0xFF2D7DD2).withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide.none,
+          ),
+          margin: const EdgeInsets.all(8),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2D7DD2), // Steel Blue
+            foregroundColor: const Color(0xFFFFFFFF), // White
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: const Color(0xFF2D7DD2), // Steel Blue
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFEDF5FC), // Alice Blue
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF2D7DD2), width: 1.5),
+          ),
+          labelStyle: const TextStyle(color: Color(0xFF210124)),
+          hintStyle: TextStyle(color: const Color(0xFF210124).withOpacity(0.5)),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color(0xFFFFFFFF),
+          selectedItemColor: Color(0xFF2D7DD2), // Steel Blue
+          unselectedItemColor: Color(0xFF210124), // Midnight Violet (or opacity)
+          type: BottomNavigationBarType.fixed,
+          elevation: 8,
+          showUnselectedLabels: true,
+        ),
+        textTheme: const TextTheme(
+          headlineLarge: TextStyle(color: Color(0xFF210124), fontWeight: FontWeight.bold),
+          titleLarge: TextStyle(color: Color(0xFF210124), fontWeight: FontWeight.bold),
+          titleMedium: TextStyle(color: Color(0xFF210124), fontWeight: FontWeight.w600),
+          bodyLarge: TextStyle(color: Color(0xFF210124)),
+          bodyMedium: TextStyle(color: Color(0xFF210124)),
+          bodySmall: TextStyle(color: Color(0xFF210124)),
+        ),
       ),
       home: MainScreen(objectbox: objectbox),
     );
@@ -70,12 +157,12 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Easify'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
       ),
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
-      ),
+      ), 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,

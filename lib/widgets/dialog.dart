@@ -91,7 +91,9 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                             decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                  color: Colors.grey[300]!,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
                                   width: 1,
                                 ),
                               ),
@@ -111,8 +113,11 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: data.revenue > 0
-                                          ? Colors.green
-                                          : Colors.grey,
+                                          ? Theme.of(context).colorScheme.primary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.5),
                                       fontWeight: FontWeight.w500,
                                     ),
                                     textAlign: TextAlign.center,
@@ -124,8 +129,11 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: data.expenses > 0
-                                          ? Colors.red
-                                          : Colors.grey,
+                                          ? Theme.of(context).colorScheme.error
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.5),
                                       fontWeight: FontWeight.w500,
                                     ),
                                     textAlign: TextAlign.center,
@@ -150,7 +158,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue[50],
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -164,11 +172,11 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                               ),
                             ),
                             Text(
-                              '${(_calculateTotalRevenue(dailyData)-_calculateTotalExpenses(dailyData))} DH',
-                              style: const TextStyle(
+                              '${(_calculateTotalRevenue(dailyData) - _calculateTotalExpenses(dailyData))} DH',
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ],

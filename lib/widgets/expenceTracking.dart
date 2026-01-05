@@ -181,14 +181,15 @@ class _AddableListWidgetState extends State<AddableListWidget> {
         ElevatedButton(
           onPressed: _showAddDialog,
           style: ElevatedButton.styleFrom(
-            backgroundColor:
-                Colors.orangeAccent, // Use provided button color or default
+            backgroundColor: Theme.of(context)
+                .colorScheme
+                .primary, // Use provided button color or default
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
           ),
           child: Text(
             widget.buttonText,
             style: widget.buttonTextStyle ??
                 const TextStyle(
-                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
           ),
@@ -202,8 +203,8 @@ class _AddableListWidgetState extends State<AddableListWidget> {
               ? Center(
                   child: Text(
                     widget.emptyListMessage,
-                    style: const TextStyle(
-                      color: Colors.grey,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       fontSize: 16,
                     ),
                   ),
@@ -255,14 +256,14 @@ class _ListItemCard extends StatelessWidget {
           children: [
             Text(
               '\$${item.amount.toStringAsFixed(2)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.green,
+                color: Theme.of(context).colorScheme.error,
                 fontSize: 16,
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
+              icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
               onPressed: onDelete,
             ),
           ],

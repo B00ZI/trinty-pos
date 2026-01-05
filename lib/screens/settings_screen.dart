@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:validators/validators.dart';
 import 'package:flutter/services.dart';
 import '../models/printer_config.dart';
+import '../models/store_config.dart';
+import '../widgets/store_config.dart';
 import '../objectbox.dart';
 import 'package:objectbox/objectbox.dart';
 
@@ -61,74 +63,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: _ipAddressController,
-                decoration: const InputDecoration(
-                  labelText: 'Printer IP Address'
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter an IP address';
-                  }
-                  if (!isIP(value)) {
-                    return 'Please enter a valid IP address';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                keyboardType: TextInputType.number,
-                controller: _portController,
-                decoration: const InputDecoration(
-                  labelText: 'Printer Port',
-                ),
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a port';
-                  }
-                  final port = int.tryParse(value);
-                  if (port == null) {
-                    return "Please enter a valid number";
-                  }
-                  if (port < 1 || port > 65535) {
-                    return "Port must be between 1-65535";
-                  }
-                  return null;
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orangeAccent,
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Printer Settings',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _ipAddressController,
+                        decoration: const InputDecoration(
+                          labelText: 'Printer IP Address',
+                          prefixIcon: Icon(Icons.router),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an IP address';
+                          }
+                          if (!isIP(value)) {
+                            return 'Please enter a valid IP address';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        keyboardType: TextInputType.number,
+                        controller: _portController,
+                        decoration: const InputDecoration(
+                          labelText: 'Printer Port',
+                          prefixIcon: Icon(Icons.settings_input_component),
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a port';
+                          }
+                          final port = int.tryParse(value);
+                          if (port == null) {
+                            return "Please enter a valid number";
+                          }
+                          if (port < 1 || port > 65535) {
+                            return "Port must be between 1-65535";
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _testPrinterConnection,
+                              icon: const Icon(Icons.print),
+                              label: const Text('Test Print'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                                foregroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _savePrinterConfig,
+                              icon: const Icon(Icons.save),
+                              label: const Text('Save IP'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  onPressed: _savePrinterConfig,
-                  child: const Text('Save Configuration', style: TextStyle(color: Colors.black45)),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orangeAccent,
-                  ),
-                  onPressed: _testPrinterConnection,
-                  child: const Text('Test Printer Connection', style: TextStyle(color: Colors.black45)),
-                ),
-              ),
+              const SizedBox(height: 8),
+              StoreConfigWidget(
+                  storeConfigBox: widget.objectbox.storeConfigBox),
             ],
           ),
         ),
       ),
+    ),
     );
   }
   

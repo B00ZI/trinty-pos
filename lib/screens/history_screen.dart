@@ -8,6 +8,7 @@ import '../models/printer_config.dart';
 import '../models/order_counter.dart'; // Import OrderCounter
 import '../widgets/dialog.dart' as custom_dialog;
 import '../service/printer_helper.dart';
+import 'order_screen.dart' as custom_order_screen;
 
 class HistoryScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -242,19 +243,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order History'),
+        
         actions: [
           // Add the button to the AppBar
           IconButton(
-            onPressed: () =>_resetOrderCounter(),
+            onPressed: () => _resetOrderCounter(),
             icon: const Icon(Icons.refresh),
-            color: Colors.orangeAccent,
+            color: Theme.of(context).colorScheme.secondary,
           ),
-           IconButton(
+          IconButton(
             onPressed: () =>
                 custom_dialog.showDailyDataDialog(context, widget.objectbox),
             icon: const Icon(Icons.archive),
-            color: Colors.orangeAccent,
+            color: Theme.of(context).colorScheme.secondary,
           )
         ],
       ),
@@ -296,6 +297,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                           const Spacer(),
                           IconButton(
+                            icon: Icon(Icons.edit,
+                                color: Theme.of(context).colorScheme.secondary),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => custom_order_screen.OrderScreen(
+                                    objectbox: widget.objectbox,
+                                    orderToEdit: order,
+                                  ),
+                                ),
+                              ).then((_) {
+                                // Refresh history when returning (though StreamBuilder should handle it)
+                                setState(() {});
+                              });
+                            },
+                          ),
+                          IconButton(
                             icon: const Icon(Icons.delete),
                             color: Colors.red,
                             onPressed: () {
@@ -323,16 +342,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         children: [
                           ElevatedButton.icon(
                             onPressed: () {
-                              final receiptData =ReceiptData.convertRuciToReceiptData(order);
+                              final receiptData =
+                                  ReceiptData.convertRuciToReceiptData(order);
                               PrinterHelper.printReceipt(
                                   receiptData, widget.objectbox);
                             },
-                            icon:
-                                const Icon(Icons.print, color: Colors.black45),
-                            label: const Text('Print',
-                                style: TextStyle(color: Colors.black45)),
+                            icon: Icon(Icons.print,
+                                color: Theme.of(context).colorScheme.onPrimary),
+                            label: Text('Print',
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orangeAccent,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         ],
