@@ -6,6 +6,8 @@ import 'package:Easify/screens/products_screen.dart';
 import 'package:Easify/models/order_counter.dart';
 import 'package:Easify/screens/settings_screen.dart';
 import 'package:Easify/screens/dashboard_screen.dart';
+import 'service/activation_service.dart';
+import 'widgets/activation_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,8 +42,6 @@ class Easify extends StatelessWidget {
           surfaceContainer: Color(0xFFEDF5FC), // Alice Blue (Secondary Background)
           error: Color(0xFFD32F2F), // Standard Red for Error/Delete
           onError: Color(0xFFFFFFFF),
-          background: Color(0xFFFFFFFF),
-          onBackground: Color(0xFF210124),
         ),
         scaffoldBackgroundColor: const Color(0xFFFFFFFF),
         useMaterial3: true,
@@ -60,7 +60,7 @@ class Easify extends StatelessWidget {
         cardTheme: CardThemeData(
           color: const Color(0xFFEDF5FC), // Alice Blue Cards
           elevation: 0, // "No heavy borders", "Elevation via soft shadow only"
-          shadowColor: const Color(0xFF2D7DD2).withOpacity(0.1),
+          shadowColor: const Color(0xFF2D7DD2).withValues(alpha: 0.1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide.none,
@@ -98,7 +98,7 @@ class Easify extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFF2D7DD2), width: 1.5),
           ),
           labelStyle: const TextStyle(color: Color(0xFF210124)),
-          hintStyle: TextStyle(color: const Color(0xFF210124).withOpacity(0.5)),
+          hintStyle: TextStyle(color: const Color(0xFF210124).withValues(alpha: 0.5)),
         ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           backgroundColor: Color(0xFFFFFFFF),
@@ -122,6 +122,7 @@ class Easify extends StatelessWidget {
   }
 }
 
+
 class MainScreen extends StatefulWidget {
   final ObjectBox objectbox;
   const MainScreen({super.key, required this.objectbox});
@@ -133,10 +134,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late final List<Widget> _widgetOptions;
+  bool _isCheckingActivation = true;
 
   @override
   void initState() {
     super.initState();
+    _checkActivation();
     _widgetOptions = <Widget>[
       OrderScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
@@ -144,6 +147,30 @@ class _MainScreenState extends State<MainScreen> {
       ProductsScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
     ];
+  }
+
+  Future<void> _checkActivation() async {
+    final activated = await ActivationService.isActivated();
+    if (mounted) {
+      setState(() {
+        _isCheckingActivation = false;
+      });
+      if (!activated) {
+        _showActivationDialog();
+      }
+    }
+  }
+
+  void _showActivationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ActivationDialog(
+        onActivated: () {
+          Navigator.of(context).pop();
+        },
+      ),
+    );
   }
 
   void _onItemTapped(int index) {
@@ -154,6 +181,13 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isCheckingActivation) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Easify'),

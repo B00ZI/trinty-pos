@@ -1,0 +1,8 @@
+﻿Analyzing 3 items...                                            
+
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\main.dart:45:11 - deprecated_member_use
+   info - 'onBackground' is deprecated and shouldn't be used. Use onSurface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\main.dart:46:11 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main.dart:65:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main.dart:103:63 - deprecated_member_use
+   info - 'verifySignature' is deprecated and shouldn't be used. For SHA256 signature verification use verifySHA256Signature - lib\service\activation_service.dart:47:27 - deprecated_member_use
+
