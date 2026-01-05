@@ -171,9 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-      ),
+      
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -230,7 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 20),
 
             // Chart
-            Container(
+            SizedBox(
               height: 300,
               child: WeeklyPerformanceChart(
                 store: widget.objectbox.store,
@@ -263,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             // Expense Tracking Section - Only show if _expenceBox is initialized
             if (_expenceBox != null)
-              Container(
+              SizedBox(
                 height: 200,
                 child: AddableListWidget(
                   expenceBox: _expenceBox!,
@@ -276,9 +274,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               )
             else
-              Container(
+              SizedBox(
                 height: 200,
-                child: Center(
+                child: const Center(
                   child: CircularProgressIndicator(),
                 ),
               ),

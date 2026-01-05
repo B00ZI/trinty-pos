@@ -18,7 +18,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: dailyData.isEmpty
               ? const Center(
@@ -91,7 +91,9 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                             decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                  color: Colors.grey[300]!,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
                                   width: 1,
                                 ),
                               ),
@@ -111,8 +113,11 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: data.revenue > 0
-                                          ? Colors.green
-                                          : Colors.grey,
+                                          ? Theme.of(context).colorScheme.primary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.5),
                                       fontWeight: FontWeight.w500,
                                     ),
                                     textAlign: TextAlign.center,
@@ -124,8 +129,11 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: data.expenses > 0
-                                          ? Colors.red
-                                          : Colors.grey,
+                                          ? Theme.of(context).colorScheme.error
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.5),
                                       fontWeight: FontWeight.w500,
                                     ),
                                     textAlign: TextAlign.center,
@@ -150,7 +158,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue[50],
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -164,11 +172,11 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                               ),
                             ),
                             Text(
-                              '${(_calculateTotalRevenue(dailyData)-_calculateTotalExpenses(dailyData))} DH',
-                              style: const TextStyle(
+                              '${(_calculateTotalRevenue(dailyData) - _calculateTotalExpenses(dailyData))} DH',
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ],
@@ -298,15 +306,9 @@ Future<double> _getDayExpenses(
   for (final e in sameDayExpenses) {
     final amt = e.amount;
     if (amt is Future<double>) {
-      total += await amt;
-    } else if (amt is double) {
       total += amt;
-    } else if (amt is num) {
-      total += amt.toDouble();
-    } else {
-      // fallback: attempt to parse or ignore invalid values
-      total += double.tryParse('$amt') ?? 0.0;
-    }
+    } else    total += amt;
+  
   }
 
   return total;

@@ -20,6 +20,7 @@ import 'models/order_counter.dart';
 import 'models/order_item.dart';
 import 'models/printer_config.dart';
 import 'models/product.dart';
+import 'models/store_config.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -224,6 +225,34 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(8, 8382040067926750167),
+    name: 'StoreConfig',
+    lastPropertyId: const obx_int.IdUid(3, 2275399429650238122),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 8214052198697434401),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 323815536522235345),
+        name: 'storeName',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 2275399429650238122),
+        name: 'storeLogoPath',
+        type: 9,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -264,7 +293,7 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(7, 398202118687831166),
+    lastEntityId: const obx_int.IdUid(8, 8382040067926750167),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
     lastRelationId: const obx_int.IdUid(2, 4326529116841583281),
     lastSequenceId: const obx_int.IdUid(0, 0),
@@ -297,9 +326,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameOffset = fbb.writeString(object.name);
         final categoryOffset =
             object.category == null ? null : fbb.writeString(object.category!);
-        final descriptionOffset = object.description == null
-            ? null
-            : fbb.writeString(object.description!);
+        final descriptionOffset =
+            object.description == null
+                ? null
+                : fbb.writeString(object.description!);
         final imageUrlOffset =
             object.imageUrl == null ? null : fbb.writeString(object.imageUrl!);
         fbb.startTable(12);
@@ -448,9 +478,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
     Ruci: obx_int.EntityDefinition<Ruci>(
       model: _entities[3],
       toOneRelations: (Ruci object) => [],
-      toManyRelations: (Ruci object) => {
-        obx_int.RelInfo<Ruci>.toMany(2, object.id): object.items,
-      },
+      toManyRelations:
+          (Ruci object) => {
+            obx_int.RelInfo<Ruci>.toMany(2, object.id): object.items,
+          },
       getId: (Ruci object) => object.id,
       setId: (Ruci object, int id) {
         object.id = id;
@@ -573,6 +604,54 @@ obx_int.ModelDefinition getObjectBoxModel() {
           title: titleParam,
           amount: amountParam,
           date: dateParam,
+        );
+
+        return object;
+      },
+    ),
+    StoreConfig: obx_int.EntityDefinition<StoreConfig>(
+      model: _entities[6],
+      toOneRelations: (StoreConfig object) => [],
+      toManyRelations: (StoreConfig object) => {},
+      getId: (StoreConfig object) => object.id,
+      setId: (StoreConfig object, int id) {
+        object.id = id;
+      },
+      objectToFB: (StoreConfig object, fb.Builder fbb) {
+        final storeNameOffset =
+            object.storeName == null
+                ? null
+                : fbb.writeString(object.storeName!);
+        final storeLogoPathOffset =
+            object.storeLogoPath == null
+                ? null
+                : fbb.writeString(object.storeLogoPath!);
+        fbb.startTable(4);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, storeNameOffset);
+        fbb.addOffset(2, storeLogoPathOffset);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final storeNameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 6);
+        final storeLogoPathParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 8);
+        final object = StoreConfig(
+          id: idParam,
+          storeName: storeNameParam,
+          storeLogoPath: storeLogoPathParam,
         );
 
         return object;
@@ -709,5 +788,23 @@ class expence_ {
   /// See [expence.date].
   static final date = obx.QueryDateProperty<expence>(
     _entities[5].properties[3],
+  );
+}
+
+/// [StoreConfig] entity fields to define ObjectBox queries.
+class StoreConfig_ {
+  /// See [StoreConfig.id].
+  static final id = obx.QueryIntegerProperty<StoreConfig>(
+    _entities[6].properties[0],
+  );
+
+  /// See [StoreConfig.storeName].
+  static final storeName = obx.QueryStringProperty<StoreConfig>(
+    _entities[6].properties[1],
+  );
+
+  /// See [StoreConfig.storeLogoPath].
+  static final storeLogoPath = obx.QueryStringProperty<StoreConfig>(
+    _entities[6].properties[2],
   );
 }

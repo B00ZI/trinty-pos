@@ -152,7 +152,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     if (validWeeklyData.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16.0),
-        child: Center(
+        child: const Center(
           child: Text('No valid data to display',
               style: TextStyle(color: Colors.grey)),
         ),
@@ -187,7 +187,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
           Expanded(
             child: Chart(
               layers: [
-                // Revenue Bars (Green)
+                // Revenue Bars (Steel Blue)
                 ChartBarLayer(
                   items: validWeeklyData.asMap().entries.map((entry) {
                     final value = entry.value.revenue;
@@ -200,7 +200,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                     return ChartBarDataItem(
                       x: safeX,
                       value: safeValue,
-                      color: Colors.green,
+                      color: Theme.of(context).colorScheme.primary,
                     );
                   }).toList(),
                   settings: const ChartBarSettings(
@@ -209,7 +209,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                   ),
                 ),
 
-                // Orders Bars (Blue) - offset slightly
+                // Orders Bars (Midnight Violet) - offset slightly
                 ChartBarLayer(
                   items: validWeeklyData.asMap().entries.map((entry) {
                     final value = entry.value.orders.toDouble();
@@ -222,7 +222,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                     return ChartBarDataItem(
                       x: safeX,
                       value: safeValue,
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.onSurface,
                     );
                   }).toList(),
                   settings: const ChartBarSettings(
@@ -249,8 +249,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                           ? 7.0
                           : validWeeklyData.length.toDouble() + 0.5,
                       min: 0.5,
-                      textStyle: const TextStyle(
-                        color: Colors.black,
+                      textStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 10,
                       ),
                     ),
@@ -260,8 +260,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                           ? 2000.0
                           : maxYValue,
                       min: 0.0,
-                      textStyle: const TextStyle(
-                        color: Colors.black,
+                      textStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 10,
                       ),
                     ),
@@ -275,9 +275,9 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildLegendItem(Colors.green, 'Revenue'),
+              _buildLegendItem(Theme.of(context).colorScheme.primary, 'Revenue'),
               const SizedBox(width: 20),
-              _buildLegendItem(Colors.blue, 'Orders'),
+              _buildLegendItem(Theme.of(context).colorScheme.onSurface, 'Orders'),
             ],
           ),
         ],

@@ -3,6 +3,7 @@ import 'models/product.dart';
 import 'models/order_item.dart';
 import 'models/printer_config.dart';
 import 'models/expence.dart';
+import 'models/store_config.dart';
 
 class ObjectBox {
   /// The Store of this app.
@@ -11,12 +12,14 @@ class ObjectBox {
   late final Box<OrderItem> orderItemBox;
   late final Box<PrinterConfig> printerConfigBox;
   late final Box<expence> expenceBox;
+  late final Box<StoreConfig> storeConfigBox;
 
   ObjectBox._create(this.store) {
     productBox = Box<Product>(store);
     orderItemBox = Box<OrderItem>(store);
     printerConfigBox = Box<PrinterConfig>(store);
     expenceBox = Box<expence>(store);
+    storeConfigBox = Box<StoreConfig>(store);
   }
 
   /// Create an instance of ObjectBox to use throughout the app.

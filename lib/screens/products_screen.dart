@@ -94,12 +94,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.black45)),
+            child: Text('Cancel',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orangeAccent,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             onPressed: () {
               if (_formKey.currentState!.validate()) {
@@ -107,7 +109,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 Navigator.of(ctx).pop();
               }
             },
-            child: const Text('Add', style: TextStyle(color: Colors.black45)),
+            child: Text('Add',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -117,10 +121,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Product Management'),
-        // Removed the IconButton from actions
-      ),
+     
       body: StreamBuilder<List<Product>>(
         stream: _productBox
             .query()
@@ -158,9 +159,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
       // Add Floating Action Button at bottom right with orange accent
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddProductDialog(context),
-        backgroundColor: Colors.orangeAccent,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
     );
   }

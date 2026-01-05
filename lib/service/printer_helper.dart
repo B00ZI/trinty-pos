@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import '../models/store_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:esc_pos_printer/esc_pos_printer.dart';
@@ -115,8 +117,8 @@ class ReceiptItem {
 
 class PrinterHelper {
   static Future<NetworkPrinter> connectToPrinter(ObjectBox objectbox) async {
-    final _printerConfigBox = objectbox.store.box<PrinterConfig>();
-    final printerConfig = _printerConfigBox.getAll().first;
+    final printerConfigBox = objectbox.store.box<PrinterConfig>();
+    final printerConfig = printerConfigBox.getAll().first;
     // final ipAddress = prefs.getString('printer_ip') ?? '';
     // final port = prefs.getInt('printer_port') ?? 9100;
 
@@ -142,8 +144,13 @@ class PrinterHelper {
     final printer = await connectToPrinter(objectbox);
 
     try {
+      final storeConfigBox = objectbox.store.box<StoreConfig>();
+      final storeConfig = storeConfigBox.getAll().isNotEmpty 
+          ? storeConfigBox.getAll().first 
+          : null;
+
       printer.reset();
-      await _printHeader(printer, receipt);
+      await _printHeader(printer, receipt, storeConfig);
 
       // Debug: Check items before printing
       debugPrint('Items to print: ${receipt.items}');
@@ -160,11 +167,16 @@ class PrinterHelper {
   static Future<void> _printHeader(
     NetworkPrinter printer,
     ReceiptData receipt,
+    StoreConfig? config,
   ) async {
-    await _printLogoImage(printer);
+    await _printLogoImage(printer, config?.storeLogoPath);
+
+    final storeName = config?.storeName?.isNotEmpty == true 
+        ? config!.storeName! 
+        : 'FRITA';
 
     printer.text(
-      'FRITA',
+      storeName,
       styles: const PosStyles(
         align: PosAlign.center,
         bold: true,
@@ -219,11 +231,24 @@ class PrinterHelper {
     printer.hr();
   }
 
-  static Future<void> _printLogoImage(NetworkPrinter printer) async {
+  static Future<void> _printLogoImage(NetworkPrinter printer, String? logoPath) async {
     try {
-      // Load the image from assets
-      final ByteData data = await rootBundle.load('lib/assets/frita.png');
-      final Uint8List imgBytes = data.buffer.asUint8List();
+      Uint8List? imgBytes;
+
+      if (logoPath != null && logoPath.isNotEmpty) {
+        final file = File(logoPath);
+        if (await file.exists()) {
+          imgBytes = await file.readAsBytes();
+        }
+      }
+
+      // If no custom logo is found, just return (print nothing for logo)
+      // The store name will be printed by the caller
+      if (imgBytes == null) {
+        return;
+      }
+
+      if (imgBytes == null) return;
 
       // Decode the image
       final img.Image? image = img.decodeImage(imgBytes);
@@ -240,7 +265,7 @@ class PrinterHelper {
       printer.feed(1);
     } catch (e) {
       debugPrint("Image print failed: $e");
-      _printTextLogo(printer); // fallback
+      // _printTextLogo(printer); // fallback
     }
   }
 
@@ -356,6 +381,16 @@ class PrinterHelper {
 
   static Future<void> testPrinter(ObjectBox objectBox) async {
     final printer = await connectToPrinter(objectBox);
+    
+    // Fetch store config
+    final storeConfigBox = objectBox.store.box<StoreConfig>();
+    final storeConfig = storeConfigBox.getAll().isNotEmpty 
+          ? storeConfigBox.getAll().first 
+          : null;
+    final storeName = storeConfig?.storeName?.isNotEmpty == true 
+          ? storeConfig!.storeName! 
+          : 'Easify POS System';
+
     try {
       printer.text(
         'PRINTER TEST',
@@ -367,7 +402,7 @@ class PrinterHelper {
         ),
       );
       printer.text(
-        'Easify POS System',
+        storeName,
         styles: const PosStyles(align: PosAlign.center),
       );
       printer.hr();

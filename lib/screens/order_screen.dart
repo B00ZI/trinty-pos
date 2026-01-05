@@ -2,10 +2,9 @@
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:2817509952.
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:1286985924.
 import 'dart:async';
-import 'dart:convert';
 import '../models/printer_config.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart'; // Import esc_pos_utils
-import 'package:esc_pos_printer/esc_pos_printer.dart'; // Import esc_pos_printer
+// Import esc_pos_utils
+// Import esc_pos_printer
 import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../models/order_item.dart';
@@ -18,7 +17,8 @@ import '../service/printer_helper.dart'; // Import PrinterHelper
 
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
-  const OrderScreen({super.key, required this.objectbox});
+  final Ruci? orderToEdit;
+  const OrderScreen({super.key, required this.objectbox, this.orderToEdit});
 
   @override
   State<OrderScreen> createState() => _OrderScreenState();
@@ -29,6 +29,7 @@ class _OrderScreenState extends State<OrderScreen> {
   late final Box<Product> _productBox;
   late final Box<PrinterConfig> _printerConfigBox;
   late final Box<OrderCounter> _orderCounterBox;
+  late final Box<OrderItem> _orderItemBox; // To manage item deletion
 
   @override
   void initState() {
@@ -36,6 +37,23 @@ class _OrderScreenState extends State<OrderScreen> {
     _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
     _productBox = widget.objectbox.store.box<Product>();
     _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
+    _orderItemBox = widget.objectbox.store.box<OrderItem>();
+
+    if (widget.orderToEdit != null) {
+      _loadOrderForEditing();
+    }
+  }
+
+  void _loadOrderForEditing() {
+    for (final item in widget.orderToEdit!.items) {
+      // Create a *copy* of the item for the cart so we don't modify the DB entity directly yet
+      // OR reuse the entity? Reusing might be tricky if we don't save.
+      // Better to create new transient objects or copies.
+      // Simple approach: Create new OrderItem with same properties.
+      final cartItem = OrderItem(quantity: item.quantity);
+      cartItem.product.target = item.product.target;
+      _cart.add(cartItem);
+    }
   }
 
   void _addToCart(Product product) {
@@ -77,9 +95,7 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Order'),
-        ),
+        appBar: widget.orderToEdit != null ? AppBar(title: Text('Edit Order #${widget.orderToEdit!.orderNumber}')) : null,
         body: OrientationBuilder(builder: (context, orientation) {
           if (orientation == Orientation.landscape) {
             return Padding(
@@ -199,16 +215,20 @@ class _OrderScreenState extends State<OrderScreen> {
             child: Center(
               child: ElevatedButton(
                 onPressed: () {
-                  _createOrder();
+                  _saveOrder();
                 },
                 style: ElevatedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   textStyle: const TextStyle(fontSize: 18),
-                  backgroundColor: Colors.orangeAccent,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
-                child: const Text('Create Order',
-                    style: TextStyle(color: Colors.black45)),
+                child: Text(
+                  widget.orderToEdit != null ? 'Update Order' : 'Create Order',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary),
+                ),
               ),
             ),
           ),
@@ -216,34 +236,67 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  void _createOrder() async {
-    // 1. Access the OrderCounter box
-    final orderCounter = _orderCounterBox.getAll().first;
-
-    // 1. Create an order object
-    final order = Ruci(
-      date: DateTime.now(),
-      orderNumber: orderCounter.value, // 3. Assign counter value to orderNumber
-    );
-    // 2. Add the order items to the order
-    for (final item in _cart) {
-      order.items.add(item);
-    }
-    // 4. Store the order in the database
-    // Assuming you have a Box<Order> called _orderBox
+  void _saveOrder() async {
     final orderBox = widget.objectbox.store.box<Ruci>();
-    orderBox.put(order);
-    // 5. Increment the counter value
-    orderCounter.value += 1;
-    _orderCounterBox.put(orderCounter);
-    // 4. Send the order as a receipt to the printer via TCP/IP
-    //  _printReceipt(order);
+    Ruci order;
 
-    //  _printReceipt(order);
-    // 5. Clear the cart
-    setState(() {
-      _cart.clear();
-    });
+    if (widget.orderToEdit != null) {
+      // EDIT MODE
+      order = widget.orderToEdit!;
+      
+      // 1. Identify items to remove (orphans)
+      // We can't just clear relation, we should remove the actual OrderItem entities
+      // to avoid filling DB with unused items.
+      final itemsToRemove = order.items.toList(); 
+      order.items.clear();
+      // Apply to DB to unlink
+      orderBox.put(order); 
+      
+      // Now delete the old items from OrderItem box
+      _orderItemBox.removeMany(itemsToRemove.map((i) => i.id).toList());
+
+      // 2. Add new items from cart
+      for (final item in _cart) {
+        // These are new OrderItem instances (id=0) or reused ones. 
+        // Since we created new objects in _loadOrderForEditing or _addToCart with id=0 (implied),
+        // they will be inserted as new records.
+        order.items.add(item);
+      }
+      
+      // 3. Update Order
+      // Date can remain original or update. Let's keep original date for history accuracy.
+      orderBox.put(order);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order updated successfully!')),
+      );
+      
+       // Pop back to history screen
+      if (mounted) {
+         Navigator.of(context).pop();
+      }
+
+    } else {
+      // CREATE MODE
+      final orderCounter = _orderCounterBox.getAll().first;
+      order = Ruci(
+        date: DateTime.now(),
+        orderNumber: orderCounter.value,
+      );
+      for (final item in _cart) {
+        order.items.add(item);
+      }
+      orderBox.put(order);
+      
+      orderCounter.value += 1;
+      _orderCounterBox.put(orderCounter);
+
+      setState(() {
+        _cart.clear();
+      });
+    }
+
+    // PRINT RECEIPT (For both Create and Edit)
     final orderPayload = {
       'id': order.id,
       'dailyNumber': order.orderNumber,
@@ -257,14 +310,13 @@ class _OrderScreenState extends State<OrderScreen> {
                 'quantity': item.quantity,
                 'price': item.product.target?.price,
               })
-          .toList(), // Ensure this is a list, not a JSON string
-      'paymentMethod': 'cash', // Add a default payment method if missing
+          .toList(),
+      'paymentMethod': 'cash',
     };
     final Rdata = ReceiptData.fromJson(orderPayload);
-
     PrinterHelper.printReceipt(Rdata, widget.objectbox);
     await Future.delayed(const Duration(milliseconds: 100));
-    PrinterHelper.printReceipt(Rdata, widget.objectbox);
+    // PrinterHelper.printReceipt(Rdata, widget.objectbox); // Second print optional
   }
 }
 
