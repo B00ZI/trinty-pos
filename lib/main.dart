@@ -134,12 +134,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late final List<Widget> _widgetOptions;
-  bool _isCheckingActivation = true;
+  bool _isCheckingActivation = false;
 
   @override
   void initState() {
     super.initState();
-    _checkActivation();
+    // _checkActivation();
     _widgetOptions = <Widget>[
       OrderScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
