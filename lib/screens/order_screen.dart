@@ -315,8 +315,8 @@ class _OrderScreenState extends State<OrderScreen> {
     };
     final Rdata = ReceiptData.fromJson(orderPayload);
     PrinterHelper.printReceipt(Rdata, widget.objectbox);
-    await Future.delayed(const Duration(milliseconds: 100));
-    // PrinterHelper.printReceipt(Rdata, widget.objectbox); // Second print optional
+    await Future.delayed(const Duration(milliseconds: 1000));
+    PrinterHelper.printReceipt(Rdata, widget.objectbox); // Second print optional
   }
 }
 
