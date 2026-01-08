@@ -14,6 +14,8 @@ import '../widgets/product_item.dart'; // Import the ProductItem widget
 import 'package:objectbox/objectbox.dart';
 import '../models/order_counter.dart'; // Import OrderCounter
 import '../service/printer_helper.dart'; // Import PrinterHelper
+import '../widgets/order_details.dart'; // Import OrderDetails
+import '../widgets/comment_dialog.dart'; // Import CommentDialog
 
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -30,6 +32,8 @@ class _OrderScreenState extends State<OrderScreen> {
   late final Box<PrinterConfig> _printerConfigBox;
   late final Box<OrderCounter> _orderCounterBox;
   late final Box<OrderItem> _orderItemBox; // To manage item deletion
+  bool _isTakeAway = false;
+  String _comment = "";
 
   @override
   void initState() {
@@ -181,6 +185,25 @@ class _OrderScreenState extends State<OrderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        OrderDetails(
+          isTakeAway: _isTakeAway,
+          onTakeAwayChanged: (value) {
+            setState(() {
+              _isTakeAway = value ?? false;
+            });
+          },
+          onCommentPressed: () async {
+            final result = await showDialog<String>(
+              context: context,
+              builder: (context) => CommentDialog(initialComment: _comment),
+            );
+            if (result != null) {
+              setState(() {
+                _comment = result;
+              });
+            }
+          },
+        ),
         Expanded(
           child: _cart.isEmpty
               ? const Center(child: Text('Your cart is empty'))
@@ -314,11 +337,18 @@ class _OrderScreenState extends State<OrderScreen> {
       'paymentMethod': 'cash',
     };
     final Rdata = ReceiptData.fromJson(orderPayload);
-    final comment = "extra chocolate souce pistach "; // Example comment
      
     PrinterHelper.printReceipt(Rdata, widget.objectbox);
     await Future.delayed(const Duration(milliseconds: 1000));
-    PrinterHelper.printReceipt(Rdata, widget.objectbox,comment: comment); // Second print optional
+    PrinterHelper.printReceipt(Rdata, widget.objectbox, 
+      comment: _comment.isNotEmpty ? _comment : " Thank you for your order! Come Again!",
+      isTakeAway: _isTakeAway);
+
+    // Reset comment and takeaway after saving? Usually good practice if it's a new order.
+    setState(() {
+      _comment = "";
+      _isTakeAway = false;
+    });
   }
 }
 

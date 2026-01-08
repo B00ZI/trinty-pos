@@ -11,6 +11,7 @@ import 'package:image/image.dart' as img;
 import '../models/printer_config.dart';
 import 'package:Easify/objectbox.dart';
 import '../models/order.dart' show Ruci;
+import 'image_generatore.dart'; // Import ImageGenerator
 
 // final _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
 
@@ -135,7 +136,7 @@ class PrinterHelper {
     return printer;
   }
 
-  static Future<void> printReceipt( ReceiptData receipt, ObjectBox objectbox, {String comment=" Thank you for your order! Come Again!"}) async {
+  static Future<void> printReceipt( ReceiptData receipt, ObjectBox objectbox, {String comment=" Thank you for your order! Come Again!", bool isTakeAway = false}) async {
 
     final printer = await connectToPrinter(objectbox);
 
@@ -152,7 +153,7 @@ class PrinterHelper {
       debugPrint('Items to print: ${receipt.items}');
 
       _printItems(printer, receipt.items);
-      _printTotals(printer, receipt);
+      _printTotals(printer, receipt , isTakeAway);
       _printFooter(printer, receipt, comment);
       printer.cut(mode: PosCutMode.partial);
     } finally {
@@ -315,7 +316,7 @@ class PrinterHelper {
     printer.hr();
   }
 
-  static void _printTotals(NetworkPrinter printer, ReceiptData receipt) {
+  static void _printTotals(NetworkPrinter printer, ReceiptData receipt, bool isTakeAway) {
     final subtotal = receipt.items.fold(0.0, (sum, item) => sum + item.total);
     final total = double.tryParse(receipt.total) ?? subtotal;
 
@@ -338,6 +339,12 @@ class PrinterHelper {
 
     printer.hr();
 
+      if (isTakeAway) {
+      final takeAwayStrip = ImageGenerator.generateTakeAwayStrip();
+      printer.image(takeAwayStrip);
+      printer.feed(1);
+    }
+
     printer.text(
       'Payment: ${_formatPaymentMethod(receipt.paymentMethod)}',
       styles: const PosStyles(align: PosAlign.left, bold: true),
@@ -345,15 +352,20 @@ class PrinterHelper {
   }
 
   static void _printFooter(NetworkPrinter printer, ReceiptData receipt, String comment) {
+   
+
     printer.feed(2);
-    if(comment.isNotEmpty){
+    if(comment=="" || comment.isEmpty){
       printer.text(
-        comment,
+    "Thank you for your order! Come Again!", 
         styles: const PosStyles(align: PosAlign.center, bold: true),
       );
       printer.feed(2);
     }
-    
+    printer.text(
+        comment,
+        styles: const PosStyles(align: PosAlign.center, bold: true),
+      );
     printer.feed(2);
   }
 
