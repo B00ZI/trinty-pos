@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import '../models/printer_config.dart';
 import 'package:Easify/objectbox.dart';
-import 'package:objectbox/objectbox.dart';
 import '../models/order.dart' show Ruci;
 
 // final _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
@@ -61,8 +60,6 @@ class ReceiptData {
       items: items,
       paymentMethod: (json['payment_method'] ?? json['paymentMethod'] ?? 'cash')
           .toString(),
-      customerName: json['customer_name']?.toString(),
-      customerPhone: json['customer_phone']?.toString(),
     );
   }
 
@@ -84,8 +81,7 @@ class ReceiptData {
         );
       }).toList(),
       paymentMethod: 'cash', // Add a default payment method if needed
-      customerName: null, // Add customer name if available
-      customerPhone: null, // Add customer phone if available
+      
     );
   }
 }
@@ -139,8 +135,8 @@ class PrinterHelper {
     return printer;
   }
 
-  static Future<void> printReceipt(
-      ReceiptData receipt, ObjectBox objectbox) async {
+  static Future<void> printReceipt( ReceiptData receipt, ObjectBox objectbox, {String comment=" Thank you for your order! Come Again!"}) async {
+
     final printer = await connectToPrinter(objectbox);
 
     try {
@@ -157,7 +153,7 @@ class PrinterHelper {
 
       _printItems(printer, receipt.items);
       _printTotals(printer, receipt);
-      _printFooter(printer, receipt);
+      _printFooter(printer, receipt, comment);
       printer.cut(mode: PosCutMode.partial);
     } finally {
       printer.disconnect();
@@ -348,12 +344,16 @@ class PrinterHelper {
     );
   }
 
-  static void _printFooter(NetworkPrinter printer, ReceiptData receipt) {
+  static void _printFooter(NetworkPrinter printer, ReceiptData receipt, String comment) {
     printer.feed(2);
-    printer.text(
-      'Thank you for your order!',
-      styles: const PosStyles(align: PosAlign.center, bold: true),
-    );
+    if(comment.isNotEmpty){
+      printer.text(
+        comment,
+        styles: const PosStyles(align: PosAlign.center, bold: true),
+      );
+      printer.feed(2);
+    }
+    
     printer.feed(2);
   }
 

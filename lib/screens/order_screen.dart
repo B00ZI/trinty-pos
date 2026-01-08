@@ -314,9 +314,11 @@ class _OrderScreenState extends State<OrderScreen> {
       'paymentMethod': 'cash',
     };
     final Rdata = ReceiptData.fromJson(orderPayload);
+    final comment = "extra chocolate souce pistach "; // Example comment
+     
     PrinterHelper.printReceipt(Rdata, widget.objectbox);
     await Future.delayed(const Duration(milliseconds: 1000));
-    PrinterHelper.printReceipt(Rdata, widget.objectbox); // Second print optional
+    PrinterHelper.printReceipt(Rdata, widget.objectbox,comment: comment); // Second print optional
   }
 }
 
