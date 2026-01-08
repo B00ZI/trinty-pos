@@ -10,8 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import '../models/printer_config.dart';
 import 'package:Easify/objectbox.dart';
-import 'package:objectbox/objectbox.dart';
 import '../models/order.dart' show Ruci;
+import 'image_generatore.dart'; // Import ImageGenerator
 
 // final _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
 
@@ -61,8 +61,6 @@ class ReceiptData {
       items: items,
       paymentMethod: (json['payment_method'] ?? json['paymentMethod'] ?? 'cash')
           .toString(),
-      customerName: json['customer_name']?.toString(),
-      customerPhone: json['customer_phone']?.toString(),
     );
   }
 
@@ -84,8 +82,7 @@ class ReceiptData {
         );
       }).toList(),
       paymentMethod: 'cash', // Add a default payment method if needed
-      customerName: null, // Add customer name if available
-      customerPhone: null, // Add customer phone if available
+      
     );
   }
 }
@@ -139,8 +136,8 @@ class PrinterHelper {
     return printer;
   }
 
-  static Future<void> printReceipt(
-      ReceiptData receipt, ObjectBox objectbox) async {
+  static Future<void> printReceipt( ReceiptData receipt, ObjectBox objectbox, {String comment=" Thank you for your order! Come Again!", bool isTakeAway = false}) async {
+
     final printer = await connectToPrinter(objectbox);
 
     try {
@@ -156,8 +153,8 @@ class PrinterHelper {
       debugPrint('Items to print: ${receipt.items}');
 
       _printItems(printer, receipt.items);
-      _printTotals(printer, receipt);
-      _printFooter(printer, receipt);
+      _printTotals(printer, receipt , isTakeAway);
+      _printFooter(printer, receipt, comment);
       printer.cut(mode: PosCutMode.partial);
     } finally {
       printer.disconnect();
@@ -319,7 +316,7 @@ class PrinterHelper {
     printer.hr();
   }
 
-  static void _printTotals(NetworkPrinter printer, ReceiptData receipt) {
+  static void _printTotals(NetworkPrinter printer, ReceiptData receipt, bool isTakeAway) {
     final subtotal = receipt.items.fold(0.0, (sum, item) => sum + item.total);
     final total = double.tryParse(receipt.total) ?? subtotal;
 
@@ -342,18 +339,33 @@ class PrinterHelper {
 
     printer.hr();
 
+      if (isTakeAway) {
+      final takeAwayStrip = ImageGenerator.generateTakeAwayStrip();
+      printer.image(takeAwayStrip);
+      printer.feed(1);
+    }
+
     printer.text(
       'Payment: ${_formatPaymentMethod(receipt.paymentMethod)}',
       styles: const PosStyles(align: PosAlign.left, bold: true),
     );
   }
 
-  static void _printFooter(NetworkPrinter printer, ReceiptData receipt) {
+  static void _printFooter(NetworkPrinter printer, ReceiptData receipt, String comment) {
+   
+
     printer.feed(2);
+    if(comment=="" || comment.isEmpty){
+      printer.text(
+    "Thank you for your order! Come Again!", 
+        styles: const PosStyles(align: PosAlign.center, bold: true),
+      );
+      printer.feed(2);
+    }
     printer.text(
-      'Thank you for your order!',
-      styles: const PosStyles(align: PosAlign.center, bold: true),
-    );
+        comment,
+        styles: const PosStyles(align: PosAlign.center, bold: true),
+      );
     printer.feed(2);
   }
 
