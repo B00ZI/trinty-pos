@@ -181,6 +181,13 @@ class PrinterHelper {
         width: PosTextSize.size2,
       ),
     );
+
+    if (config?.storePhone?.isNotEmpty == true) {
+      printer.text(
+        config!.storePhone!,
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
     printer.row([
       PosColumn(
         text: 'EASIFY POS',
@@ -429,21 +436,44 @@ class PrinterHelper {
     }
   }
 
-  static Future<void> simpleTestPrint(String ipAddress, int port) async {
-    final profile = await CapabilityProfile.load();
-    final printer = NetworkPrinter(PaperSize.mm80, profile);
-    final result = await printer.connect(ipAddress, port: port);
+  static Future<void> printStoreConfig(ObjectBox objectbox) async {
+    final printer = await connectToPrinter(objectbox);
 
-    if (result == PosPrintResult.success) {
-      try {
-        printer.text('Test Print\n\n\n');
-        printer.feed(2);
-        printer.cut(mode: PosCutMode.partial);
-      } finally {
-        printer.disconnect();
-      }
-    } else {
-      throw Exception('Failed to connect: $result');
+    try {
+      final storeConfigBox = objectbox.store.box<StoreConfig>();
+      final storeConfig = storeConfigBox.getAll().isNotEmpty 
+          ? storeConfigBox.getAll().first 
+          : null;
+
+      printer.reset();
+      
+      // Print logo and store name/phone using the header logic (minimal receipt data)
+      final dummyReceipt = ReceiptData(
+        id: 'CONFIG-TEST',
+        dailyNumber: '00',
+        createdAt: DateTime.now().toIso8601String(),
+        total: '0.00',
+        items: [],
+        paymentMethod: 'TEST',
+      );
+
+      await _printHeader(printer, dummyReceipt, storeConfig);
+      
+      printer.feed(2);
+      printer.text(
+        'STORE CONFIGURATION TEST',
+        styles: const PosStyles(align: PosAlign.center, bold: true),
+      );
+      printer.feed(1);
+      printer.text(
+        '✅ Connection: OK',
+        styles: const PosStyles(align: PosAlign.center),
+      );
+      
+      printer.feed(3);
+      printer.cut(mode: PosCutMode.partial);
+    } finally {
+      printer.disconnect();
     }
   }
 

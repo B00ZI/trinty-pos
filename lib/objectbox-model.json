@@ -178,7 +178,7 @@
     },
     {
       "id": "8:8382040067926750167",
-      "lastPropertyId": "3:2275399429650238122",
+      "lastPropertyId": "4:1895794657527752576",
       "name": "StoreConfig",
       "properties": [
         {
@@ -195,6 +195,11 @@
         {
           "id": "3:2275399429650238122",
           "name": "storeLogoPath",
+          "type": 9
+        },
+        {
+          "id": "4:1895794657527752576",
+          "name": "storePhone",
           "type": 9
         }
       ],

@@ -158,7 +158,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 8),
               StoreConfigWidget(
-                  storeConfigBox: widget.objectbox.storeConfigBox),
+                  objectbox: widget.objectbox),
             ],
           ),
         ),

@@ -4,13 +4,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../models/store_config.dart'; // Make sure this import is correct based on your file structure
+import '../objectbox.dart';
 import '../objectbox.g.dart'; // This will be generated
 import 'package:objectbox/objectbox.dart';
+import '../service/printer_helper.dart';
 
 class StoreConfigWidget extends StatefulWidget {
-  final Box<StoreConfig> storeConfigBox;
+  final ObjectBox objectbox;
 
-  const StoreConfigWidget({super.key, required this.storeConfigBox});
+  const StoreConfigWidget({super.key, required this.objectbox});
 
   @override
   State<StoreConfigWidget> createState() => _StoreConfigWidgetState();
@@ -19,6 +21,7 @@ class StoreConfigWidget extends StatefulWidget {
 class _StoreConfigWidgetState extends State<StoreConfigWidget> {
   final _formKey = GlobalKey<FormState>();
   final _storeNameController = TextEditingController();
+  final _storePhoneController = TextEditingController();
   File? _logoImage;
   final ImagePicker _picker = ImagePicker();
   StoreConfig? _currentConfig;
@@ -30,10 +33,11 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
   }
 
   void _loadConfig() {
-    final configs = widget.storeConfigBox.getAll();
+    final configs = widget.objectbox.storeConfigBox.getAll();
     if (configs.isNotEmpty) {
       _currentConfig = configs.first;
       _storeNameController.text = _currentConfig?.storeName ?? '';
+      _storePhoneController.text = _currentConfig?.storePhone ?? '';
       if (_currentConfig?.storeLogoPath != null) {
         final file = File(_currentConfig!.storeLogoPath!);
         if (file.existsSync()) {
@@ -73,12 +77,13 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
     if (_formKey.currentState!.validate()) {
       final config = _currentConfig ?? StoreConfig();
       config.storeName = _storeNameController.text;
+      config.storePhone = _storePhoneController.text;
       config.storeLogoPath = _logoImage?.path;
       
       // If we're updating, we need to make sure we keep the ID if it was loaded
       // StoreConfig object from objectbox usually has ID if it was read from box
       
-      widget.storeConfigBox.put(config);
+      widget.objectbox.storeConfigBox.put(config);
       
       // Reload current config to ensure we have the latest state (like ID)
       _currentConfig = config;
@@ -94,6 +99,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
   @override
   void dispose() {
     _storeNameController.dispose();
+    _storePhoneController.dispose();
     super.dispose();
   }
 
@@ -122,6 +128,20 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter store name';
+                  }
+                  return null;
+                },
+              ),const SizedBox(height: 16),
+              TextFormField(
+                controller: _storePhoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Store Phone Number',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.phone),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter store phone number';
                   }
                   return null;
                 },
@@ -165,17 +185,34 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                 ],
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => PrinterHelper.printStoreConfig(widget.objectbox),
+                      icon: const Icon(Icons.print),
+                      label: const Text('Print Test'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                        foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
+                    ),
                   ),
-                  onPressed: _saveConfig,
-                  child: const Text('Save Store Details'),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _saveConfig,
+                      icon: const Icon(Icons.save),
+                      label: const Text('Save Details'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

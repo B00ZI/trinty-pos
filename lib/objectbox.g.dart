@@ -228,7 +228,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(8, 8382040067926750167),
     name: 'StoreConfig',
-    lastPropertyId: const obx_int.IdUid(3, 2275399429650238122),
+    lastPropertyId: const obx_int.IdUid(4, 1895794657527752576),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -246,6 +246,12 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(3, 2275399429650238122),
         name: 'storeLogoPath',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 1895794657527752576),
+        name: 'storePhone',
         type: 9,
         flags: 0,
       ),
@@ -626,10 +632,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
             object.storeLogoPath == null
                 ? null
                 : fbb.writeString(object.storeLogoPath!);
-        fbb.startTable(4);
+        final storePhoneOffset =
+            object.storePhone == null
+                ? null
+                : fbb.writeString(object.storePhone!);
+        fbb.startTable(5);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, storeNameOffset);
         fbb.addOffset(2, storeLogoPathOffset);
+        fbb.addOffset(3, storePhoneOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -645,12 +656,16 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final storeNameParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 6);
+        final storePhoneParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 10);
         final storeLogoPathParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 8);
         final object = StoreConfig(
           id: idParam,
           storeName: storeNameParam,
+          storePhone: storePhoneParam,
           storeLogoPath: storeLogoPathParam,
         );
 
@@ -806,5 +821,10 @@ class StoreConfig_ {
   /// See [StoreConfig.storeLogoPath].
   static final storeLogoPath = obx.QueryStringProperty<StoreConfig>(
     _entities[6].properties[2],
+  );
+
+  /// See [StoreConfig.storePhone].
+  static final storePhone = obx.QueryStringProperty<StoreConfig>(
+    _entities[6].properties[3],
   );
 }
