@@ -7,6 +7,7 @@ class OrderItem {
   int id;
 
   final ToOne<Product> product = ToOne<Product>();
+  final ToMany<Product> extras = ToMany<Product>();
   int quantity;
 
   OrderItem({

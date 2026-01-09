@@ -236,7 +236,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   double calculateItemTotal(OrderItem item) {
-    return item.quantity * (item.product.target?.price ?? 0).toDouble();
+    double total = item.quantity * (item.product.target?.price ?? 0).toDouble();
+    for (final extra in item.extras) {
+      total += extra.price;
+    }
+    return total;
   }
 
   @override
@@ -333,8 +337,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       for (final item in order.items)
                         Padding(
                           padding: const EdgeInsets.only(left: 16.0),
-                          child: Text(
-                              '- ${item.product.target != null ? item.product.target!.name : 'Deleted Product'}: ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  '- ${item.product.target != null ? item.product.target!.name : 'Deleted Product'}: ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
+                              if (item.extras.isNotEmpty)
+                                for (final extra in item.extras)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 16.0),
+                                    child: Text(
+                                      '  + ${extra.name}: ${extra.price} DH',
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ),
+                            ],
+                          ),
                         ),
                       const SizedBox(height: 8),
                       Row(

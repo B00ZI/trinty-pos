@@ -34,6 +34,9 @@ class _OrderScreenState extends State<OrderScreen> {
   late final Box<OrderItem> _orderItemBox; // To manage item deletion
   bool _isTakeAway = false;
   String _comment = "";
+  
+  String? _categoryFilter; // null means show all NON-'Extra' products
+  OrderItem? _activeParentForExtras; // item getting the extras
 
   @override
   void initState() {
@@ -62,6 +65,14 @@ class _OrderScreenState extends State<OrderScreen> {
 
   void _addToCart(Product product) {
     setState(() {
+      if (_activeParentForExtras != null) {
+        // Adding an EXTRA to a specific item
+        _activeParentForExtras!.extras.add(product);
+        // Automatically clear filter after adding an extra? 
+        // User might want to add more than one. Let's keep it for now.
+        return;
+      }
+
       final existingItem = _cart.firstWhere(
           (item) => item.product.target?.id == product.id, orElse: () {
         final newItem = OrderItem(quantity: 0);
@@ -93,7 +104,11 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   double calculateItemTotal(OrderItem item) {
-    return item.quantity * (item.product.target?.price ?? 0).toDouble();
+    double total = item.quantity * (item.product.target?.price ?? 0).toDouble();
+    for (final extra in item.extras) {
+      total += extra.price;
+    }
+    return total;
   }
 
   @override
@@ -144,40 +159,72 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   Widget _buildProductGrid() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: StreamBuilder<List<Product>>(
-        stream: _productBox
-            .query()
-            .watch(triggerImmediately: true)
-            .map((query) => query.find()),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+    return Column(
+      children: [
+        if (_categoryFilter != null)
+           Padding(
+             padding: const EdgeInsets.all(8.0),
+             child: Row(
+               children: [
+                 Text('Editing Extras for: ${_activeParentForExtras?.product.target?.name ?? "Item"}', 
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                 const Spacer(),
+                 TextButton.icon(
+                   onPressed: () {
+                     setState(() {
+                       _categoryFilter = null;
+                       _activeParentForExtras = null;
+                     });
+                   }, 
+                   icon: const Icon(Icons.close), 
+                   label: const Text('Finish Extras')
+                 )
+               ],
+             ),
+           ),
+        Expanded(
+          child: StreamBuilder<List<Product>>(
+            stream: _productBox
+                .query()
+                .watch(triggerImmediately: true)
+                .map((query) => query.find()),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+          
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+          
+              final allProducts = snapshot.data!;
+              final products = allProducts.where((p) {
+                if (_categoryFilter != null) {
+                  return p.category == _categoryFilter;
+                } else {
+                  return p.category != 'Extra'; // Default: hide extras
+                }
+              }).toList();
 
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final products = snapshot.data!;
-          return GridView.builder(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 200,
-                crossAxisSpacing: 8.0,
-                mainAxisSpacing: 8.0,
-                childAspectRatio: 1.8,
-              ),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return ProductItem(
-                  product: product,
-                  onAddToCart: _addToCart,
-                );
-              });
-        },
-      ),
+              return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 200,
+                    crossAxisSpacing: 8.0,
+                    mainAxisSpacing: 8.0,
+                    childAspectRatio: 1.8,
+                  ),
+                  itemCount: products.length,
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+                    return ProductItem(
+                      product: product,
+                      onAddToCart: _addToCart,
+                    );
+                  });
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -211,21 +258,77 @@ class _OrderScreenState extends State<OrderScreen> {
                   itemCount: _cart.length,
                   itemBuilder: (context, index) {
                     final item = _cart[index];
-                    return ListTile(
-                      leading: Text(item.quantity.toString(),
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      title: Text(getProductName(item)),
-                      trailing: SizedBox(
-                        width: 100,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    return Dismissible(
+                      key: Key('cart_item_${item.product.target?.id}_$index'),
+                      direction: DismissDirection.horizontal,
+                      onDismissed: (direction) {
+                        setState(() {
+                          _cart.removeAt(index);
+                        });
+                      },
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      secondaryBackground: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Column(
                           children: [
-                            Text(
-                                '\$${calculateItemTotal(item).toStringAsFixed(2)}'),
-                            IconButton(
-                                onPressed: () => _removeItem(index),
-                                icon: const Icon(Icons.close)),
+                            ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                child: Text(item.quantity.toString(),
+                                    style: TextStyle(
+                                        fontSize: 16, 
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                              ),
+                              title: Text(getProductName(item), style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text('\$${calculateItemTotal(item).toStringAsFixed(2)}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                                onPressed: () {
+                                  setState(() {
+                                    _categoryFilter = 'Extra';
+                                    _activeParentForExtras = item;
+                                  });
+                                },
+                              ),
+                            ),
+                            if (item.extras.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 56.0, bottom: 8.0, right: 16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: item.extras.map((extra) => Row(
+                                    children: [
+                                      const Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Text(extra.name, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                      const Spacer(),
+                                      Text('\$${extra.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            item.extras.remove(extra);
+                                          });
+                                        },
+                                        child: const Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
+                                      )
+                                    ],
+                                  )).toList(),
+                                ),
+                              )
                           ],
                         ),
                       ),
@@ -332,6 +435,14 @@ class _OrderScreenState extends State<OrderScreen> {
                 'title': item.product.target?.name,
                 'quantity': item.quantity,
                 'price': item.product.target?.price,
+                'extras': item.extras
+                    .map((extra) => {
+                          'id': extra.id,
+                          'title': extra.name,
+                          'quantity': 1,
+                          'price': extra.price,
+                        })
+                    .toList(),
               })
           .toList(),
       'paymentMethod': 'cash',

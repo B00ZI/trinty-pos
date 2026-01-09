@@ -92,12 +92,14 @@ class ReceiptItem {
   final String title;
   final int quantity;
   final double price;
+  final List<ReceiptItem> extras;
 
   ReceiptItem({
     required this.id,
     required this.title,
     required this.quantity,
     required this.price,
+    this.extras = const [],
   });
 
   factory ReceiptItem.fromJson(Map<String, dynamic> json) {
@@ -106,10 +108,24 @@ class ReceiptItem {
       title: (json['title'] ?? json['name'] ?? '').toString(),
       quantity: int.tryParse(json['quantity']?.toString() ?? '1') ?? 1,
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      extras: (json['extras'] as List?)
+              ?.map((e) => ReceiptItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
-  double get total => quantity * price;
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'quantity': quantity,
+      'price': price,
+      'extras': extras.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  double get total => (quantity * price) + extras.fold(0.0, (sum, e) => sum + e.price);
 }
 
 class PrinterHelper {
@@ -318,6 +334,21 @@ class PrinterHelper {
           styles: const PosStyles(align: PosAlign.right, bold: true),
         ),
       ]);
+
+      for (final extra in item.extras) {
+        printer.row([
+          PosColumn(
+            text: '  + ${extra.title}',
+            width: 8,
+            styles: const PosStyles(align: PosAlign.left),
+          ),
+          PosColumn(
+            text: '${extra.price.toStringAsFixed(2)} DH',
+            width: 4,
+            styles: const PosStyles(align: PosAlign.right),
+          ),
+        ]);
+      }
     }
 
     printer.hr();

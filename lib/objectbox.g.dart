@@ -104,7 +104,13 @@ final _entities = <obx_int.ModelEntity>[
         flags: 0,
       ),
     ],
-    relations: <obx_int.ModelRelation>[],
+    relations: <obx_int.ModelRelation>[
+      obx_int.ModelRelation(
+        id: const obx_int.IdUid(3, 14140742415403822),
+        name: 'extras',
+        targetId: const obx_int.IdUid(1, 7649823169092191057),
+      ),
+    ],
     backlinks: <obx_int.ModelBacklink>[],
   ),
   obx_int.ModelEntity(
@@ -301,7 +307,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
     entities: _entities,
     lastEntityId: const obx_int.IdUid(8, 8382040067926750167),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
-    lastRelationId: const obx_int.IdUid(2, 4326529116841583281),
+    lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [8743093086059233857],
     retiredIndexUids: const [],
@@ -398,7 +404,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
     OrderItem: obx_int.EntityDefinition<OrderItem>(
       model: _entities[1],
       toOneRelations: (OrderItem object) => [object.product],
-      toManyRelations: (OrderItem object) => {},
+      toManyRelations:
+          (OrderItem object) => {
+            obx_int.RelInfo<OrderItem>.toMany(3, object.id): object.extras,
+          },
       getId: (OrderItem object) => object.id,
       setId: (OrderItem object, int id) {
         object.id = id;
@@ -434,6 +443,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
           0,
         );
         object.product.attach(store);
+        obx_int.InternalToManyAccess.setRelInfo<OrderItem>(
+          object.extras,
+          store,
+          obx_int.RelInfo<OrderItem>.toMany(3, object.id),
+        );
         return object;
       },
     ),
@@ -730,6 +744,11 @@ class OrderItem_ {
   /// See [OrderItem.quantity].
   static final quantity = obx.QueryIntegerProperty<OrderItem>(
     _entities[1].properties[2],
+  );
+
+  /// see [OrderItem.extras]
+  static final extras = obx.QueryRelationToMany<OrderItem, Product>(
+    _entities[1].relations[0],
   );
 }
 

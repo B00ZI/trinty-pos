@@ -4,13 +4,15 @@ import 'package:Easify/models/product.dart';
 class ProductItem extends StatelessWidget {
   final Product product;
   final void Function(Product) onAddToCart;
-  final void Function(Product)? onDelete; // Make onDelete optional
+  final void Function(Product)? onDelete;
+  final void Function(Product)? onEdit;
 
   const ProductItem({
     super.key,
     required this.product,
     required this.onAddToCart,
-    this.onDelete, // Marked as optional
+    this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -46,7 +48,12 @@ class ProductItem extends StatelessWidget {
                   ],
                 ),
               ),
-              // Only show delete button if callback is provided
+              // Actions
+              if (onEdit != null)
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => onEdit!(product),
+                ),
               if (onDelete != null)
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),

@@ -17,6 +17,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
+  final _categoryController = TextEditingController();
 
   @override
   void initState() {
@@ -28,20 +29,25 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void dispose() {
     _nameController.dispose();
     _priceController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
-  void _addProduct() {
+  void _saveProduct(Product? originalProduct) {
     if (_formKey.currentState!.validate()) {
-      final product = Product(
-        name: _nameController.text,
-        price: double.parse(_priceController.text),
-      );
+      final product = originalProduct ?? Product(name: '', price: 0);
+      product.name = _nameController.text;
+      product.price = double.parse(_priceController.text);
+      product.category = _categoryController.text.isNotEmpty ? _categoryController.text : null;
+      
       _productBox.put(product);
+      
       _nameController.clear();
       _priceController.clear();
+      _categoryController.clear();
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product added successfully!')),
+        SnackBar(content: Text(originalProduct == null ? 'Product added successfully!' : 'Product updated successfully!')),
       );
     }
   }
@@ -53,50 +59,69 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  void _showAddProductDialog(BuildContext context) {
+  void _showProductDialog(BuildContext context, [Product? product]) {
+    if (product != null) {
+      _nameController.text = product.name;
+      _priceController.text = product.price.toString();
+      _categoryController.text = product.category ?? '';
+    } else {
+      _nameController.clear();
+      _priceController.clear();
+      _categoryController.clear();
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add New Product'),
+        title: Text(product == null ? 'Add New Product' : 'Edit Product'),
         content: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Product Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a product name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a price';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Product Name'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a product name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _priceController,
+                  decoration: const InputDecoration(labelText: 'Price'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a price';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _categoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    hintText: "e.g. 'Extra', 'Drink', 'Food'",
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text('Cancel',
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -105,13 +130,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
             onPressed: () {
               if (_formKey.currentState!.validate()) {
-                _addProduct();
+                _saveProduct(product);
                 Navigator.of(ctx).pop();
               }
             },
-            child: Text('Add',
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text(product == null ? 'Add' : 'Update'),
           ),
         ],
       ),
@@ -152,13 +175,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     product: products[index],
                     onAddToCart: (product) {}, // Not used in management screen
                     onDelete: _deleteProduct, // Delete enabled here
+                    onEdit: (product) => _showProductDialog(context, product),
                   ),
                 );
         },
       ),
       // Add Floating Action Button at bottom right with orange accent
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddProductDialog(context),
+        onPressed: () => _showProductDialog(context),
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
