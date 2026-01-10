@@ -24,7 +24,7 @@ class ImageGenerator {
       img.arial_24,
       (width - (9 * 14)) ~/ 2, // Centered (approximate width calculation)
       (height - 24) ~/ 2,
-      'TAKE AWAY',
+      'IN HOUSE',
       color: white,
     );
 

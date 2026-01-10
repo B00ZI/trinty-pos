@@ -20,6 +20,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
         ),
         content: SizedBox(
           width: double.maxFinite,
+          height: MediaQuery.of(context).size.height * 0.6, // Constrain height for scrolling
           child: dailyData.isEmpty
               ? const Center(
                   child: Text(
@@ -27,10 +28,13 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 )
-              : SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+              : Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                       // Header
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -153,37 +157,40 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                             ),
                           )),
                       const SizedBox(height: 16),
-
-                      // Summary
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Gaines:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              '${(_calculateTotalRevenue(dailyData) - _calculateTotalExpenses(dailyData))} DH',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
+                    const SizedBox(height: 12),
+                    // Summary (Sticky at bottom)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'General Total:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '${(_calculateTotalRevenue(dailyData) - _calculateTotalExpenses(dailyData)).toStringAsFixed(2)} DH',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
         ),
         actions: [
@@ -286,6 +293,10 @@ Future<double> _getDayRevenue(
       if (product == null) continue;
 
       total += product.price * item.quantity;
+      // Include EXTRAS in revenue
+      for (final extra in item.extras) {
+        total += extra.price;
+      }
     }
   }
 
@@ -304,11 +315,7 @@ Future<double> _getDayExpenses(
 
   double total = 0.0;
   for (final e in sameDayExpenses) {
-    final amt = e.amount;
-    if (amt is Future<double>) {
-      total += amt;
-    } else    total += amt;
-  
+    total += e.amount;
   }
 
   return total;

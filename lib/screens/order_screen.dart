@@ -338,15 +338,17 @@ class _OrderScreenState extends State<OrderScreen> {
         if (_cart.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Center(
-              child: ElevatedButton(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
                 onPressed: () {
                   _saveOrder();
                 },
                 style: ElevatedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18),
+                  textStyle: const TextStyle(fontSize: 18), 
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
@@ -356,7 +358,24 @@ class _OrderScreenState extends State<OrderScreen> {
                       color: Theme.of(context).colorScheme.onPrimary),
                 ),
               ),
-            ),
+              ElevatedButton(
+                onPressed: () {
+                  _saveOrder();
+                },
+                style: ElevatedButton.styleFrom( 
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  textStyle: const TextStyle(fontSize: 18), 
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+                child: Text(
+                  widget.orderToEdit != null ? 'Update Order' : 'singel Ticket',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary),
+                ),
+              ),
+            ],),
           ),
       ],
     );
