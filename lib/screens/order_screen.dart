@@ -124,7 +124,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 children: [
                   Expanded(
                     flex: 3, // Product grid takes 3 parts of the space
-                    child: _buildProductGrid(),
+                    child: _buildProductGrid(), 
                   ),
                   const SizedBox(width: 8.0), // Space between grid and summary
                   Expanded(
@@ -284,13 +284,32 @@ class _OrderScreenState extends State<OrderScreen> {
                         child: Column(
                           children: [
                             ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                child: Text(item.quantity.toString(),
-                                    style: TextStyle(
-                                        fontSize: 16, 
+                              leading: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildQuantityButton(
+                                    icon: Icons.remove, 
+                                    onPressed: () => _removeItem(index),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                    child: Text(
+                                      item.quantity.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 14,
                                         fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                                      ),
+                                    ),
+                                  ),
+                                  _buildQuantityButton(
+                                    icon: Icons.add,
+                                    onPressed: () {
+                                      setState(() {
+                                        item.quantity++;
+                                      });
+                                    },
+                                  ),
+                                ],
                               ),
                               title: Text(getProductName(item), style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: Text('\$${calculateItemTotal(item).toStringAsFixed(2)}'),
@@ -337,45 +356,44 @@ class _OrderScreenState extends State<OrderScreen> {
         ),
         if (_cart.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ElevatedButton(
-                onPressed: () {
-                  _saveOrder();
-                },
-                style: ElevatedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18), 
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _saveOrder,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                    child: Text(
+                      widget.orderToEdit != null ? 'Update Order' : 'Create Order',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-                child: Text(
-                  widget.orderToEdit != null ? 'Update Order' : 'Create Order',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _printSingleTicket,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                      foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0, // Less prominent than primary action
+                    ),
+                    child: const Text(
+                      'Single Ticket',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  _saveOrder();
-                },
-                style: ElevatedButton.styleFrom( 
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18), 
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                ),
-                child: Text(
-                  widget.orderToEdit != null ? 'Update Order' : 'singel Ticket',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary),
-                ),
-              ),
-            ],),
+              ],
+            ),
           ),
       ],
     );
@@ -471,7 +489,7 @@ class _OrderScreenState extends State<OrderScreen> {
     PrinterHelper.printReceipt(Rdata, widget.objectbox);
     await Future.delayed(const Duration(milliseconds: 1000));
     PrinterHelper.printReceipt(Rdata, widget.objectbox, 
-      comment: _comment.isNotEmpty ? _comment : " Thank you for your order! Come Again!",
+      comment: _comment.isNotEmpty ? _comment : "",
       isTakeAway: _isTakeAway);
 
     // Reset comment and takeaway after saving? Usually good practice if it's a new order.
@@ -479,6 +497,124 @@ class _OrderScreenState extends State<OrderScreen> {
       _comment = "";
       _isTakeAway = false;
     });
+  }
+
+  void _printSingleTicket() async {
+    final orderBox = widget.objectbox.store.box<Ruci>();
+    Ruci order;
+
+    if (widget.orderToEdit != null) {
+      // EDIT MODE
+      order = widget.orderToEdit!;
+      
+      // 1. Identify items to remove (orphans)
+      // We can't just clear relation, we should remove the actual OrderItem entities
+      // to avoid filling DB with unused items.
+      final itemsToRemove = order.items.toList(); 
+      order.items.clear();
+      // Apply to DB to unlink
+      orderBox.put(order); 
+      
+      // Now delete the old items from OrderItem box
+      _orderItemBox.removeMany(itemsToRemove.map((i) => i.id).toList());
+
+      // 2. Add new items from cart
+      for (final item in _cart) {
+        // These are new OrderItem instances (id=0) or reused ones. 
+        // Since we created new objects in _loadOrderForEditing or _addToCart with id=0 (implied),
+        // they will be inserted as new records.
+        order.items.add(item);
+      }
+      
+      // 3. Update Order
+      // Date can remain original or update. Let's keep original date for history accuracy.
+      orderBox.put(order);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order updated successfully!')),
+      );
+      
+       // Pop back to history screen
+      if (mounted) {
+         Navigator.of(context).pop();
+      }
+
+    } else {
+      // CREATE MODE
+      final orderCounter = _orderCounterBox.getAll().first;
+      order = Ruci(
+        date: DateTime.now(),
+        orderNumber: orderCounter.value,
+      );
+      for (final item in _cart) {
+        order.items.add(item);
+      }
+      orderBox.put(order);
+      
+      orderCounter.value += 1;
+      _orderCounterBox.put(orderCounter);
+
+      setState(() {
+        _cart.clear();
+      });
+    }
+
+    // PRINT RECEIPT (For both Create and Edit)
+    final orderPayload = {
+      'id': order.id,
+      'dailyNumber': order.orderNumber,
+      'createdat': order.date.toIso8601String(),
+      'total':
+          order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)),
+      'items': order.items
+          .map((item) => {
+                'id': item.product.target?.id,
+                'title': item.product.target?.name,
+                'quantity': item.quantity,
+                'price': item.product.target?.price,
+                'extras': item.extras
+                    .map((extra) => {
+                          'id': extra.id,
+                          'title': extra.name,
+                          'quantity': 1,
+                          'price': extra.price,
+                        })
+                    .toList(),
+              })
+          .toList(),
+      'paymentMethod': 'cash',
+    };
+    final Rdata = ReceiptData.fromJson(orderPayload);
+     
+    // PrinterHelper.printReceipt(Rdata, widget.objectbox);
+    await Future.delayed(const Duration(milliseconds: 1000));
+    PrinterHelper.printReceipt(Rdata, widget.objectbox, 
+      comment: _comment.isNotEmpty ? _comment : "",
+      isTakeAway: _isTakeAway);
+
+    // Reset comment and takeaway after saving? Usually good practice if it's a new order.
+    setState(() {
+      _comment = "";
+      _isTakeAway = false;
+    });
+  }
+
+  Widget _buildQuantityButton({required IconData icon, required VoidCallback onPressed}) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.15),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          size: 12,
+          color: Colors.black87,
+        ),
+      ),
+    );
   }
 }
 

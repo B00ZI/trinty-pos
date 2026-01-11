@@ -152,7 +152,7 @@ class PrinterHelper {
     return printer;
   }
 
-  static Future<void> printReceipt( ReceiptData receipt, ObjectBox objectbox, {String comment=" Thank you for your order! Come Again!", bool isTakeAway = false}) async {
+  static Future<void> printReceipt( ReceiptData receipt, ObjectBox objectbox, {String comment="", bool isTakeAway = false}) async {
 
     final printer = await connectToPrinter(objectbox);
 
@@ -163,14 +163,14 @@ class PrinterHelper {
           : null;
 
       printer.reset();
-      await _printHeader(printer, receipt, storeConfig);
+      await _printHeader(printer, receipt, storeConfig, comment);
 
       // Debug: Check items before printing
       debugPrint('Items to print: ${receipt.items}');
 
       _printItems(printer, receipt.items);
       _printTotals(printer, receipt , isTakeAway);
-      _printFooter(printer, receipt, comment);
+      _printFooter(printer, receipt);
       printer.cut(mode: PosCutMode.partial);
     } finally {
       printer.disconnect();
@@ -181,6 +181,7 @@ class PrinterHelper {
     NetworkPrinter printer,
     ReceiptData receipt,
     StoreConfig? config,
+    String comment
   ) async {
     await _printLogoImage(printer, config?.storeLogoPath);
 
@@ -221,6 +222,18 @@ class PrinterHelper {
         styles: const PosStyles(align: PosAlign.right),
       ),
     ]);
+    if (comment.isNotEmpty) {
+      printer.hr();
+      printer.text(
+        comment,
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+        ),
+      );
+    }
     printer.hr();
 
     printer.row([
@@ -389,21 +402,16 @@ class PrinterHelper {
     );
   }
 
-  static void _printFooter(NetworkPrinter printer, ReceiptData receipt, String comment) {
+  static void _printFooter(NetworkPrinter printer, ReceiptData receipt,) {
    
 
     printer.feed(2);
-    if(comment=="" || comment.isEmpty){
+   
       printer.text(
     "Thank you for your order! Come Again!", 
         styles: const PosStyles(align: PosAlign.center, bold: true),
       );
-      printer.feed(2);
-    }
-    printer.text(
-        comment,
-        styles: const PosStyles(align: PosAlign.center, bold: true),
-      );
+  
     printer.feed(2);
   }
 
@@ -487,8 +495,9 @@ class PrinterHelper {
         items: [],
         paymentMethod: 'TEST',
       );
+      final comment = ''; 
 
-      await _printHeader(printer, dummyReceipt, storeConfig);
+      await _printHeader(printer, dummyReceipt, storeConfig, comment);
       
       printer.feed(2);
       printer.text(
