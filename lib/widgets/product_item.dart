@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:Easify/models/product.dart';
+import 'dart:io';
 
 class ProductItem extends StatelessWidget {
   final Product product;
@@ -25,6 +26,20 @@ class ProductItem extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
+              // Product Image
+              if (product.imageUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(product.imageUrl!),
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
               // Product details
               Expanded(
                 child: Column(

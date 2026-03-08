@@ -50,7 +50,7 @@ class _ActivationDialogState extends State<ActivationDialog> {
     // Small delay for UI feedback
     await Future.delayed(const Duration(milliseconds: 500));
 
-    final isValid = await ActivationService.verifyActivationKey(key);
+    final isValid = await ActivationService.verifyKey(key);
 
     if (isValid) {
       await ActivationService.saveActivationKey(key);
@@ -59,7 +59,7 @@ class _ActivationDialogState extends State<ActivationDialog> {
       if (mounted) {
         setState(() {
           _isValidating = false;
-          _errorMessage = "Invalid activation key for this device.";
+          _errorMessage = "Invalid key for this device. Please try again.";
         });
       }
     }

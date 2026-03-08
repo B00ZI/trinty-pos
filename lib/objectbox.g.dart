@@ -14,6 +14,7 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import 'models/catigory.dart';
 import 'models/expence.dart';
 import 'models/order.dart';
 import 'models/order_counter.dart';
@@ -265,6 +266,34 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(9, 2621355858066362497),
+    name: 'Catigory',
+    lastPropertyId: const obx_int.IdUid(3, 1815411420379856413),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 5300239888405535330),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 2160292034632863541),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 1815411420379856413),
+        name: 'imageUrl',
+        type: 9,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -305,7 +334,7 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(8, 8382040067926750167),
+    lastEntityId: const obx_int.IdUid(9, 2621355858066362497),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
     lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
@@ -686,6 +715,49 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    Catigory: obx_int.EntityDefinition<Catigory>(
+      model: _entities[7],
+      toOneRelations: (Catigory object) => [],
+      toManyRelations: (Catigory object) => {},
+      getId: (Catigory object) => object.id,
+      setId: (Catigory object, int id) {
+        object.id = id;
+      },
+      objectToFB: (Catigory object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final imageUrlOffset =
+            object.imageUrl == null ? null : fbb.writeString(object.imageUrl!);
+        fbb.startTable(4);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addOffset(2, imageUrlOffset);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final imageUrlParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 8);
+        final object = Catigory(
+          id: idParam,
+          name: nameParam,
+          imageUrl: imageUrlParam,
+        );
+
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -845,5 +917,23 @@ class StoreConfig_ {
   /// See [StoreConfig.storePhone].
   static final storePhone = obx.QueryStringProperty<StoreConfig>(
     _entities[6].properties[3],
+  );
+}
+
+/// [Catigory] entity fields to define ObjectBox queries.
+class Catigory_ {
+  /// See [Catigory.id].
+  static final id = obx.QueryIntegerProperty<Catigory>(
+    _entities[7].properties[0],
+  );
+
+  /// See [Catigory.name].
+  static final name = obx.QueryStringProperty<Catigory>(
+    _entities[7].properties[1],
+  );
+
+  /// See [Catigory.imageUrl].
+  static final imageUrl = obx.QueryStringProperty<Catigory>(
+    _entities[7].properties[2],
   );
 }

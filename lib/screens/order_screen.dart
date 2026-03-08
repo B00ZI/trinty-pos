@@ -10,7 +10,7 @@ import '../models/order.dart';
 import '../models/order_item.dart';
 import '../models/product.dart';
 import 'package:Easify/objectbox.dart';
-import '../widgets/product_item.dart'; // Import the ProductItem widget
+import '../widgets/product_card.dart'; // Import the ProductCard widget
 import 'package:objectbox/objectbox.dart';
 import '../models/order_counter.dart'; // Import OrderCounter
 import '../service/printer_helper.dart'; // Import PrinterHelper
@@ -20,7 +20,8 @@ import '../widgets/comment_dialog.dart'; // Import CommentDialog
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
   final Ruci? orderToEdit;
-  const OrderScreen({super.key, required this.objectbox, this.orderToEdit});
+  final String? initialCategory;
+  const OrderScreen({super.key, required this.objectbox, this.orderToEdit, this.initialCategory});
 
   @override
   State<OrderScreen> createState() => _OrderScreenState();
@@ -36,6 +37,7 @@ class _OrderScreenState extends State<OrderScreen> {
   String _comment = "";
   
   String? _categoryFilter; // null means show all NON-'Extra' products
+  String? _previousCategoryFilter; // to restore after adding extras
   OrderItem? _activeParentForExtras; // item getting the extras
 
   @override
@@ -45,6 +47,7 @@ class _OrderScreenState extends State<OrderScreen> {
     _productBox = widget.objectbox.store.box<Product>();
     _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
     _orderItemBox = widget.objectbox.store.box<OrderItem>();
+    _categoryFilter = widget.initialCategory;
 
     if (widget.orderToEdit != null) {
       _loadOrderForEditing();
@@ -114,7 +117,12 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: widget.orderToEdit != null ? AppBar(title: Text('Edit Order #${widget.orderToEdit!.orderNumber}')) : null,
+        appBar: (widget.orderToEdit != null || widget.initialCategory != null)
+            ? AppBar(
+                title: Text(widget.orderToEdit != null
+                    ? 'Edit Order #${widget.orderToEdit!.orderNumber}'
+                    : widget.initialCategory ?? 'Order'))
+            : null,
         body: OrientationBuilder(builder: (context, orientation) {
           if (orientation == Orientation.landscape) {
             return Padding(
@@ -161,7 +169,7 @@ class _OrderScreenState extends State<OrderScreen> {
   Widget _buildProductGrid() {
     return Column(
       children: [
-        if (_categoryFilter != null)
+        if (_activeParentForExtras != null)
            Padding(
              padding: const EdgeInsets.all(8.0),
              child: Row(
@@ -169,13 +177,13 @@ class _OrderScreenState extends State<OrderScreen> {
                  Text('Editing Extras for: ${_activeParentForExtras?.product.target?.name ?? "Item"}', 
                       style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
                  const Spacer(),
-                 TextButton.icon(
-                   onPressed: () {
-                     setState(() {
-                       _categoryFilter = null;
-                       _activeParentForExtras = null;
-                     });
-                   }, 
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _categoryFilter = _previousCategoryFilter;
+                        _activeParentForExtras = null;
+                      });
+                    }, 
                    icon: const Icon(Icons.close), 
                    label: const Text('Finish Extras')
                  )
@@ -183,44 +191,53 @@ class _OrderScreenState extends State<OrderScreen> {
              ),
            ),
         Expanded(
-          child: StreamBuilder<List<Product>>(
-            stream: _productBox
-                .query()
-                .watch(triggerImmediately: true)
-                .map((query) => query.find()),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-          
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-          
-              final allProducts = snapshot.data!;
-              final products = allProducts.where((p) {
-                if (_categoryFilter != null) {
-                  return p.category == _categoryFilter;
-                } else {
-                  return p.category != 'Extra'; // Default: hide extras
-                }
-              }).toList();
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              int crossAxisCount = (constraints.maxWidth / 140).floor();
+              if (crossAxisCount < 1) crossAxisCount = 1;
+              return StreamBuilder<List<Product>>(
+                stream: _productBox
+                    .query()
+                    .watch(triggerImmediately: true)
+                    .map((query) => query.find()),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
 
-              return GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 200,
-                    crossAxisSpacing: 8.0,
-                    mainAxisSpacing: 8.0,
-                    childAspectRatio: 1.8,
-                  ),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return ProductItem(
-                      product: product,
-                      onAddToCart: _addToCart,
-                    );
-                  });
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final allProducts = snapshot.data!;
+                  final products = allProducts.where((p) {
+                    if (_categoryFilter != null) {
+                      return p.category == _categoryFilter;
+                    } else {
+                      return p.category != 'Extra'; // Default: hide extras
+                    }
+                  }).toList();
+
+                  return GridView.builder(
+                    itemCount: products.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      childAspectRatio: 0.55,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return ProductCard(
+                        title: product.name,
+                        price: product.price,
+                        imageUrl: product.imageUrl ?? '',
+                        onAdd: () => _addToCart(product),
+                      );
+                    },
+                  );
+                },
+              );
             },
           ),
         ),
@@ -317,6 +334,7 @@ class _OrderScreenState extends State<OrderScreen> {
                                 icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
                                 onPressed: () {
                                   setState(() {
+                                    _previousCategoryFilter = _categoryFilter;
                                     _categoryFilter = 'Extra';
                                     _activeParentForExtras = item;
                                   });

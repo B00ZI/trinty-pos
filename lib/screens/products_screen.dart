@@ -3,6 +3,11 @@ import 'package:Easify/models/product.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/widgets/product_item.dart';
 import 'package:objectbox/objectbox.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:Easify/models/catigory.dart';
 
 class ProductsScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -18,6 +23,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _categoryController = TextEditingController();
+  String? _selectedImagePath;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -39,16 +46,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
       product.name = _nameController.text;
       product.price = double.parse(_priceController.text);
       product.category = _categoryController.text.isNotEmpty ? _categoryController.text : null;
+      product.imageUrl = _selectedImagePath;
       
       _productBox.put(product);
       
       _nameController.clear();
       _priceController.clear();
       _categoryController.clear();
+      setState(() {
+        _selectedImagePath = null;
+      });
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(originalProduct == null ? 'Product added successfully!' : 'Product updated successfully!')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(originalProduct == null ? 'Product added successfully!' : 'Product updated successfully!')),
+        );
+      }
     }
   }
 
@@ -64,15 +77,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
       _nameController.text = product.name;
       _priceController.text = product.price.toString();
       _categoryController.text = product.category ?? '';
+      _selectedImagePath = product.imageUrl;
     } else {
       _nameController.clear();
       _priceController.clear();
       _categoryController.clear();
+      _selectedImagePath = null;
     }
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
         title: Text(product == null ? 'Add New Product' : 'Edit Product'),
         content: Form(
           key: _formKey,
@@ -106,13 +122,72 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    hintText: "e.g. 'Extra', 'Drink', 'Food'",
+                DropdownButtonFormField<String>(
+                  value: _categoryController.text.isNotEmpty ? _categoryController.text : null,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: [
+                    const DropdownMenuItem(value: 'Extra', child: Text('Extra')),
+                    ...widget.objectbox.store.box<Catigory>().getAll().map((cat) => DropdownMenuItem(
+                      value: cat.name,
+                      child: Text(cat.name),
+                    )),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() {
+                      _categoryController.text = value ?? '';
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text('Product Image', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                    if (image != null) {
+                      final appDir = await getApplicationDocumentsDirectory();
+                      final fileName = path.basename(image.path);
+                      final localFile = await File(image.path).copy('${appDir.path}/$fileName');
+                      
+                      setDialogState(() {
+                        _selectedImagePath = localFile.path;
+                      });
+                      setState(() {
+                         _selectedImagePath = localFile.path;
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: _selectedImagePath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(_selectedImagePath!),
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : const Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
                   ),
                 ),
+                if (_selectedImagePath != null)
+                   TextButton.icon(
+                     onPressed: () {
+                        setDialogState(() {
+                           _selectedImagePath = null;
+                        });
+                        setState(() {
+                           _selectedImagePath = null;
+                        });
+                     }, 
+                     icon: const Icon(Icons.delete, color: Colors.red), 
+                     label: const Text('Remove Image', style: TextStyle(color: Colors.red))
+                   )
               ],
             ),
           ),
@@ -138,6 +213,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -169,7 +245,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.only(top: 8, bottom: 80),
                   itemCount: products.length,
                   itemBuilder: (ctx, index) => ProductItem(
                     product: products[index],

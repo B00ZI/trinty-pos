@@ -8,6 +8,7 @@ import 'package:Easify/screens/settings_screen.dart';
 import 'package:Easify/screens/dashboard_screen.dart';
 import 'service/activation_service.dart';
 import 'widgets/activation_dialog.dart';
+import 'screens/catigory_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -134,14 +135,14 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   late final List<Widget> _widgetOptions;
-  bool _isCheckingActivation = false;
+  bool _isCheckingActivation = true;
 
   @override
   void initState() {
     super.initState();
-    // _checkActivation();
+    _checkActivation();
     _widgetOptions = <Widget>[
-      OrderScreen(objectbox: widget.objectbox),
+      CatigoryScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
       DashboardScreen(objectbox: widget.objectbox),
       ProductsScreen(objectbox: widget.objectbox),
