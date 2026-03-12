@@ -59,7 +59,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(originalProduct == null ? 'Product added successfully!' : 'Product updated successfully!')),
+          SnackBar(content: Text(originalProduct == null ? 'Produit ajouté avec succès !' : 'Produit mis à jour avec succès !')),
         );
       }
     }
@@ -68,7 +68,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void _deleteProduct(Product product) {
     _productBox.remove(product.id);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Deleted ${product.name}')),
+      SnackBar(content: Text('Supprimé ${product.name}')),
     );
   }
 
@@ -89,7 +89,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-        title: Text(product == null ? 'Add New Product' : 'Edit Product'),
+        title: Text(product == null ? 'Ajouter un Nouveau Produit' : 'Modifier le Produit'),
         content: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -98,10 +98,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Product Name'),
+                  decoration: const InputDecoration(labelText: 'Nom du Produit'),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a product name';
+                      return 'Veuillez entrer un nom de produit';
                     }
                     return null;
                   },
@@ -109,14 +109,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _priceController,
-                  decoration: const InputDecoration(labelText: 'Price'),
+                  decoration: const InputDecoration(labelText: 'Prix'),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a price';
+                      return 'Veuillez entrer un prix';
                     }
                     if (double.tryParse(value) == null) {
-                      return 'Please enter a valid number';
+                      return 'Veuillez entrer un nombre valide';
                     }
                     return null;
                   },
@@ -124,9 +124,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: _categoryController.text.isNotEmpty ? _categoryController.text : null,
-                  decoration: const InputDecoration(labelText: 'Category'),
+                  decoration: const InputDecoration(labelText: 'Catégorie'),
                   items: [
-                    const DropdownMenuItem(value: 'Extra', child: Text('Extra')),
+                    const DropdownMenuItem(value: 'Extra', child: Text('Supplément')),
                     ...widget.objectbox.store.box<Catigory>().getAll().map((cat) => DropdownMenuItem(
                       value: cat.name,
                       child: Text(cat.name),
@@ -139,7 +139,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text('Product Image', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Image du Produit', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () async {
@@ -186,7 +186,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         });
                      }, 
                      icon: const Icon(Icons.delete, color: Colors.red), 
-                     label: const Text('Remove Image', style: TextStyle(color: Colors.red))
+                     label: const Text('Supprimer l\'Image', style: TextStyle(color: Colors.red))
                    )
               ],
             ),
@@ -195,7 +195,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel',
+            child: Text('Annuler',
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
           ElevatedButton(
@@ -209,7 +209,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 Navigator.of(ctx).pop();
               }
             },
-            child: Text(product == null ? 'Add' : 'Update'),
+            child: Text(product == null ? 'Ajouter' : 'Mettre à jour'),
           ),
         ],
       ),
@@ -228,7 +228,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             .map((query) => query.find()),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Erreur : ${snapshot.error}'));
           }
 
           if (!snapshot.hasData) {
@@ -240,7 +240,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           return products.isEmpty
               ? const Center(
                   child: Text(
-                    'No products available',
+                    'Aucun produit disponible',
                     style: TextStyle(fontSize: 18),
                   ),
                 )

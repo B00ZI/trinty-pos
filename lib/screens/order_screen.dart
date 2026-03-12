@@ -2,6 +2,7 @@
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:2817509952.
 // Suggested code may be subject to a license. Learn more: ~LicenseLog:1286985924.
 import 'dart:async';
+import 'dart:math' as math;
 import '../models/printer_config.dart';
 // Import esc_pos_utils
 // Import esc_pos_printer
@@ -12,10 +13,13 @@ import '../models/product.dart';
 import 'package:Easify/objectbox.dart';
 import '../widgets/product_card.dart'; // Import the ProductCard widget
 import 'package:objectbox/objectbox.dart';
+import 'package:reorderable_grid_view/reorderable_grid_view.dart'; // Import ReorderableGridView
 import '../models/order_counter.dart'; // Import OrderCounter
 import '../service/printer_helper.dart'; // Import PrinterHelper
 import '../widgets/order_details.dart'; // Import OrderDetails
 import '../widgets/comment_dialog.dart'; // Import CommentDialog
+import '../models/catigory.dart'; // Import Catigory
+import '../widgets/catigory_card.dart'; // Import CatigoryCard
 
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -27,14 +31,18 @@ class OrderScreen extends StatefulWidget {
   State<OrderScreen> createState() => _OrderScreenState();
 }
 
-class _OrderScreenState extends State<OrderScreen> {
+class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStateMixin {
   final List<OrderItem> _cart = [];
   late final Box<Product> _productBox;
   late final Box<PrinterConfig> _printerConfigBox;
   late final Box<OrderCounter> _orderCounterBox;
   late final Box<OrderItem> _orderItemBox; // To manage item deletion
+  late final Box<Catigory> _catigoryBox;
+  List<Catigory> _categories = [];
   bool _isTakeAway = false;
   String _comment = "";
+  late AnimationController _shakeController;
+  int? _shakingCartIndex;
   
   String? _categoryFilter; // null means show all NON-'Extra' products
   String? _previousCategoryFilter; // to restore after adding extras
@@ -47,11 +55,28 @@ class _OrderScreenState extends State<OrderScreen> {
     _productBox = widget.objectbox.store.box<Product>();
     _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
     _orderItemBox = widget.objectbox.store.box<OrderItem>();
+    _catigoryBox = widget.objectbox.store.box<Catigory>();
     _categoryFilter = widget.initialCategory;
+    _categories = _catigoryBox.getAll();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() => _shakingCartIndex = null);
+        _shakeController.reset();
+      }
+    });
 
     if (widget.orderToEdit != null) {
       _loadOrderForEditing();
     }
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
   }
 
   void _loadOrderForEditing() {
@@ -62,6 +87,9 @@ class _OrderScreenState extends State<OrderScreen> {
       // Simple approach: Create new OrderItem with same properties.
       final cartItem = OrderItem(quantity: item.quantity);
       cartItem.product.target = item.product.target;
+      for (final extra in item.extras) {
+        cartItem.extras.add(extra);
+      }
       _cart.add(cartItem);
     }
   }
@@ -69,10 +97,12 @@ class _OrderScreenState extends State<OrderScreen> {
   void _addToCart(Product product) {
     setState(() {
       if (_activeParentForExtras != null) {
-        // Adding an EXTRA to a specific item
-        _activeParentForExtras!.extras.add(product);
-        // Automatically clear filter after adding an extra? 
-        // User might want to add more than one. Let's keep it for now.
+        final currentQty = _activeParentForExtras!.getExtraQuantity(product);
+        if (_activeParentForExtras!.extras.any((e) => e.id == product.id)) {
+          _activeParentForExtras!.setExtraQuantity(product, currentQty + 1);
+        } else {
+          _activeParentForExtras!.setExtraQuantity(product, 1);
+        }
         return;
       }
 
@@ -93,7 +123,7 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   String getProductName(OrderItem item) {
-    return item.product.target?.name ?? 'Unknown Product';
+    return item.product.target?.name ?? 'Produit Inconnu';
   }
 
   void _removeItem(int index) {
@@ -109,7 +139,7 @@ class _OrderScreenState extends State<OrderScreen> {
   double calculateItemTotal(OrderItem item) {
     double total = item.quantity * (item.product.target?.price ?? 0).toDouble();
     for (final extra in item.extras) {
-      total += extra.price;
+      total += extra.price * item.getExtraQuantity(extra);
     }
     return total;
   }
@@ -117,12 +147,12 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: (widget.orderToEdit != null || widget.initialCategory != null)
+        appBar: (widget.orderToEdit != null )
             ? AppBar(
                 title: Text(widget.orderToEdit != null
-                    ? 'Edit Order #${widget.orderToEdit!.orderNumber}'
-                    : widget.initialCategory ?? 'Order'))
-            : null,
+                    ? 'Modifier Commande N°${widget.orderToEdit!.orderNumber}'
+                    : 'Commande'))
+           :null,
         body: OrientationBuilder(builder: (context, orientation) {
           if (orientation == Orientation.landscape) {
             return Padding(
@@ -153,7 +183,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     child: _buildProductGrid(),
                   ),
                   const SizedBox(height: 8.0), // Space between grid and summary
-                  const Text('Order Summary',
+                  const Text('Résumé de la Commande',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   Expanded(
@@ -167,14 +197,36 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   Widget _buildProductGrid() {
+    if (_activeParentForExtras == null && _categoryFilter == null) {
+      return _buildCategoryGrid();
+    }
+
     return Column(
       children: [
+        if (_activeParentForExtras == null && _categoryFilter != null)
+           Padding(
+             padding: const EdgeInsets.all(8.0),
+             child: Row(
+               children: [
+                 IconButton(
+                   icon: const Icon(Icons.arrow_back),
+                   onPressed: () {
+                     setState(() {
+                       _categoryFilter = null;
+                     });
+                   },
+                 ),
+                 Text('Catégorie : $_categoryFilter', 
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+               ],
+             ),
+           ),
         if (_activeParentForExtras != null)
            Padding(
              padding: const EdgeInsets.all(8.0),
              child: Row(
                children: [
-                 Text('Editing Extras for: ${_activeParentForExtras?.product.target?.name ?? "Item"}', 
+                 Text('Modifier les suppléments pour : ${_activeParentForExtras?.product.target?.name ?? "Article"}', 
                       style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
                  const Spacer(),
                   TextButton.icon(
@@ -185,7 +237,7 @@ class _OrderScreenState extends State<OrderScreen> {
                       });
                     }, 
                    icon: const Icon(Icons.close), 
-                   label: const Text('Finish Extras')
+                   label: const Text('Terminer Suppléments')
                  )
                ],
              ),
@@ -202,7 +254,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     .map((query) => query.find()),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                    return Center(child: Text('Erreur : ${snapshot.error}'));
                   }
 
                   if (!snapshot.hasData) {
@@ -211,14 +263,22 @@ class _OrderScreenState extends State<OrderScreen> {
 
                   final allProducts = snapshot.data!;
                   final products = allProducts.where((p) {
+                    if (_activeParentForExtras != null) {
+                      return p.category == 'Extra';
+                    }
                     if (_categoryFilter != null) {
                       return p.category == _categoryFilter;
-                    } else {
-                      return p.category != 'Extra'; // Default: hide extras
                     }
+                    return p.category != 'Extra'; // Default: hide extras
                   }).toList();
+                  
+                  // Sort products by displayOrder
+                  products.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
-                  return GridView.builder(
+                  if (products.isEmpty) {
+                    return const Center(child: Text('Aucun produit dans cette catégorie'));
+                  }
+                  return ReorderableGridView.builder(
                     itemCount: products.length,
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: crossAxisCount,
@@ -226,9 +286,20 @@ class _OrderScreenState extends State<OrderScreen> {
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        final p = products.removeAt(oldIndex);
+                        products.insert(newIndex, p);
+                        for (int i = 0; i < products.length; i++) {
+                          products[i].displayOrder = i;
+                        }
+                        _productBox.putMany(products);
+                      });
+                    },
                     itemBuilder: (context, index) {
                       final product = products[index];
                       return ProductCard(
+                        key: ValueKey(product.id),
                         title: product.name,
                         price: product.price,
                         imageUrl: product.imageUrl ?? '',
@@ -242,6 +313,40 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCategoryGrid() {
+    if (_categories.isEmpty) {
+      return const Center(child: Text('Aucune catégorie trouvée. Ajoutez-en dans Produits.'));
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = (constraints.maxWidth / 200).floor();
+        if (crossAxisCount < 2) crossAxisCount = 2;
+        return GridView.builder(
+          padding: const EdgeInsets.all(12),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: _categories.length,
+          itemBuilder: (context, index) {
+            final cat = _categories[index];
+            return CatigoryCard(
+              title: cat.name,
+              imageUrl: cat.imageUrl ?? '',
+              onTap: () {
+                setState(() {
+                  _categoryFilter = cat.name;
+                });
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -270,7 +375,7 @@ class _OrderScreenState extends State<OrderScreen> {
         ),
         Expanded(
           child: _cart.isEmpty
-              ? const Center(child: Text('Your cart is empty'))
+              ? const Center(child: Text('Votre panier est vide'))
               : ListView.builder(
                   itemCount: _cart.length,
                   itemBuilder: (context, index) {
@@ -295,79 +400,95 @@ class _OrderScreenState extends State<OrderScreen> {
                         padding: const EdgeInsets.only(right: 20),
                         child: const Icon(Icons.delete, color: Colors.white),
                       ),
-                      child: Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: Row(
-                                mainAxisSize: MainAxisSize.min,
+                      child: AnimatedBuilder(
+                        animation: _shakeController,
+                        builder: (context, child) {
+                          double offset = 0;
+                          if (_shakingCartIndex == index) {
+                            // Sine wave oscillation: amplitude 8, 3 shakes (3 * 2pi)
+                            offset = math.sin(_shakeController.value * math.pi * 6) * 8;
+                          }
+                          return Transform.translate(
+                            offset: Offset(offset, 0),
+                            child: Card(
+                              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: Column(
                                 children: [
-                                  _buildQuantityButton(
-                                    icon: Icons.remove, 
-                                    onPressed: () => _removeItem(index),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                                    child: Text(
-                                      item.quantity.toString(),
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  ListTile(
+                                    leading: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _buildQuantityButton(
+                                          icon: Icons.remove, 
+                                          onPressed: () => _removeItem(index),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                          child: Text(
+                                            item.quantity.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        _buildQuantityButton(
+                                          icon: Icons.add,
+                                          onPressed: () {
+                                            setState(() {
+                                              item.quantity++;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    title: Text(getProductName(item), style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text('\$${calculateItemTotal(item).toStringAsFixed(2)}'),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                                      onPressed: () {
+                                        setState(() {
+                                          _previousCategoryFilter = _categoryFilter;
+                                          _categoryFilter = 'Extra';
+                                          _activeParentForExtras = item;
+                                        });
+                                      },
                                     ),
                                   ),
-                                  _buildQuantityButton(
-                                    icon: Icons.add,
-                                    onPressed: () {
-                                      setState(() {
-                                        item.quantity++;
-                                      });
-                                    },
-                                  ),
+                                  if (item.extras.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 56.0, bottom: 8.0, right: 16.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: item.extras.map((extra) {
+                                          final qty = item.getExtraQuantity(extra);
+                                          return Row(
+                                          children: [
+                                            const Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey),
+                                            const SizedBox(width: 4),
+                                            Text('${extra.name} ${qty > 1 ? "x$qty" : ""}'.trim(), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                            const Spacer(),
+                                            Text('${(extra.price * qty).toStringAsFixed(2)} DH', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                            const SizedBox(width: 8),
+                                            GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  item.setExtraQuantity(extra, qty - 1);
+                                                });
+                                              },
+                                              child: const Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
+                                            )
+                                          ],
+                                        );
+                                        }).toList(),
+                                      ),
+                                    )
                                 ],
                               ),
-                              title: Text(getProductName(item), style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('\$${calculateItemTotal(item).toStringAsFixed(2)}'),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
-                                onPressed: () {
-                                  setState(() {
-                                    _previousCategoryFilter = _categoryFilter;
-                                    _categoryFilter = 'Extra';
-                                    _activeParentForExtras = item;
-                                  });
-                                },
-                              ),
                             ),
-                            if (item.extras.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 56.0, bottom: 8.0, right: 16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: item.extras.map((extra) => Row(
-                                    children: [
-                                      const Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(extra.name, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                      const Spacer(),
-                                      Text('\$${extra.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                      const SizedBox(width: 8),
-                                      GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            item.extras.remove(extra);
-                                          });
-                                        },
-                                        child: const Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
-                                      )
-                                    ],
-                                  )).toList(),
-                                ),
-                              )
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     );
                   }),
@@ -388,7 +509,7 @@ class _OrderScreenState extends State<OrderScreen> {
                       elevation: 2,
                     ),
                     child: Text(
-                      widget.orderToEdit != null ? 'Update Order' : 'Create Order',
+                      widget.orderToEdit != null ? 'Mettre à jour Commande' : 'Créer Commande',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -405,7 +526,7 @@ class _OrderScreenState extends State<OrderScreen> {
                       elevation: 0, // Less prominent than primary action
                     ),
                     child: const Text(
-                      'Single Ticket',
+                      'Ticket Simple',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -449,7 +570,7 @@ class _OrderScreenState extends State<OrderScreen> {
       orderBox.put(order);
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Order updated successfully!')),
+        const SnackBar(content: Text('Commande mise à jour avec succès !')),
       );
       
        // Pop back to history screen
@@ -494,7 +615,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     .map((extra) => {
                           'id': extra.id,
                           'title': extra.name,
-                          'quantity': 1,
+                          'quantity': item.getExtraQuantity(extra),
                           'price': extra.price,
                         })
                     .toList(),
@@ -549,7 +670,7 @@ class _OrderScreenState extends State<OrderScreen> {
       orderBox.put(order);
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Order updated successfully!')),
+        const SnackBar(content: Text('Commande mise à jour avec succès !')),
       );
       
        // Pop back to history screen
@@ -594,7 +715,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     .map((extra) => {
                           'id': extra.id,
                           'title': extra.name,
-                          'quantity': 1,
+                          'quantity': item.getExtraQuantity(extra),
                           'price': extra.price,
                         })
                     .toList(),

@@ -238,7 +238,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   double calculateItemTotal(OrderItem item) {
     double total = item.quantity * (item.product.target?.price ?? 0).toDouble();
     for (final extra in item.extras) {
-      total += extra.price;
+      total += extra.price * item.getExtraQuantity(extra);
     }
     return total;
   }
@@ -270,7 +270,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             .map((query) => query.find()),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Erreur : ${snapshot.error}'));
           }
 
           if (!snapshot.hasData) {
@@ -295,7 +295,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           Text(
-                            'Order Number: ${order.orderNumber}',
+                            'Commande N° ${order.orderNumber}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 18),
                           ),
@@ -329,11 +329,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                          'Order Date: ${order.date.toLocal().toString().split('.')[0]}'),
+                          'Date de commande : ${order.date.toLocal().toString().split('.')[0]}'),
                       const SizedBox(height: 4),
-                      Text('Total Items: ${order.items.length}'),
+                      Text('Total d\'articles : ${order.items.length}'),
                       const SizedBox(height: 4),
-                      const Text('Items:'),
+                      const Text('Articles :'),
                       for (final item in order.items)
                         Padding(
                           padding: const EdgeInsets.only(left: 16.0),
@@ -341,16 +341,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                  '- ${item.product.target != null ? item.product.target!.name : 'Deleted Product'}: ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
+                                  '- ${item.product.target != null ? item.product.target!.name : 'Produit Supprimé'} : ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
                               if (item.extras.isNotEmpty)
-                                for (final extra in item.extras)
-                                  Padding(
+                                ...item.extras.map((extra) {
+                                  final qty = item.getExtraQuantity(extra);
+                                  return Padding(
                                     padding: const EdgeInsets.only(left: 16.0),
                                     child: Text(
-                                      '  + ${extra.name}: ${extra.price} DH',
+                                      '  + ${extra.name} ${qty > 1 ? "x$qty" : ""}: ${(extra.price * qty).toStringAsFixed(2)} DH',
                                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                                     ),
-                                  ),
+                                  );
+                                }),
                             ],
                           ),
                         ),
@@ -367,7 +369,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             },
                             icon: Icon(Icons.print,
                                 color: Theme.of(context).colorScheme.onPrimary),
-                            label: Text('Print',
+                            label: Text('Imprimer',
                                 style: TextStyle(
                                     color: Theme.of(context)
                                         .colorScheme

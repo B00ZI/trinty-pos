@@ -136,7 +136,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double calculateItemTotal(OrderItem item) {
     double total = item.quantity * (item.product.target?.price ?? 0.0);
     for (final extra in item.extras) {
-      total += extra.price;
+      total += extra.price * item.getExtraQuantity(extra);
     }
     return total;
   }

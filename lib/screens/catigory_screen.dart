@@ -36,14 +36,15 @@ class _CatigoryScreenState extends State<CatigoryScreen> {
     super.dispose();
   }
 
-  void _saveCatigory() {
+  void _saveCatigory([Catigory? catigory]) {
     if (_formKey.currentState!.validate()) {
-      final catigory = Catigory(
+      final newCatigory = Catigory(
+        id: catigory?.id ?? 0,
         name: _nameController.text,
         imageUrl: _selectedImagePath,
       );
       
-      _catigoryBox.put(catigory);
+      _catigoryBox.put(newCatigory);
       
       _nameController.clear();
       setState(() {
@@ -52,21 +53,50 @@ class _CatigoryScreenState extends State<CatigoryScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Category added successfully!')),
+          SnackBar(content: Text(catigory == null ? 'Catégorie ajoutée avec succès !' : 'Catégorie mise à jour !')),
         );
       }
     }
   }
 
-  void _showAddDialog() {
-    _nameController.clear();
-    _selectedImagePath = null;
+  void _deleteCatigory(Catigory cat) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text('Voulez-vous vraiment supprimer la catégorie "${cat.name}" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _catigoryBox.remove(cat.id);
+              Navigator.of(ctx).pop();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Catégorie supprimée')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error, foregroundColor: Theme.of(context).colorScheme.onError),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddEditDialog([Catigory? catigory]) {
+    _nameController.text = catigory?.name ?? '';
+    _selectedImagePath = catigory?.imageUrl;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add New Category'),
+          title: Text(catigory == null ? 'Ajouter une Nouvelle Catégorie' : 'Modifier la Catégorie'),
           content: Form(
             key: _formKey,
             child: SingleChildScrollView(
@@ -75,16 +105,16 @@ class _CatigoryScreenState extends State<CatigoryScreen> {
                 children: [
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Category Name'),
+                    decoration: const InputDecoration(labelText: 'Nom de la Catégorie'),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a name';
+                        return 'Veuillez entrer un nom';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
-                  const Text('Category Image', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Image de la Catégorie', style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () async {
@@ -127,16 +157,16 @@ class _CatigoryScreenState extends State<CatigoryScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
+              child: const Text('Annuler'),
             ),
             ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
-                  _saveCatigory();
+                  _saveCatigory(catigory);
                   Navigator.of(ctx).pop();
                 }
               },
-              child: const Text('Add'),
+              child: Text(catigory == null ? 'Ajouter' : 'Mettre à jour'),
             ),
           ],
         ),
@@ -154,7 +184,7 @@ class _CatigoryScreenState extends State<CatigoryScreen> {
             .map((query) => query.find()),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Erreur : ${snapshot.error}'));
           }
 
           if (!snapshot.hasData) {
@@ -164,7 +194,7 @@ class _CatigoryScreenState extends State<CatigoryScreen> {
           final categories = snapshot.data!;
 
           return categories.isEmpty
-              ? const Center(child: Text('No categories available'))
+              ? const Center(child: Text('Aucune catégorie disponible'))
               : GridView.builder(
                   padding: const EdgeInsets.all(12),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -180,22 +210,24 @@ class _CatigoryScreenState extends State<CatigoryScreen> {
                       title: cat.name,
                       imageUrl: cat.imageUrl ?? '',
                       onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => OrderScreen(
-                              objectbox: widget.objectbox,
-                              initialCategory: cat.name,
-                            ),
-                          ),
-                        );
+                        // Navigator.of(context).push(
+                        //   MaterialPageRoute(
+                        //     builder: (context) => OrderScreen(
+                        //       objectbox: widget.objectbox,
+                        //       initialCategory: cat.name,
+                        //     ),
+                        //   ),
+                        // );
                       },
+                      onEdit: () => _showAddEditDialog(cat),
+                      onDelete: () => _deleteCatigory(cat),
                     );
                   },
                 );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
+        onPressed: () => _showAddEditDialog(),
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),

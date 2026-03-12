@@ -14,7 +14,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text(
-          'Financial Summary',
+          'Résumé Financier',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
@@ -24,7 +24,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
           child: dailyData.isEmpty
               ? const Center(
                   child: Text(
-                    'No data available',
+                    'Aucune donnée disponible',
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 )
@@ -56,7 +56,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                             ),
                             Expanded(
                               child: Text(
-                                'Revenue',
+                                'Revenus',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -66,7 +66,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                             ),
                             Expanded(
                               child: Text(
-                                'Expenses',
+                                'Dépenses',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -76,7 +76,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                             ),
                             Expanded(
                               child: Text(
-                                'profit',
+                                'Bénéfice',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -173,7 +173,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'General Total:',
+                            'Total Général :',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -196,14 +196,14 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            child: const Text('Fermer'),
           ),
         ],
       ),
     );
   } catch (e) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error loading data: $e')),
+      SnackBar(content: Text('Erreur de chargement des données : $e')),
     );
   }
 }

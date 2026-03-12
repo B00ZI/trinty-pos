@@ -27,12 +27,12 @@ class _CommentDialogState extends State<CommentDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text('Add Comment'),
+      title: const Text('Ajouter un Commentaire'),
       content: TextField(
         controller: _controller,
         maxLines: 3,
         decoration: InputDecoration(
-          hintText: 'Enter order notes...',
+          hintText: 'Entrez les notes de la commande...',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -43,14 +43,14 @@ class _CommentDialogState extends State<CommentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Annuler'),
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
           style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: const Text('Save'),
+          child: const Text('Enregistrer'),
         ),
       ],
     );

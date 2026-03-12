@@ -44,7 +44,7 @@ class OrderDetails extends StatelessWidget {
               GestureDetector(
                 onTap: () => onTakeAwayChanged(!isTakeAway),
                 child: Text(
-                  'In House',
+                  'Sur place',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

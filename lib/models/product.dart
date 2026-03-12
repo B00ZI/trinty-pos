@@ -11,6 +11,7 @@ class Product {
   String? description;
   String? imageUrl;
   bool isAvailable = false;
+  int displayOrder = 0;
 
   Product({
     this.id = 0,
@@ -19,6 +20,7 @@ class Product {
     this.category,
     this.description,
     this.imageUrl,
-    this.isAvailable = false
+    this.isAvailable = false,
+    this.displayOrder = 0,
   });
 }

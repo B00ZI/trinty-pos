@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/screens/history_screen.dart';
 import 'package:Easify/screens/order_screen.dart';
@@ -29,6 +30,15 @@ class Easify extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Easify',
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('fr', 'FR'), // Set French as the supported locale
+      ],
+      locale: const Locale('fr', 'FR'), // Default to French
       theme: ThemeData(
         colorScheme: const ColorScheme(
           brightness: Brightness.light,
@@ -142,10 +152,11 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _checkActivation();
     _widgetOptions = <Widget>[
-      CatigoryScreen(objectbox: widget.objectbox),
+      OrderScreen(objectbox: widget.objectbox),
       HistoryScreen(objectbox: widget.objectbox),
       DashboardScreen(objectbox: widget.objectbox),
       ProductsScreen(objectbox: widget.objectbox),
+      CatigoryScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
     ];
   }
@@ -204,23 +215,27 @@ class _MainScreenState extends State<MainScreen> {
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
-            label: 'Order',
+            label: 'Commande',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
-            label: 'History',
+            label: 'Historique',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: 'Tableau de bord',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.apps),
-            label: 'Products',
+            label: 'Produits',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings), // Removed unnecessary const
-            label: 'Settings',
+            icon: Icon(Icons.category),
+            label: 'Catégories',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Paramètres',
           ),
         ],
         currentIndex: _selectedIndex,

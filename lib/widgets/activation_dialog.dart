@@ -13,7 +13,7 @@ class ActivationDialog extends StatefulWidget {
 
 class _ActivationDialogState extends State<ActivationDialog> {
   final _keyController = TextEditingController();
-  String _androidId = "Loading...";
+  String _androidId = "Chargement...";
   bool _isValidating = false;
   String? _errorMessage;
 
@@ -38,7 +38,7 @@ class _ActivationDialogState extends State<ActivationDialog> {
   Future<void> _handleActivation() async {
     final key = _keyController.text.trim();
     if (key.isEmpty) {
-      setState(() => _errorMessage = "Please enter the activation key");
+      setState(() => _errorMessage = "Veuillez entrer la clé d'activation");
       return;
     }
 
@@ -59,7 +59,7 @@ class _ActivationDialogState extends State<ActivationDialog> {
       if (mounted) {
         setState(() {
           _isValidating = false;
-          _errorMessage = "Invalid key for this device. Please try again.";
+          _errorMessage = "Clé invalide pour cet appareil. Veuillez réessayer.";
         });
       }
     }
@@ -72,14 +72,14 @@ class _ActivationDialogState extends State<ActivationDialog> {
     return PopScope(
       canPop: false, // Prevent dismissing the dialog
       child: AlertDialog(
-        title: const Text("Application Activation"),
+        title: const Text("Activation de l'application"),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                "Your application is not activated. Please send the following Android ID to your service provider to receive an activation key:",
+                "Votre application n'est pas activée. Veuillez envoyer l'identifiant Android suivant à votre fournisseur pour recevoir une clé d'activation :",
                 style: TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 16),
@@ -107,7 +107,7 @@ class _ActivationDialogState extends State<ActivationDialog> {
                         Clipboard.setData(ClipboardData(text: _androidId));
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text("ID copied to clipboard")),
+                              content: Text("Identifiant copié dans le presse-papiers")),
                         );
                       },
                     ),
@@ -116,14 +116,14 @@ class _ActivationDialogState extends State<ActivationDialog> {
               ),
               const SizedBox(height: 24),
               const Text(
-                "Enter Activation Key:",
+                "Entrez la clé d'activation :",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _keyController,
                 decoration: InputDecoration(
-                  hintText: "Paste your key here",
+                  hintText: "Collez votre clé ici",
                   errorText: _errorMessage,
                   border: const OutlineInputBorder(),
                 ),
@@ -141,7 +141,7 @@ class _ActivationDialogState extends State<ActivationDialog> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text("Activate Now"),
+                : const Text("Activer Maintenant"),
           ),
         ],
       ),

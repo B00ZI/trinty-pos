@@ -46,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading config: ${e.toString()}')),
+          SnackBar(content: Text('Erreur de chargement : ${e.toString()}')),
         );
       }
     }
@@ -79,22 +79,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Printer Settings',
+                        'Paramètres de l\'Imprimante',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _ipAddressController,
                         decoration: const InputDecoration(
-                          labelText: 'Printer IP Address',
+                          labelText: 'Adresse IP de l\'imprimante',
                           prefixIcon: Icon(Icons.router),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter an IP address';
+                            return 'Veuillez entrer une adresse IP';
                           }
                           if (!isIP(value)) {
-                            return 'Please enter a valid IP address';
+                            return 'Veuillez entrer une adresse IP valide';
                           }
                           return null;
                         },
@@ -104,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         keyboardType: TextInputType.number,
                         controller: _portController,
                         decoration: const InputDecoration(
-                          labelText: 'Printer Port',
+                          labelText: 'Port de l\'imprimante',
                           prefixIcon: Icon(Icons.settings_input_component),
                         ),
                         inputFormatters: [
@@ -112,14 +112,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter a port';
+                            return 'Veuillez entrer un port';
                           }
                           final port = int.tryParse(value);
                           if (port == null) {
-                            return "Please enter a valid number";
+                            return "Veuillez entrer un nombre valide";
                           }
                           if (port < 1 || port > 65535) {
-                            return "Port must be between 1-65535";
+                            return "Le port doit être entre 1 et 65535";
                           }
                           return null;
                         },
@@ -131,7 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: ElevatedButton.icon(
                               onPressed: _testPrinterConnection,
                               icon: const Icon(Icons.print),
-                              label: const Text('Test Print'),
+                              label: const Text('Imprimer un test'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Theme.of(context)
                                     .colorScheme
@@ -147,7 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: ElevatedButton.icon(
                               onPressed: _savePrinterConfig,
                               icon: const Icon(Icons.save),
-                              label: const Text('Save IP'),
+                              label: const Text('Enregistrer l\'IP'),
                             ),
                           ),
                         ],
@@ -179,13 +179,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Configuration saved')),
+            const SnackBar(content: Text('Configuration enregistrée')),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error saving config: ${e.toString()}')),
+            SnackBar(content: Text('Erreur d\'enregistrement : ${e.toString()}')),
           );
         }
       }
@@ -213,13 +213,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Test print sent to printer')),
+          const SnackBar(content: Text('Test d\'impression envoyé')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text('Erreur : ${e.toString()}')),
         );
       }
     }

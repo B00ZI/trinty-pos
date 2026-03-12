@@ -66,7 +66,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
       } catch (e) {
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error saving image: $e')),
+            SnackBar(content: Text('Erreur d\'enregistrement de l\'image : $e')),
           );
         }
       }
@@ -90,7 +90,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Store details saved')),
+          const SnackBar(content: Text('Détails du magasin enregistrés')),
         );
       }
     }
@@ -114,20 +114,20 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Store Details',
+                'Détails du Magasin',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _storeNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Store Name',
+                  labelText: 'Nom du Magasin',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.store),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter store name';
+                    return 'Veuillez entrer le nom du magasin';
                   }
                   return null;
                 },
@@ -135,13 +135,13 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
               TextFormField(
                 controller: _storePhoneController,
                 decoration: const InputDecoration(
-                  labelText: 'Store Phone Number',
+                  labelText: 'Numéro de Téléphone',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter store phone number';
+                    return 'Veuillez entrer le numéro de téléphone';
                   }
                   return null;
                 },
@@ -172,13 +172,13 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Store Logo',
+                      Text('Logo du Magasin',
                           style: Theme.of(context).textTheme.bodyMedium),
                       const SizedBox(height: 8),
                       ElevatedButton.icon(
                         onPressed: _pickImage,
                         icon: const Icon(Icons.upload),
-                        label: const Text('Upload Image'),
+                        label: const Text('Télécharger une Image'),
                       ),
                     ],
                   ),
@@ -191,7 +191,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                     child: ElevatedButton.icon(
                       onPressed: () => PrinterHelper.printStoreConfig(widget.objectbox),
                       icon: const Icon(Icons.print),
-                      label: const Text('Print Test'),
+                      label: const Text('Imprimer un test'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
@@ -204,7 +204,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                     child: ElevatedButton.icon(
                       onPressed: _saveConfig,
                       icon: const Icon(Icons.save),
-                      label: const Text('Save Details'),
+                      label: const Text('Enregistrer les Détails'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Theme.of(context).colorScheme.primary,

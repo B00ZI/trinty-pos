@@ -29,7 +29,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(1, 7649823169092191057),
     name: 'Product',
-    lastPropertyId: const obx_int.IdUid(11, 1215224271417333887),
+    lastPropertyId: const obx_int.IdUid(12, 5009935299184568836),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -74,6 +74,12 @@ final _entities = <obx_int.ModelEntity>[
         type: 1,
         flags: 0,
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(12, 5009935299184568836),
+        name: 'displayOrder',
+        type: 6,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
@@ -81,7 +87,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(2, 7719230692724575644),
     name: 'OrderItem',
-    lastPropertyId: const obx_int.IdUid(3, 6159233334699626007),
+    lastPropertyId: const obx_int.IdUid(4, 3420416872380588178),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -102,6 +108,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(3, 6159233334699626007),
         name: 'quantity',
         type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 3420416872380588178),
+        name: 'extraQuantitiesJson',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -373,7 +385,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
                 : fbb.writeString(object.description!);
         final imageUrlOffset =
             object.imageUrl == null ? null : fbb.writeString(object.imageUrl!);
-        fbb.startTable(12);
+        fbb.startTable(13);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addFloat64(2, object.price);
@@ -381,6 +393,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addOffset(8, descriptionOffset);
         fbb.addOffset(9, imageUrlOffset);
         fbb.addBool(10, object.isAvailable);
+        fbb.addInt64(11, object.displayOrder);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -417,6 +430,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
           24,
           false,
         );
+        final displayOrderParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          26,
+          0,
+        );
         final object = Product(
           id: idParam,
           name: nameParam,
@@ -425,6 +444,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           description: descriptionParam,
           imageUrl: imageUrlParam,
           isAvailable: isAvailableParam,
+          displayOrder: displayOrderParam,
         );
 
         return object;
@@ -442,10 +462,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
         object.id = id;
       },
       objectToFB: (OrderItem object, fb.Builder fbb) {
-        fbb.startTable(4);
+        final extraQuantitiesJsonOffset =
+            object.extraQuantitiesJson == null
+                ? null
+                : fbb.writeString(object.extraQuantitiesJson!);
+        fbb.startTable(5);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.product.targetId);
         fbb.addInt64(2, object.quantity);
+        fbb.addOffset(3, extraQuantitiesJsonOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -464,7 +489,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
           8,
           0,
         );
-        final object = OrderItem(id: idParam, quantity: quantityParam);
+        final extraQuantitiesJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 10);
+        final object = OrderItem(
+          id: idParam,
+          quantity: quantityParam,
+          extraQuantitiesJson: extraQuantitiesJsonParam,
+        );
         object.product.targetId = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -799,6 +831,11 @@ class Product_ {
   static final isAvailable = obx.QueryBooleanProperty<Product>(
     _entities[0].properties[6],
   );
+
+  /// See [Product.displayOrder].
+  static final displayOrder = obx.QueryIntegerProperty<Product>(
+    _entities[0].properties[7],
+  );
 }
 
 /// [OrderItem] entity fields to define ObjectBox queries.
@@ -816,6 +853,11 @@ class OrderItem_ {
   /// See [OrderItem.quantity].
   static final quantity = obx.QueryIntegerProperty<OrderItem>(
     _entities[1].properties[2],
+  );
+
+  /// See [OrderItem.extraQuantitiesJson].
+  static final extraQuantitiesJson = obx.QueryStringProperty<OrderItem>(
+    _entities[1].properties[3],
   );
 
   /// see [OrderItem.extras]

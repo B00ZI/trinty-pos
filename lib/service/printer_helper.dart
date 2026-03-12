@@ -125,7 +125,7 @@ class ReceiptItem {
     };
   }
 
-  double get total => (quantity * price) + extras.fold(0.0, (sum, e) => sum + e.price);
+  double get total => (quantity * price) + extras.fold(0.0, (sum, e) => sum + (e.price * e.quantity));
 }
 
 class PrinterHelper {
@@ -351,12 +351,12 @@ class PrinterHelper {
       for (final extra in item.extras) {
         printer.row([
           PosColumn(
-            text: '  + ${extra.title}',
+            text: '  + ${extra.title} ${extra.quantity > 1 ? "x${extra.quantity}" : ""}'.trimRight(),
             width: 8,
             styles: const PosStyles(align: PosAlign.left),
           ),
           PosColumn(
-            text: '${extra.price.toStringAsFixed(2)} DH',
+            text: '${(extra.price * extra.quantity).toStringAsFixed(2)} DH',
             width: 4,
             styles: const PosStyles(align: PosAlign.right),
           ),
