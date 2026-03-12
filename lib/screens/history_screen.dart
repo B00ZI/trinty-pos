@@ -333,6 +333,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const SizedBox(height: 4),
                       Text('Total d\'articles : ${order.items.length}'),
                       const SizedBox(height: 4),
+                      Text(
+                        'Montant Total : ${order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)).toStringAsFixed(2)} DH',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       const Text('Articles :'),
                       for (final item in order.items)
                         Padding(

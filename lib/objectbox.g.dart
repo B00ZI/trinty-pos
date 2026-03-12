@@ -129,7 +129,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(3, 5101334298372515029),
     name: 'PrinterConfig',
-    lastPropertyId: const obx_int.IdUid(3, 8887651537502346251),
+    lastPropertyId: const obx_int.IdUid(5, 1901214142456309128),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -148,6 +148,18 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(3, 8887651537502346251),
         name: 'port',
         type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 8048408281464808759),
+        name: 'singleTicketMode',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 1901214142456309128),
+        name: 'enableChangeWindow',
+        type: 1,
         flags: 0,
       ),
     ],
@@ -522,10 +534,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (PrinterConfig object, fb.Builder fbb) {
         final ipAddressOffset = fbb.writeString(object.ipAddress);
-        fbb.startTable(4);
+        fbb.startTable(6);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, ipAddressOffset);
         fbb.addInt64(2, object.port);
+        fbb.addBool(3, object.singleTicketMode);
+        fbb.addBool(4, object.enableChangeWindow);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -547,10 +561,24 @@ obx_int.ModelDefinition getObjectBoxModel() {
           8,
           0,
         );
+        final singleTicketModeParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          false,
+        );
+        final enableChangeWindowParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          false,
+        );
         final object = PrinterConfig(
           id: idParam,
           ipAddress: ipAddressParam,
           port: portParam,
+          singleTicketMode: singleTicketModeParam,
+          enableChangeWindow: enableChangeWindowParam,
         );
 
         return object;
@@ -881,6 +909,16 @@ class PrinterConfig_ {
   /// See [PrinterConfig.port].
   static final port = obx.QueryIntegerProperty<PrinterConfig>(
     _entities[2].properties[2],
+  );
+
+  /// See [PrinterConfig.singleTicketMode].
+  static final singleTicketMode = obx.QueryBooleanProperty<PrinterConfig>(
+    _entities[2].properties[3],
+  );
+
+  /// See [PrinterConfig.enableChangeWindow].
+  static final enableChangeWindow = obx.QueryBooleanProperty<PrinterConfig>(
+    _entities[2].properties[4],
   );
 }
 

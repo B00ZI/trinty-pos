@@ -20,18 +20,24 @@ import '../widgets/order_details.dart'; // Import OrderDetails
 import '../widgets/comment_dialog.dart'; // Import CommentDialog
 import '../models/catigory.dart'; // Import Catigory
 import '../widgets/catigory_card.dart'; // Import CatigoryCard
+import '../widgets/payment_dialog.dart'; // Import PaymentDialog
 
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
   final Ruci? orderToEdit;
   final String? initialCategory;
-  const OrderScreen({super.key, required this.objectbox, this.orderToEdit, this.initialCategory});
+  const OrderScreen(
+      {super.key,
+      required this.objectbox,
+      this.orderToEdit,
+      this.initialCategory});
 
   @override
   State<OrderScreen> createState() => _OrderScreenState();
 }
 
-class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStateMixin {
+class _OrderScreenState extends State<OrderScreen>
+    with SingleTickerProviderStateMixin {
   final List<OrderItem> _cart = [];
   late final Box<Product> _productBox;
   late final Box<PrinterConfig> _printerConfigBox;
@@ -43,10 +49,12 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
   String _comment = "";
   late AnimationController _shakeController;
   int? _shakingCartIndex;
-  
+
   String? _categoryFilter; // null means show all NON-'Extra' products
   String? _previousCategoryFilter; // to restore after adding extras
   OrderItem? _activeParentForExtras; // item getting the extras
+  bool _singleTicketMode = false;
+  bool _enableChangeWindow = true;
 
   @override
   void initState() {
@@ -62,14 +70,32 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 400),
     )..addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() => _shakingCartIndex = null);
-        _shakeController.reset();
-      }
-    });
+        if (status == AnimationStatus.completed) {
+          setState(() => _shakingCartIndex = null);
+          _shakeController.reset();
+        }
+      });
+
+    // Load toggle settings from PrinterConfig
+    _loadToggleSettings();
 
     if (widget.orderToEdit != null) {
       _loadOrderForEditing();
+    }
+  }
+
+  void _loadToggleSettings() {
+    try {
+      final existingConfig = _printerConfigBox.getAll();
+      if (existingConfig.isNotEmpty) {
+        final config = existingConfig.first;
+        _singleTicketMode = config.singleTicketMode;
+        _enableChangeWindow = config.enableChangeWindow;
+      }
+    } catch (e) {
+      // Use defaults if there's an error
+      _singleTicketMode = false;
+      _enableChangeWindow = true;
     }
   }
 
@@ -147,12 +173,12 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: (widget.orderToEdit != null )
+        appBar: (widget.orderToEdit != null)
             ? AppBar(
                 title: Text(widget.orderToEdit != null
                     ? 'Modifier Commande N°${widget.orderToEdit!.orderNumber}'
                     : 'Commande'))
-           :null,
+            : null,
         body: OrientationBuilder(builder: (context, orientation) {
           if (orientation == Orientation.landscape) {
             return Padding(
@@ -162,7 +188,7 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
                 children: [
                   Expanded(
                     flex: 3, // Product grid takes 3 parts of the space
-                    child: _buildProductGrid(), 
+                    child: _buildProductGrid(),
                   ),
                   const SizedBox(width: 8.0), // Space between grid and summary
                   Expanded(
@@ -204,44 +230,46 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
     return Column(
       children: [
         if (_activeParentForExtras == null && _categoryFilter != null)
-           Padding(
-             padding: const EdgeInsets.all(8.0),
-             child: Row(
-               children: [
-                 IconButton(
-                   icon: const Icon(Icons.arrow_back),
-                   onPressed: () {
-                     setState(() {
-                       _categoryFilter = null;
-                     });
-                   },
-                 ),
-                 Text('Catégorie : $_categoryFilter', 
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-               ],
-             ),
-           ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _categoryFilter = null;
+                    });
+                  },
+                ),
+                Text('Catégorie : $_categoryFilter',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            ),
+          ),
         if (_activeParentForExtras != null)
-           Padding(
-             padding: const EdgeInsets.all(8.0),
-             child: Row(
-               children: [
-                 Text('Modifier les suppléments pour : ${_activeParentForExtras?.product.target?.name ?? "Article"}', 
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-                 const Spacer(),
-                  TextButton.icon(
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Text(
+                    'Modifier les suppléments pour : ${_activeParentForExtras?.product.target?.name ?? "Article"}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.blue)),
+                const Spacer(),
+                TextButton.icon(
                     onPressed: () {
                       setState(() {
                         _categoryFilter = _previousCategoryFilter;
                         _activeParentForExtras = null;
                       });
-                    }, 
-                   icon: const Icon(Icons.close), 
-                   label: const Text('Terminer Suppléments')
-                 )
-               ],
-             ),
-           ),
+                    },
+                    icon: const Icon(Icons.close),
+                    label: const Text('Terminer Suppléments'))
+              ],
+            ),
+          ),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -271,12 +299,14 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
                     }
                     return p.category != 'Extra'; // Default: hide extras
                   }).toList();
-                  
+
                   // Sort products by displayOrder
-                  products.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+                  products
+                      .sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
                   if (products.isEmpty) {
-                    return const Center(child: Text('Aucun produit dans cette catégorie'));
+                    return const Center(
+                        child: Text('Aucun produit dans cette catégorie'));
                   }
                   return ReorderableGridView.builder(
                     itemCount: products.length,
@@ -318,7 +348,8 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
 
   Widget _buildCategoryGrid() {
     if (_categories.isEmpty) {
-      return const Center(child: Text('Aucune catégorie trouvée. Ajoutez-en dans Produits.'));
+      return const Center(
+          child: Text('Aucune catégorie trouvée. Ajoutez-en dans Produits.'));
     }
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -406,13 +437,17 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
                           double offset = 0;
                           if (_shakingCartIndex == index) {
                             // Sine wave oscillation: amplitude 8, 3 shakes (3 * 2pi)
-                            offset = math.sin(_shakeController.value * math.pi * 6) * 8;
+                            offset =
+                                math.sin(_shakeController.value * math.pi * 6) *
+                                    8;
                           }
                           return Transform.translate(
                             offset: Offset(offset, 0),
                             child: Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                               child: Column(
                                 children: [
                                   ListTile(
@@ -420,11 +455,12 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         _buildQuantityButton(
-                                          icon: Icons.remove, 
+                                          icon: Icons.remove,
                                           onPressed: () => _removeItem(index),
                                         ),
                                         Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6.0),
                                           child: Text(
                                             item.quantity.toString(),
                                             style: const TextStyle(
@@ -443,13 +479,18 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
                                         ),
                                       ],
                                     ),
-                                    title: Text(getProductName(item), style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    subtitle: Text('\$${calculateItemTotal(item).toStringAsFixed(2)}'),
+                                    title: Text(getProductName(item),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    subtitle: Text(
+                                        '\$${calculateItemTotal(item).toStringAsFixed(2)}'),
                                     trailing: IconButton(
-                                      icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                                      icon: const Icon(Icons.add_circle_outline,
+                                          color: Colors.blue),
                                       onPressed: () {
                                         setState(() {
-                                          _previousCategoryFilter = _categoryFilter;
+                                          _previousCategoryFilter =
+                                              _categoryFilter;
                                           _categoryFilter = 'Extra';
                                           _activeParentForExtras = item;
                                         });
@@ -458,29 +499,49 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
                                   ),
                                   if (item.extras.isNotEmpty)
                                     Padding(
-                                      padding: const EdgeInsets.only(left: 56.0, bottom: 8.0, right: 16.0),
+                                      padding: const EdgeInsets.only(
+                                          left: 56.0, bottom: 8.0, right: 16.0),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: item.extras.map((extra) {
-                                          final qty = item.getExtraQuantity(extra);
+                                          final qty =
+                                              item.getExtraQuantity(extra);
                                           return Row(
-                                          children: [
-                                            const Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey),
-                                            const SizedBox(width: 4),
-                                            Text('${extra.name} ${qty > 1 ? "x$qty" : ""}'.trim(), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                            const Spacer(),
-                                            Text('${(extra.price * qty).toStringAsFixed(2)} DH', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                            const SizedBox(width: 8),
-                                            GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  item.setExtraQuantity(extra, qty - 1);
-                                                });
-                                              },
-                                              child: const Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
-                                            )
-                                          ],
-                                        );
+                                            children: [
+                                              const Icon(
+                                                  Icons
+                                                      .subdirectory_arrow_right,
+                                                  size: 16,
+                                                  color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                  '${extra.name} ${qty > 1 ? "x$qty" : ""}'
+                                                      .trim(),
+                                                  style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey)),
+                                              const Spacer(),
+                                              Text(
+                                                  '${(extra.price * qty).toStringAsFixed(2)} DH',
+                                                  style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey)),
+                                              const SizedBox(width: 8),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  setState(() {
+                                                    item.setExtraQuantity(
+                                                        extra, qty - 1);
+                                                  });
+                                                },
+                                                child: const Icon(
+                                                    Icons.remove_circle_outline,
+                                                    size: 14,
+                                                    color: Colors.red),
+                                              )
+                                            ],
+                                          );
                                         }).toList(),
                                       ),
                                     )
@@ -495,42 +556,52 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
         ),
         if (_cart.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
             child: Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _saveOrder,
+                    onPressed: () => _handleCartAction('save-print'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 2,
                     ),
                     child: Text(
-                      widget.orderToEdit != null ? 'Mettre à jour Commande' : 'Créer Commande',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      widget.orderToEdit != null
+                          ? 'Mettre à jour Commande'
+                          : 'Créer Commande',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _printSingleTicket,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                      foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0, // Less prominent than primary action
-                    ),
-                    child: const Text(
-                      'Ticket Simple',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                if (!_singleTicketMode) const SizedBox(width: 12),
+                if (!_singleTicketMode)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _handleCartAction('single-print'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondaryContainer,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onSecondaryContainer,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 0, // Less prominent than primary action
+                      ),
+                      child: const Text(
+                        'Ticket Simple',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -538,46 +609,78 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
     );
   }
 
-  void _saveOrder() async {
+  Future<void> _handleCartAction(String actionType) async {
+    // Calculate total
+    final total =
+        _cart.fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
+
+    // If Change Window is enabled, show payment dialog
+    if (_enableChangeWindow) {
+      final paymentConfirmed = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => PaymentDialog(totalAmount: total),
+          ) ??
+          false;
+
+      // If user cancelled, cancel the entire order
+      if (!paymentConfirmed) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Commande annulée')),
+          );
+        }
+        return;
+      }
+    }
+
+    // Proceed with the action (save or print)
+    if (actionType == 'save-print') {
+      await _saveOrder();
+    } else if (actionType == 'single-print') {
+      await _printSingleTicket();
+    }
+  }
+
+  Future<void> _saveOrder() async {
     final orderBox = widget.objectbox.store.box<Ruci>();
     Ruci order;
 
     if (widget.orderToEdit != null) {
       // EDIT MODE
       order = widget.orderToEdit!;
-      
+
       // 1. Identify items to remove (orphans)
       // We can't just clear relation, we should remove the actual OrderItem entities
       // to avoid filling DB with unused items.
-      final itemsToRemove = order.items.toList(); 
+      final itemsToRemove = order.items.toList();
       order.items.clear();
       // Apply to DB to unlink
-      orderBox.put(order); 
-      
+      orderBox.put(order);
+
       // Now delete the old items from OrderItem box
       _orderItemBox.removeMany(itemsToRemove.map((i) => i.id).toList());
 
       // 2. Add new items from cart
       for (final item in _cart) {
-        // These are new OrderItem instances (id=0) or reused ones. 
+        // These are new OrderItem instances (id=0) or reused ones.
         // Since we created new objects in _loadOrderForEditing or _addToCart with id=0 (implied),
         // they will be inserted as new records.
         order.items.add(item);
       }
-      
+
       // 3. Update Order
       // Date can remain original or update. Let's keep original date for history accuracy.
       orderBox.put(order);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Commande mise à jour avec succès !')),
       );
-      
-       // Pop back to history screen
-      if (mounted) {
-         Navigator.of(context).pop();
-      }
 
+      // Pop back to history screen
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     } else {
       // CREATE MODE
       final orderCounter = _orderCounterBox.getAll().first;
@@ -589,7 +692,7 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
         order.items.add(item);
       }
       orderBox.put(order);
-      
+
       orderCounter.value += 1;
       _orderCounterBox.put(orderCounter);
 
@@ -603,8 +706,8 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
       'id': order.id,
       'dailyNumber': order.orderNumber,
       'createdat': order.date.toIso8601String(),
-      'total':
-          order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)),
+      'total': order.items
+          .fold<double>(0, (sum, item) => sum + calculateItemTotal(item)),
       'items': order.items
           .map((item) => {
                 'id': item.product.target?.id,
@@ -624,12 +727,11 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
       'paymentMethod': 'cash',
     };
     final Rdata = ReceiptData.fromJson(orderPayload);
-     
+
     PrinterHelper.printReceipt(Rdata, widget.objectbox);
     await Future.delayed(const Duration(milliseconds: 1000));
-    PrinterHelper.printReceipt(Rdata, widget.objectbox, 
-      comment: _comment.isNotEmpty ? _comment : "",
-      isTakeAway: _isTakeAway);
+    PrinterHelper.printReceipt(Rdata, widget.objectbox,
+        comment: _comment.isNotEmpty ? _comment : "", isTakeAway: _isTakeAway);
 
     // Reset comment and takeaway after saving? Usually good practice if it's a new order.
     setState(() {
@@ -638,46 +740,45 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
     });
   }
 
-  void _printSingleTicket() async {
+  Future<void> _printSingleTicket() async {
     final orderBox = widget.objectbox.store.box<Ruci>();
     Ruci order;
 
     if (widget.orderToEdit != null) {
       // EDIT MODE
       order = widget.orderToEdit!;
-      
+
       // 1. Identify items to remove (orphans)
       // We can't just clear relation, we should remove the actual OrderItem entities
       // to avoid filling DB with unused items.
-      final itemsToRemove = order.items.toList(); 
+      final itemsToRemove = order.items.toList();
       order.items.clear();
       // Apply to DB to unlink
-      orderBox.put(order); 
-      
+      orderBox.put(order);
+
       // Now delete the old items from OrderItem box
       _orderItemBox.removeMany(itemsToRemove.map((i) => i.id).toList());
 
       // 2. Add new items from cart
       for (final item in _cart) {
-        // These are new OrderItem instances (id=0) or reused ones. 
+        // These are new OrderItem instances (id=0) or reused ones.
         // Since we created new objects in _loadOrderForEditing or _addToCart with id=0 (implied),
         // they will be inserted as new records.
         order.items.add(item);
       }
-      
+
       // 3. Update Order
       // Date can remain original or update. Let's keep original date for history accuracy.
       orderBox.put(order);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Commande mise à jour avec succès !')),
       );
-      
-       // Pop back to history screen
-      if (mounted) {
-         Navigator.of(context).pop();
-      }
 
+      // Pop back to history screen
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     } else {
       // CREATE MODE
       final orderCounter = _orderCounterBox.getAll().first;
@@ -689,7 +790,7 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
         order.items.add(item);
       }
       orderBox.put(order);
-      
+
       orderCounter.value += 1;
       _orderCounterBox.put(orderCounter);
 
@@ -703,8 +804,8 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
       'id': order.id,
       'dailyNumber': order.orderNumber,
       'createdat': order.date.toIso8601String(),
-      'total':
-          order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)),
+      'total': order.items
+          .fold<double>(0, (sum, item) => sum + calculateItemTotal(item)),
       'items': order.items
           .map((item) => {
                 'id': item.product.target?.id,
@@ -724,12 +825,11 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
       'paymentMethod': 'cash',
     };
     final Rdata = ReceiptData.fromJson(orderPayload);
-     
+
     // PrinterHelper.printReceipt(Rdata, widget.objectbox);
     await Future.delayed(const Duration(milliseconds: 1000));
-    PrinterHelper.printReceipt(Rdata, widget.objectbox, 
-      comment: _comment.isNotEmpty ? _comment : "",
-      isTakeAway: _isTakeAway);
+    PrinterHelper.printReceipt(Rdata, widget.objectbox,
+        comment: _comment.isNotEmpty ? _comment : "", isTakeAway: _isTakeAway);
 
     // Reset comment and takeaway after saving? Usually good practice if it's a new order.
     setState(() {
@@ -738,7 +838,8 @@ class _OrderScreenState extends State<OrderScreen> with SingleTickerProviderStat
     });
   }
 
-  Widget _buildQuantityButton({required IconData icon, required VoidCallback onPressed}) {
+  Widget _buildQuantityButton(
+      {required IconData icon, required VoidCallback onPressed}) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(

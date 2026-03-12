@@ -92,7 +92,7 @@
     },
     {
       "id": "3:5101334298372515029",
-      "lastPropertyId": "3:8887651537502346251",
+      "lastPropertyId": "5:1901214142456309128",
       "name": "PrinterConfig",
       "properties": [
         {
@@ -110,6 +110,16 @@
           "id": "3:8887651537502346251",
           "name": "port",
           "type": 6
+        },
+        {
+          "id": "4:8048408281464808759",
+          "name": "singleTicketMode",
+          "type": 1
+        },
+        {
+          "id": "5:1901214142456309128",
+          "name": "enableChangeWindow",
+          "type": 1
         }
       ],
       "relations": []
