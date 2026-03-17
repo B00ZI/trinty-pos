@@ -9,7 +9,17 @@ class Ruci {
 
   DateTime date;
 
+  bool isDeleted = false;
+
+  bool isEdited = false;
+
   final items = ToMany<OrderItem>();
 
-  Ruci({required this.orderNumber, required this.date, this.id = 0});
+  Ruci({
+    required this.orderNumber,
+    required this.date,
+    this.id = 0,
+    this.isDeleted = false,
+    this.isEdited = false,
+  });
 }

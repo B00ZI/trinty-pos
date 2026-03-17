@@ -20,7 +20,8 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
         ),
         content: SizedBox(
           width: double.maxFinite,
-          height: MediaQuery.of(context).size.height * 0.6, // Constrain height for scrolling
+          height: MediaQuery.of(context).size.height *
+              0.6, // Constrain height for scrolling
           child: dailyData.isEmpty
               ? const Center(
                   child: Text(
@@ -35,132 +36,137 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                'Date',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                            // Header
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Date',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      'Revenus',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      'Dépenses',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      'Bénéfice',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Expanded(
-                              child: Text(
-                                'Revenus',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                'Dépenses',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                'Bénéfice',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+                            const SizedBox(height: 8),
+
+                            // Data rows
+                            ...dailyData.map((data) => Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer,
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          _formatDateForDisplay(data.rawDate),
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          '${data.revenue.toStringAsFixed(2)} DH',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: data.revenue > 0
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .primary
+                                                : Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withOpacity(0.5),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          '${data.expenses.toStringAsFixed(2)} DH',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: data.expenses > 0
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .error
+                                                : Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withOpacity(0.5),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          '${data.profite.toStringAsFixed(2)} DH',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                            const SizedBox(height: 16),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-
-                      // Data rows
-                      ...dailyData.map((data) => Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    _formatDateForDisplay(data.rawDate),
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    '${data.revenue.toStringAsFixed(2)} DH',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: data.revenue > 0
-                                          ? Theme.of(context).colorScheme.primary
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withOpacity(0.5),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    '${data.expenses.toStringAsFixed(2)} DH',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: data.expenses > 0
-                                          ? Theme.of(context).colorScheme.error
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withOpacity(0.5),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    '${data.profite.toStringAsFixed(2)} DH',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )),
-                      const SizedBox(height: 16),
-                        ],
-                      ),
                     ),
-                  ),
                     const SizedBox(height: 12),
                     // Summary (Sticky at bottom)
                     Container(
@@ -250,19 +256,18 @@ Future<List<DailySummary>> _getAllDailyData(ObjectBox objectbox) async {
     ));
   }
 
-  dailyData.sort((a, b) =>
-      b.rawDate.compareTo(a.rawDate));
+  dailyData.sort((a, b) => b.rawDate.compareTo(a.rawDate));
 
   return dailyData;
 }
 
 // Extract all unique days
-Future<List<DateTime>> _getAllUniqueDates(
-    Box<order_model.Ruci> ordersBox,
+Future<List<DateTime>> _getAllUniqueDates(Box<order_model.Ruci> ordersBox,
     Box<expence_model.expence> expensesBox) async {
   final Set<DateTime> unique = {};
 
   for (final o in ordersBox.getAll()) {
+    if (o.isDeleted) continue; // Skip deleted orders
     final d = DateTime(o.date.year, o.date.month, o.date.day);
     unique.add(d);
   }
@@ -281,6 +286,7 @@ Future<double> _getDayRevenue(
   final all = ordersBox.getAll();
 
   final sameDayOrders = all.where((order) =>
+      !order.isDeleted &&
       order.date.year == day.year &&
       order.date.month == day.month &&
       order.date.day == day.day);
@@ -321,28 +327,25 @@ Future<double> _getDayExpenses(
   return total;
 }
 
-Future<double> _calculateProfit(
-    Box<order_model.Ruci> ordersBox,
-    Box<expence_model.expence> expensesBox,
-    DateTime day) async {
+Future<double> _calculateProfit(Box<order_model.Ruci> ordersBox,
+    Box<expence_model.expence> expensesBox, DateTime day) async {
   final revenue = await _getDayRevenue(ordersBox, day);
   final expenses = await _getDayExpenses(expensesBox, day);
-  final profite= revenue - expenses;
-  return profite; 
+  final profite = revenue - expenses;
+  return profite;
 }
 
-
-
-
 // Number of orders for day
-Future<int> _getDayOrders(
-    Box<order_model.Ruci> ordersBox, DateTime day) async {
+Future<int> _getDayOrders(Box<order_model.Ruci> ordersBox, DateTime day) async {
   final all = ordersBox.getAll();
 
-  return all.where((o) =>
-      o.date.year == day.year &&
-      o.date.month == day.month &&
-      o.date.day == day.day).length;
+  return all
+      .where((o) =>
+          !o.isDeleted &&
+          o.date.year == day.year &&
+          o.date.month == day.month &&
+          o.date.day == day.day)
+      .length;
 }
 
 // Format date
@@ -353,6 +356,7 @@ String _formatDateForDisplay(DateTime d) {
 double _calculateTotalRevenue(List<DailySummary> data) {
   return data.fold(0.0, (sum, d) => sum + d.revenue);
 }
+
 double _calculateTotalExpenses(List<DailySummary> data) {
   return data.fold(0.0, (sum, d) => sum + d.expenses);
 }

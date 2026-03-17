@@ -126,7 +126,7 @@
     },
     {
       "id": "5:459141988423342695",
-      "lastPropertyId": "3:5362303099465410369",
+      "lastPropertyId": "5:8538196005444145719",
       "name": "Ruci",
       "properties": [
         {
@@ -144,6 +144,16 @@
           "id": "3:5362303099465410369",
           "name": "orderNumber",
           "type": 6
+        },
+        {
+          "id": "4:2733093124830040761",
+          "name": "isDeleted",
+          "type": 1
+        },
+        {
+          "id": "5:8538196005444145719",
+          "name": "isEdited",
+          "type": 1
         }
       ],
       "relations": [
@@ -254,9 +264,33 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "10:8871212447154404771",
+      "lastPropertyId": "3:3093597794620651979",
+      "name": "DailyFunds",
+      "properties": [
+        {
+          "id": "1:2271881994418560112",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6237209972077744845",
+          "name": "date",
+          "type": 10
+        },
+        {
+          "id": "3:3093597794620651979",
+          "name": "amount",
+          "type": 8
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "9:2621355858066362497",
+  "lastEntityId": "10:8871212447154404771",
   "lastIndexId": "1:4823262623031552778",
   "lastRelationId": "3:14140742415403822",
   "lastSequenceId": "0:0",

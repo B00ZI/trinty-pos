@@ -15,6 +15,7 @@ import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'models/catigory.dart';
+import 'models/daily_funds.dart';
 import 'models/expence.dart';
 import 'models/order.dart';
 import 'models/order_counter.dart';
@@ -169,7 +170,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(5, 459141988423342695),
     name: 'Ruci',
-    lastPropertyId: const obx_int.IdUid(3, 5362303099465410369),
+    lastPropertyId: const obx_int.IdUid(5, 8538196005444145719),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -188,6 +189,18 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(3, 5362303099465410369),
         name: 'orderNumber',
         type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 2733093124830040761),
+        name: 'isDeleted',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 8538196005444145719),
+        name: 'isEdited',
+        type: 1,
         flags: 0,
       ),
     ],
@@ -318,6 +331,34 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(10, 8871212447154404771),
+    name: 'DailyFunds',
+    lastPropertyId: const obx_int.IdUid(3, 3093597794620651979),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 2271881994418560112),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 6237209972077744845),
+        name: 'date',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 3093597794620651979),
+        name: 'amount',
+        type: 8,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -358,7 +399,7 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(9, 2621355858066362497),
+    lastEntityId: const obx_int.IdUid(10, 8871212447154404771),
     lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
     lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
@@ -596,10 +637,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         object.id = id;
       },
       objectToFB: (Ruci object, fb.Builder fbb) {
-        fbb.startTable(4);
+        fbb.startTable(6);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.date.millisecondsSinceEpoch);
         fbb.addInt64(2, object.orderNumber);
+        fbb.addBool(3, object.isDeleted);
+        fbb.addBool(4, object.isEdited);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -621,10 +664,24 @@ obx_int.ModelDefinition getObjectBoxModel() {
           4,
           0,
         );
+        final isDeletedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          false,
+        );
+        final isEditedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          false,
+        );
         final object = Ruci(
           orderNumber: orderNumberParam,
           date: dateParam,
           id: idParam,
+          isDeleted: isDeletedParam,
+          isEdited: isEditedParam,
         );
         obx_int.InternalToManyAccess.setRelInfo<Ruci>(
           object.items,
@@ -818,6 +875,40 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    DailyFunds: obx_int.EntityDefinition<DailyFunds>(
+      model: _entities[8],
+      toOneRelations: (DailyFunds object) => [],
+      toManyRelations: (DailyFunds object) => {},
+      getId: (DailyFunds object) => object.id,
+      setId: (DailyFunds object, int id) {
+        object.id = id;
+      },
+      objectToFB: (DailyFunds object, fb.Builder fbb) {
+        fbb.startTable(4);
+        fbb.addInt64(0, object.id);
+        fbb.addInt64(1, object.date.millisecondsSinceEpoch);
+        fbb.addFloat64(2, object.amount);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final dateParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 6, 0),
+        );
+        final amountParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final object = DailyFunds(date: dateParam, amount: amountParam)
+          ..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
+
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -935,6 +1026,16 @@ class Ruci_ {
     _entities[3].properties[2],
   );
 
+  /// See [Ruci.isDeleted].
+  static final isDeleted = obx.QueryBooleanProperty<Ruci>(
+    _entities[3].properties[3],
+  );
+
+  /// See [Ruci.isEdited].
+  static final isEdited = obx.QueryBooleanProperty<Ruci>(
+    _entities[3].properties[4],
+  );
+
   /// see [Ruci.items]
   static final items = obx.QueryRelationToMany<Ruci, OrderItem>(
     _entities[3].relations[0],
@@ -1015,5 +1116,23 @@ class Catigory_ {
   /// See [Catigory.imageUrl].
   static final imageUrl = obx.QueryStringProperty<Catigory>(
     _entities[7].properties[2],
+  );
+}
+
+/// [DailyFunds] entity fields to define ObjectBox queries.
+class DailyFunds_ {
+  /// See [DailyFunds.id].
+  static final id = obx.QueryIntegerProperty<DailyFunds>(
+    _entities[8].properties[0],
+  );
+
+  /// See [DailyFunds.date].
+  static final date = obx.QueryDateProperty<DailyFunds>(
+    _entities[8].properties[1],
+  );
+
+  /// See [DailyFunds.amount].
+  static final amount = obx.QueryDoubleProperty<DailyFunds>(
+    _entities[8].properties[2],
   );
 }

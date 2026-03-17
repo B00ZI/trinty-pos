@@ -11,6 +11,8 @@ import '../objectbox.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/expence.dart';
 import 'package:flutter/scheduler.dart';
+import '../models/daily_funds.dart';
+import '../widgets/daily_funds_dialog.dart';
 
 class DashboardScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -49,18 +51,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _todayOrderCount = 0.0;
   double _todayExpenses = 0.0;
   double _todayProfit = 0.0;
+  double _todayFunds = 0.0;
+  bool _fundsAlreadySet = false;
   late final Box<order_model.Ruci> _ruciBox;
+  late final Box<DailyFunds> _dailyFundsBox;
   Box<expence>? _expenceBox; // Change to nullable
 
   @override
   void initState() {
     super.initState();
     _ruciBox = widget.objectbox.store.box<order_model.Ruci>();
+    _dailyFundsBox = widget.objectbox.store.box<DailyFunds>();
     _expenceBox = widget.objectbox.store.box<expence>(); // Initialize
     _calculateRevenue();
     _calculateOrderCount();
     _calculateExpense(); // Calculate expenses
     _calculateProfit(); // Calculate profit
+    _loadTodayFunds(); // Load today's funds
   }
 
   Future<void> _calculateProfit() async {
@@ -76,6 +83,91 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       debugPrint('Error calculating profit: $e');
     }
+  }
+
+  Future<void> _loadTodayFunds() async {
+    try {
+      final DateTime todayStart = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
+      final query = _dailyFundsBox
+          .query(DailyFunds_.date.between(
+            todayStart.millisecondsSinceEpoch,
+            todayEnd.millisecondsSinceEpoch,
+          ))
+          .build();
+      final result = query.find();
+      query.close();
+
+      if (mounted) {
+        setState(() {
+          if (result.isNotEmpty) {
+            _todayFunds = result.first.amount;
+            _fundsAlreadySet = true;
+          } else {
+            _todayFunds = 0.0;
+            _fundsAlreadySet = false;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading today\'s funds: $e');
+    }
+  }
+
+  Future<void> _saveFunds(double amount) async {
+    try {
+      final DateTime todayStart = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
+
+      // Check if funds already exist for today
+      final query = _dailyFundsBox
+          .query(DailyFunds_.date.between(
+            todayStart.millisecondsSinceEpoch,
+            todayEnd.millisecondsSinceEpoch,
+          ))
+          .build();
+      final result = query.find();
+      query.close();
+
+      if (result.isNotEmpty) {
+        // Update existing funds
+        result.first.amount = amount;
+        _dailyFundsBox.put(result.first);
+      } else {
+        // Create new funds entry
+        final newFunds = DailyFunds(date: todayStart, amount: amount);
+        _dailyFundsBox.put(newFunds);
+      }
+
+      if (mounted) {
+        setState(() {
+          _todayFunds = amount;
+          _fundsAlreadySet = true;
+        });
+      }
+
+      debugPrint('Funds saved: ${amount.toStringAsFixed(2)} DH');
+    } catch (e) {
+      debugPrint('Error saving funds: $e');
+    }
+  }
+
+  void _showFundsDialog() {
+    final currentFunds = _fundsAlreadySet
+        ? DailyFunds(date: DateTime.now(), amount: _todayFunds)
+        : null;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => DailyFundsDialog(
+        currentFunds: currentFunds,
+        onSave: (amount) {
+          _saveFunds(amount);
+        },
+      ),
+    );
   }
 
   Future<void> _calculateExpense() async {
@@ -114,10 +206,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           DateTime.now().year, DateTime.now().month, DateTime.now().day);
       final DateTime todayEnd = todayStart.add(const Duration(days: 1));
       final query = _ruciBox
-          .query(Ruci_.date.between(
-            todayStart.millisecondsSinceEpoch,
-            todayEnd.millisecondsSinceEpoch,
-          ))
+          .query(Ruci_.date
+              .between(
+                todayStart.millisecondsSinceEpoch,
+                todayEnd.millisecondsSinceEpoch,
+              )
+              .and(Ruci_.isDeleted.equals(false)))
           .build();
       final todayOrders = query.find();
       query.close();
@@ -147,10 +241,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           DateTime.now().year, DateTime.now().month, DateTime.now().day);
       final DateTime todayEnd = todayStart.add(const Duration(days: 1));
       final query = _ruciBox
-          .query(Ruci_.date.between(
-            todayStart.millisecondsSinceEpoch,
-            todayEnd.millisecondsSinceEpoch,
-          ))
+          .query(Ruci_.date
+              .between(
+                todayStart.millisecondsSinceEpoch,
+                todayEnd.millisecondsSinceEpoch,
+              )
+              .and(Ruci_.isDeleted.equals(false)))
           .build();
       final todayOrders = query.find();
       query.close();
@@ -175,59 +271,165 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             const SizedBox(height: 10),
 
-            // Info Cards in a row
-            Row(
+            Stack(
               children: [
-                Expanded(
-                  child: InfoCard(
-                    title: "Today's Revenue",
-                    value: '${_todayRevenue.toStringAsFixed(2)} DH',
-                    icon: Icons.attach_money,
-                    color: Colors.green,
-                  ),
+                // 2x2 Grid of Cards
+                Column(
+                  children: [
+                    // Top Row: Revenue + Orders
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InfoCard(
+                            title: "Today's Revenue",
+                            value: '${_todayRevenue.toStringAsFixed(2)} DH',
+                            icon: Icons.attach_money,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: InfoCard(
+                            title: 'Orders',
+                            value: '${_todayOrderCount.toInt()}',
+                            icon: Icons.shopping_cart,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Bottom Row: Expenses + Profit
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InfoCard(
+                            title: 'Expenses',
+                            value: '${_todayExpenses.toInt()} DH',
+                            icon: Icons.money_off,
+                            color: Colors.red,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: InfoCard(
+                            title: 'Profit',
+                            value: '${_todayProfit.toStringAsFixed(2)} DH',
+                            icon: Icons.trending_up,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InfoCard(
-                    title: 'Orders',
-                    value: '${_todayOrderCount.toInt()}',
-                    icon: Icons.shopping_cart,
-                    color: Colors.blue,
+
+                // Circular Funds Widget (Absolutely Positioned in Center)
+                Positioned(
+                  top: 70,
+                  left: 10,
+                  right: 20,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: _showFundsDialog,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Circular Container
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 3,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${_todayFunds.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                Text(
+                                  'DH',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  'Fond de caisse',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Checkmark badge if already set
+                          // if (_fundsAlreadySet)
+                          //   Positioned(
+                          //     bottom: 0,
+                          //     right: 0,
+                          //     child: Container(
+                          //       padding: const EdgeInsets.all(4),
+                          //       decoration: BoxDecoration(
+                          //         shape: BoxShape.circle,
+                          //         color: Colors.green,
+                          //         boxShadow: [
+                          //           BoxShadow(
+                          //             color: Colors.green.withOpacity(0.5),
+                          //             blurRadius: 4,
+                          //           ),
+                          //         ],
+                          //       ),
+                          //       child: const Icon(
+                          //         Icons.check,
+                          //         color: Colors.white,
+                          //         size: 16,
+                          //       ),
+                          //     ),
+                          //   ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 10),
-
-            Row(
-              children: [
-                Expanded(
-                  child: InfoCard(
-                    title: 'Expenses',
-                    value: '${_todayExpenses.toInt()} DH',
-                    icon: Icons.money_off,
-                    color: Colors.red,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InfoCard(
-                    title: 'Profit',
-                    value: '${_todayProfit.toStringAsFixed(2)} DH',
-                    icon: Icons.trending_up,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
+            const SizedBox(height: 20),
 
             const SizedBox(height: 20),
 

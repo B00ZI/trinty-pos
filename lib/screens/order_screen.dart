@@ -669,7 +669,8 @@ class _OrderScreenState extends State<OrderScreen>
         order.items.add(item);
       }
 
-      // 3. Update Order
+      // 3. Mark as edited and update Order
+      order.isEdited = true;
       // Date can remain original or update. Let's keep original date for history accuracy.
       orderBox.put(order);
 

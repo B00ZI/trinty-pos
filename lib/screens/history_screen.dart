@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/order_item.dart';
 import '../objectbox.dart';
+import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/order.dart';
 import '../models/printer_config.dart';
@@ -22,6 +23,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   late final Box<Ruci> _orderBox;
   late final Box<PrinterConfig> _printerConfigBox;
   late final Box<OrderCounter> _orderCounterBox; // Declare OrderCounter box
+  bool _showDeletedOrders = false;
 
   @override
   void initState() {
@@ -102,7 +104,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 // }
 
   Future<void> _deleteOrder(Ruci order) async {
-    _orderBox.remove(order.id);
+    // Soft delete: mark as deleted instead of removing
+    order.isDeleted = true;
+    _orderBox.put(order);
   }
 
   // Future<void> _printOrder(Ruci order) async {
@@ -247,9 +251,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        
         actions: [
           // Add the button to the AppBar
+          Tooltip(
+            message: 'Afficher les commandes supprimées',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _showDeletedOrders,
+                    onChanged: (value) {
+                      setState(() {
+                        _showDeletedOrders = value ?? false;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('Supprimées'),
+                ],
+              ),
+            ),
+          ),
           IconButton(
             onPressed: () => _resetOrderCounter(),
             icon: const Icon(Icons.refresh),
@@ -279,121 +302,205 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
           final orders = snapshot.data!;
           final reversedOrders = orders.reversed.toList();
+          final filteredOrders = _showDeletedOrders
+              ? reversedOrders
+              : reversedOrders.where((order) => !order.isDeleted).toList();
 
           return ListView.builder(
-            itemCount: reversedOrders.length,
+            itemCount: filteredOrders.length,
             itemBuilder: (context, index) {
-              final order = reversedOrders[index];
+              final order = filteredOrders[index];
               return Card(
-                margin: const EdgeInsets.all(8.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
+                  margin: const EdgeInsets.all(8.0),
+                  color: order.isDeleted
+                      ? Colors.red.shade50
+                      : Theme.of(context).colorScheme.surface,
+                  child: Container(
+                    decoration: order.isDeleted
+                        ? BoxDecoration(
+                            border: Border.all(
+                                color: Colors.red.shade300, width: 2),
+                            borderRadius: BorderRadius.circular(12),
+                          )
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Commande N° ${order.orderNumber}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 18),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            icon: Icon(Icons.edit,
-                                color: Theme.of(context).colorScheme.secondary),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => custom_order_screen.OrderScreen(
-                                    objectbox: widget.objectbox,
-                                    orderToEdit: order,
-                                  ),
-                                ),
-                              ).then((_) {
-                                // Refresh history when returning (though StreamBuilder should handle it)
-                                setState(() {});
-                              });
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            color: Colors.red,
-                            onPressed: () {
-                              _deleteOrder(order);
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                          'Date de commande : ${order.date.toLocal().toString().split('.')[0]}'),
-                      const SizedBox(height: 4),
-                      Text('Total d\'articles : ${order.items.length}'),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Montant Total : ${order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)).toStringAsFixed(2)} DH',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('Articles :'),
-                      for (final item in order.items)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
                             children: [
-                              Text(
-                                  '- ${item.product.target != null ? item.product.target!.name : 'Produit Supprimé'} : ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
-                              if (item.extras.isNotEmpty)
-                                ...item.extras.map((extra) {
-                                  final qty = item.getExtraQuantity(extra);
-                                  return Padding(
-                                    padding: const EdgeInsets.only(left: 16.0),
-                                    child: Text(
-                                      '  + ${extra.name} ${qty > 1 ? "x$qty" : ""}: ${(extra.price * qty).toStringAsFixed(2)} DH',
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                    ),
-                                  );
-                                }),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Commande N° ${order.orderNumber}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      if (order.isEdited)
+                                        Container(
+                                          margin:
+                                              const EdgeInsets.only(right: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'MODIFIÉE',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10),
+                                          ),
+                                        ),
+                                      if (order.isDeleted)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'SUPPRIMÉE',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: Icon(Icons.edit,
+                                    color: order.isDeleted
+                                        ? Colors.grey
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .secondary),
+                                onPressed: order.isDeleted
+                                    ? null
+                                    : () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                custom_order_screen.OrderScreen(
+                                              objectbox: widget.objectbox,
+                                              orderToEdit: order,
+                                            ),
+                                          ),
+                                        ).then((_) {
+                                          setState(() {});
+                                        });
+                                      },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                color:
+                                    order.isDeleted ? Colors.grey : Colors.red,
+                                onPressed: order.isDeleted
+                                    ? null
+                                    : () {
+                                        _deleteOrder(order);
+                                      },
+                              ),
                             ],
                           ),
-                        ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              final receiptData =
-                                  ReceiptData.convertRuciToReceiptData(order);
-                              PrinterHelper.printReceipt(
-                                  receiptData, widget.objectbox);
-                            },
-                            icon: Icon(Icons.print,
-                                color: Theme.of(context).colorScheme.onPrimary),
-                            label: Text('Imprimer',
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimary)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          const SizedBox(height: 8),
+                          Text(
+                              'Date de commande : ${order.date.toLocal().toString().split('.')[0]}'),
+                          const SizedBox(height: 4),
+                          Text('Total d\'articles : ${order.items.length}'),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Montant Total : ${order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)).toStringAsFixed(2)} DH',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.green,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('Articles :'),
+                          for (final item in order.items)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      '- ${item.product.target != null ? item.product.target!.name : 'Produit Supprimé'} : ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
+                                  if (item.extras.isNotEmpty)
+                                    ...item.extras.map((extra) {
+                                      final qty = item.getExtraQuantity(extra);
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 16.0),
+                                        child: Text(
+                                          '  + ${extra.name} ${qty > 1 ? "x$qty" : ""}: ${(extra.price * qty).toStringAsFixed(2)} DH',
+                                          style: const TextStyle(
+                                              fontSize: 12, color: Colors.grey),
+                                        ),
+                                      );
+                                    }),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: order.isDeleted
+                                    ? null
+                                    : () {
+                                        final receiptData = ReceiptData
+                                            .convertRuciToReceiptData(order);
+                                        PrinterHelper.printReceipt(
+                                            receiptData, widget.objectbox);
+                                      },
+                                icon: Icon(Icons.print,
+                                    color: order.isDeleted
+                                        ? Colors.grey
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary),
+                                label: Text('Imprimer',
+                                    style: TextStyle(
+                                        color: order.isDeleted
+                                            ? Colors.grey
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: order.isDeleted
+                                      ? Colors.grey.shade300
+                                      : Theme.of(context).colorScheme.primary,
+                                  foregroundColor: order.isDeleted
+                                      ? Colors.grey
+                                      : Theme.of(context).colorScheme.onPrimary,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              );
+                    ),
+                  ));
             },
           );
         },

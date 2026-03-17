@@ -70,10 +70,12 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     final DateTime endOfDay = startOfDay.add(const Duration(days: 1));
 
     final query = _ruciBox
-        .query(Ruci_.date.between(
-          startOfDay.millisecondsSinceEpoch,
-          endOfDay.millisecondsSinceEpoch,
-        ))
+        .query(Ruci_.date
+            .between(
+              startOfDay.millisecondsSinceEpoch,
+              endOfDay.millisecondsSinceEpoch,
+            )
+            .and(Ruci_.isDeleted.equals(false)))
         .build();
 
     final dailyOrders = query.find();
@@ -275,9 +277,11 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildLegendItem(Theme.of(context).colorScheme.primary, 'Revenue'),
+              _buildLegendItem(
+                  Theme.of(context).colorScheme.primary, 'Revenue'),
               const SizedBox(width: 20),
-              _buildLegendItem(Theme.of(context).colorScheme.onSurface, 'Orders'),
+              _buildLegendItem(
+                  Theme.of(context).colorScheme.onSurface, 'Orders'),
             ],
           ),
         ],
