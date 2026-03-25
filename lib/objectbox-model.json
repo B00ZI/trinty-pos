@@ -54,7 +54,7 @@
     },
     {
       "id": "2:7719230692724575644",
-      "lastPropertyId": "4:3420416872380588178",
+      "lastPropertyId": "6:537470869254787763",
       "name": "OrderItem",
       "properties": [
         {
@@ -79,6 +79,16 @@
         {
           "id": "4:3420416872380588178",
           "name": "extraQuantitiesJson",
+          "type": 9
+        },
+        {
+          "id": "5:6264582929891489481",
+          "name": "price",
+          "type": 8
+        },
+        {
+          "id": "6:537470869254787763",
+          "name": "productName",
           "type": 9
         }
       ],
@@ -126,7 +136,7 @@
     },
     {
       "id": "5:459141988423342695",
-      "lastPropertyId": "5:8538196005444145719",
+      "lastPropertyId": "6:4334168741010396403",
       "name": "Ruci",
       "properties": [
         {
@@ -154,6 +164,14 @@
           "id": "5:8538196005444145719",
           "name": "isEdited",
           "type": 1
+        },
+        {
+          "id": "6:4334168741010396403",
+          "name": "userId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "2:6747678160280048648",
+          "relationTarget": "AppUser"
         }
       ],
       "relations": [
@@ -288,10 +306,29 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "11:5447409109248621204",
+      "lastPropertyId": "2:6828018991168305233",
+      "name": "AppUser",
+      "properties": [
+        {
+          "id": "1:1751455072111973181",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6828018991168305233",
+          "name": "name",
+          "type": 9
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "10:8871212447154404771",
-  "lastIndexId": "1:4823262623031552778",
+  "lastEntityId": "11:5447409109248621204",
+  "lastIndexId": "2:6747678160280048648",
   "lastRelationId": "3:14140742415403822",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

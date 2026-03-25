@@ -1,5 +1,6 @@
 import 'package:objectbox/objectbox.dart';
 import 'order_item.dart';
+import 'app_user.dart';
 
 @Entity()
 class Ruci {
@@ -14,6 +15,7 @@ class Ruci {
   bool isEdited = false;
 
   final items = ToMany<OrderItem>();
+  final user = ToOne<AppUser>();
 
   Ruci({
     required this.orderNumber,

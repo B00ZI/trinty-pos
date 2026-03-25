@@ -13,6 +13,8 @@ import '../models/expence.dart';
 import 'package:flutter/scheduler.dart';
 import '../models/daily_funds.dart';
 import '../widgets/daily_funds_dialog.dart';
+import '../models/app_user.dart';
+import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -55,14 +57,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _fundsAlreadySet = false;
   late final Box<order_model.Ruci> _ruciBox;
   late final Box<DailyFunds> _dailyFundsBox;
+  late final Box<AppUser> _userBox;
   Box<expence>? _expenceBox; // Change to nullable
+
+  DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  DateTime _endDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 23, 59, 59);
+  AppUser? _selectedUserFilter;
+  List<AppUser> _allUsers = [];
 
   @override
   void initState() {
     super.initState();
     _ruciBox = widget.objectbox.store.box<order_model.Ruci>();
     _dailyFundsBox = widget.objectbox.store.box<DailyFunds>();
+    _userBox = widget.objectbox.store.box<AppUser>();
     _expenceBox = widget.objectbox.store.box<expence>(); // Initialize
+    _allUsers = _userBox.getAll();
+    _refreshData();
+  }
+
+  void _refreshData() {
     _calculateRevenue();
     _calculateOrderCount();
     _calculateExpense(); // Calculate expenses
@@ -70,14 +84,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadTodayFunds(); // Load today's funds
   }
 
+  Future<void> _selectDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _startDate = DateTime(picked.start.year, picked.start.month, picked.start.day);
+        _endDate = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
+      });
+      _refreshData();
+    }
+  }
+
   Future<void> _calculateProfit() async {
     try {
       final profit = _todayRevenue - _todayExpenses;
-      debugPrint('Today\'s total profit: \$${profit.toStringAsFixed(2)}');
       if (mounted) {
         setState(() {
-          // Assuming you want to store profit somewhere
-          _todayProfit = profit; // Uncomment and define _todayProfit if needed
+          _todayProfit = profit;
         });
       }
     } catch (e) {
@@ -119,24 +148,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final DateTime todayStart = DateTime(
           DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
 
       // Check if funds already exist for today
       final query = _dailyFundsBox
-          .query(DailyFunds_.date.between(
-            todayStart.millisecondsSinceEpoch,
-            todayEnd.millisecondsSinceEpoch,
-          ))
+          .query(DailyFunds_.date.equals(todayStart.millisecondsSinceEpoch))
           .build();
       final result = query.find();
       query.close();
 
       if (result.isNotEmpty) {
-        // Update existing funds
         result.first.amount = amount;
         _dailyFundsBox.put(result.first);
       } else {
-        // Create new funds entry
         final newFunds = DailyFunds(date: todayStart, amount: amount);
         _dailyFundsBox.put(newFunds);
       }
@@ -147,8 +170,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _fundsAlreadySet = true;
         });
       }
-
-      debugPrint('Funds saved: ${amount.toStringAsFixed(2)} DH');
     } catch (e) {
       debugPrint('Error saving funds: $e');
     }
@@ -172,27 +193,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _calculateExpense() async {
     try {
-      final DateTime todayStart = DateTime(
-          DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
-      final query = _expenceBox!
+      final queryBuilder = _expenceBox!
           .query(expence_.date.between(
-            todayStart.millisecondsSinceEpoch,
-            todayEnd.millisecondsSinceEpoch,
-          ))
-          .build();
-      final todayExpenses = query.find();
+            _startDate.millisecondsSinceEpoch,
+            _endDate.millisecondsSinceEpoch,
+          ));
+      
+      final query = queryBuilder.build();
+      final periodExpenses = query.find();
       query.close();
+
       double totalExpenses = 0.0;
-      for (final exp in todayExpenses) {
+      for (final exp in periodExpenses) {
         totalExpenses += exp.amount;
       }
-      debugPrint(
-          'Today\'s total expenses: \$${totalExpenses.toStringAsFixed(2)}');
       if (mounted) {
         setState(() {
-          // Assuming you want to store expenses in _todayRevenue for now
-          _todayExpenses = totalExpenses; // Subtract expenses from revenue
+          _todayExpenses = totalExpenses;
         });
       }
     } catch (e) {
@@ -202,24 +219,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _calculateOrderCount() async {
     try {
-      final DateTime todayStart = DateTime(
-          DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
-      final query = _ruciBox
-          .query(Ruci_.date
+      final queryBuilder = _ruciBox.query(Ruci_.date
               .between(
-                todayStart.millisecondsSinceEpoch,
-                todayEnd.millisecondsSinceEpoch,
+                _startDate.millisecondsSinceEpoch,
+                _endDate.millisecondsSinceEpoch,
               )
-              .and(Ruci_.isDeleted.equals(false)))
-          .build();
-      final todayOrders = query.find();
+              .and(Ruci_.isDeleted.equals(false)));
+      
+      if (_selectedUserFilter != null) {
+        queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserFilter!.id));
+      }
+
+      final query = queryBuilder.build();
+      final periodOrders = query.find();
       query.close();
-      int orderCount = todayOrders.length;
-      debugPrint('Today\'s total orders: $orderCount');
+      
       if (mounted) {
         setState(() {
-          _todayOrderCount = orderCount.toDouble();
+          _todayOrderCount = periodOrders.length.toDouble();
         });
       }
     } catch (e) {
@@ -228,7 +245,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   double calculateItemTotal(OrderItem item) {
-    double total = item.quantity * (item.product.target?.price ?? 0.0);
+    // Use persisted price if available, otherwise fallback to current product price
+    double basePrice = (item.price ?? item.product.target?.price ?? 0.0).toDouble();
+    double total = item.quantity * basePrice;
     for (final extra in item.extras) {
       total += extra.price * item.getExtraQuantity(extra);
     }
@@ -237,27 +256,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _calculateRevenue() async {
     try {
-      final DateTime todayStart = DateTime(
-          DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
-      final query = _ruciBox
-          .query(Ruci_.date
+      final queryBuilder = _ruciBox.query(Ruci_.date
               .between(
-                todayStart.millisecondsSinceEpoch,
-                todayEnd.millisecondsSinceEpoch,
+                _startDate.millisecondsSinceEpoch,
+                _endDate.millisecondsSinceEpoch,
               )
-              .and(Ruci_.isDeleted.equals(false)))
-          .build();
-      final todayOrders = query.find();
+              .and(Ruci_.isDeleted.equals(false)));
+      
+      if (_selectedUserFilter != null) {
+        queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserFilter!.id));
+      }
+
+      final query = queryBuilder.build();
+      final periodOrders = query.find();
       query.close();
+
       double totalRevenue = 0.0;
-      for (final ruci in todayOrders) {
+      for (final ruci in periodOrders) {
         for (final orderItem in ruci.items) {
           totalRevenue += calculateItemTotal(orderItem);
         }
       }
-      debugPrint(
-          'Today\'s total revenue: \$${totalRevenue.toStringAsFixed(2)}');
       if (mounted) {
         setState(() {
           _todayRevenue = totalRevenue;
@@ -268,6 +287,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _showUnitsSoldPopup() {
+    final queryBuilder = _ruciBox.query(Ruci_.date
+            .between(
+              _startDate.millisecondsSinceEpoch,
+              _endDate.millisecondsSinceEpoch,
+            )
+            .and(Ruci_.isDeleted.equals(false)));
+    
+    if (_selectedUserFilter != null) {
+      queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserFilter!.id));
+    }
+
+    final query = queryBuilder.build();
+    final periodOrders = query.find();
+    query.close();
+
+    final Map<String, int> productCounts = {};
+    for (final ruci in periodOrders) {
+      for (final item in ruci.items) {
+        // Use persisted name if available, otherwise fallback to current product name
+        final productName = item.productName ?? item.product.target?.name ?? 'Inconnu';
+        productCounts[productName] = (productCounts[productName] ?? 0) + item.quantity;
+      }
+    }
+
+    final sortedItems = productCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unités Vendues'),
+        content: SizedBox(
+          width: 400, // Fixed width
+          height: 500, // Fixed height
+          child: sortedItems.isEmpty
+              ? const Center(child: Text('Aucune vente sur cette période'))
+              : ListView.builder(
+                  itemCount: sortedItems.length,
+                  itemBuilder: (context, index) {
+                    final entry = sortedItems[index];
+                    return ListTile(
+                      title: Text(entry.key),
+                      trailing: Text(
+                        '${entry.value}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -275,7 +355,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const SizedBox(height: 10),
+            // Filters Section
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _selectDateRange,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.date_range, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${DateFormat('dd/MM').format(_startDate)} - ${DateFormat('dd/MM').format(_endDate)}',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<AppUser?>(
+                        value: _selectedUserFilter,
+                        hint: const Text('Tous les Utilisateurs', style: TextStyle(fontSize: 13)),
+                        isExpanded: true,
+                        items: [
+                          const DropdownMenuItem<AppUser?>(
+                            value: null,
+                            child: Text('Tous les Utilisateurs', style: TextStyle(fontSize: 13)),
+                          ),
+                          ..._allUsers.map((user) => DropdownMenuItem<AppUser?>(
+                                value: user,
+                                child: Text(user.name, style: const TextStyle(fontSize: 13)),
+                              )),
+                        ],
+                        onChanged: (user) {
+                          setState(() {
+                            _selectedUserFilter = user;
+                          });
+                          _refreshData();
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
 
             Stack(
               children: [
@@ -287,7 +430,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         Expanded(
                           child: InfoCard(
-                            title: "Today's Revenue",
+                            title: "Revenu",
                             value: '${_todayRevenue.toStringAsFixed(2)} DH',
                             icon: Icons.attach_money,
                             color: Colors.green,
@@ -295,11 +438,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: InfoCard(
-                            title: 'Orders',
-                            value: '${_todayOrderCount.toInt()}',
-                            icon: Icons.shopping_cart,
-                            color: Colors.blue,
+                          child: GestureDetector(
+                            onTap: _showUnitsSoldPopup,
+                            child: InfoCard(
+                              title: 'Commandes',
+                              value: '${_todayOrderCount.toInt()}',
+                              icon: Icons.shopping_cart,
+                              color: Colors.blue,
+                            ),
                           ),
                         ),
                       ],
@@ -310,7 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         Expanded(
                           child: InfoCard(
-                            title: 'Expenses',
+                            title: 'Dépenses',
                             value: '${_todayExpenses.toInt()} DH',
                             icon: Icons.money_off,
                             color: Colors.red,
@@ -319,7 +465,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: InfoCard(
-                            title: 'Profit',
+                            title: 'Bénéfice',
                             value: '${_todayProfit.toStringAsFixed(2)} DH',
                             icon: Icons.trending_up,
                             color: Colors.green,
@@ -330,7 +476,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
 
-                // Circular Funds Widget (Absolutely Positioned in Center)
+                // Circular Funds Widget
                 Positioned(
                   top: 70,
                   left: 10,
@@ -341,25 +487,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Circular Container
                           Container(
                             width: 120,
                             height: 120,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer,
+                              color: Theme.of(context).colorScheme.primaryContainer,
                               border: Border.all(
                                 color: Theme.of(context).colorScheme.primary,
                                 width: 3,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.3),
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                                   blurRadius: 8,
                                   spreadRadius: 2,
                                 ),
@@ -373,16 +513,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                                 Text(
                                   'DH',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -390,37 +528,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   'Fond de caisse',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          // Checkmark badge if already set
-                          // if (_fundsAlreadySet)
-                          //   Positioned(
-                          //     bottom: 0,
-                          //     right: 0,
-                          //     child: Container(
-                          //       padding: const EdgeInsets.all(4),
-                          //       decoration: BoxDecoration(
-                          //         shape: BoxShape.circle,
-                          //         color: Colors.green,
-                          //         boxShadow: [
-                          //           BoxShadow(
-                          //             color: Colors.green.withOpacity(0.5),
-                          //             blurRadius: 4,
-                          //           ),
-                          //         ],
-                          //       ),
-                          //       child: const Icon(
-                          //         Icons.check,
-                          //         color: Colors.white,
-                          //         size: 16,
-                          //       ),
-                          //     ),
-                          //   ),
                         ],
                       ),
                     ),
@@ -431,41 +544,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
-
             // Chart
             SizedBox(
               height: 300,
               child: WeeklyPerformanceChart(
                 store: widget.objectbox.store,
-                title: 'Weekly Sales & Orders',
+                title: 'Performance Hebdomadaire',
                 maxYValue: 2000.0,
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Best Sellers Section
-            // Container(
-            //   height: 200,
-            //   child: best_seller.ProductCardsRow(
-            //     products: widget.myProducts
-            //         .map((p) => best_seller.Product(
-            //               title: p.name,
-            //               price: '\$${p.price.toStringAsFixed(2)}',
-            //               rank: '#${widget.myProducts.indexOf(p) + 1}',
-            //               rankColor:
-            //                   _getRankColor(widget.myProducts.indexOf(p)),
-            //             ))
-            //         .toList(),
-            //     sectionTitle: 'Best Sellers',
-            //     scrollable: true,
-            //   ),
-            // ),
-
-            const SizedBox(height: 20),
-
-            // Expense Tracking Section - Only show if _expenceBox is initialized
+            // Expense Tracking Section
             if (_expenceBox != null)
               SizedBox(
                 height: 200,
@@ -473,28 +564,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   expenceBox: _expenceBox!,
                   onListChanged: (newExpenses) {
                     SchedulerBinding.instance.addPostFrameCallback((_) {
-                      _calculateExpense();
-                      _calculateProfit();
+                      _refreshData();
                     });
                   },
                 ),
               )
             else
-              SizedBox(
+              const SizedBox(
                 height: 200,
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               ),
           ],
         ),
       ),
     );
-  }
-
-  Color _getRankColor(int index) {
-    final colors = [Colors.amber, Colors.blue, Colors.green, Colors.purple];
-    return colors[index % colors.length];
   }
 
   @override

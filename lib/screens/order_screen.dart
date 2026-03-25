@@ -21,16 +21,19 @@ import '../widgets/comment_dialog.dart'; // Import CommentDialog
 import '../models/catigory.dart'; // Import Catigory
 import '../widgets/catigory_card.dart'; // Import CatigoryCard
 import '../widgets/payment_dialog.dart'; // Import PaymentDialog
+import '../models/app_user.dart';
 
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
   final Ruci? orderToEdit;
   final String? initialCategory;
+  final AppUser? assignedUser;
   const OrderScreen(
       {super.key,
       required this.objectbox,
       this.orderToEdit,
-      this.initialCategory});
+      this.initialCategory,
+      this.assignedUser});
 
   @override
   State<OrderScreen> createState() => _OrderScreenState();
@@ -163,7 +166,9 @@ class _OrderScreenState extends State<OrderScreen>
   }
 
   double calculateItemTotal(OrderItem item) {
-    double total = item.quantity * (item.product.target?.price ?? 0).toDouble();
+    // Use persisted price if available, otherwise fallback to current product price
+    double basePrice = (item.price ?? item.product.target?.price ?? 0).toDouble();
+    double total = item.quantity * basePrice;
     for (final extra in item.extras) {
       total += extra.price * item.getExtraQuantity(extra);
     }
@@ -663,6 +668,9 @@ class _OrderScreenState extends State<OrderScreen>
 
       // 2. Add new items from cart
       for (final item in _cart) {
+        // Set persisted price and name from product target
+        item.price = item.product.target?.price;
+        item.productName = item.product.target?.name;
         // These are new OrderItem instances (id=0) or reused ones.
         // Since we created new objects in _loadOrderForEditing or _addToCart with id=0 (implied),
         // they will be inserted as new records.
@@ -689,7 +697,12 @@ class _OrderScreenState extends State<OrderScreen>
         date: DateTime.now(),
         orderNumber: orderCounter.value,
       );
+      if (widget.assignedUser != null) {
+        order.user.target = widget.assignedUser;
+      }
       for (final item in _cart) {
+        item.price = item.product.target?.price;
+        item.productName = item.product.target?.name;
         order.items.add(item);
       }
       orderBox.put(order);
@@ -762,6 +775,9 @@ class _OrderScreenState extends State<OrderScreen>
 
       // 2. Add new items from cart
       for (final item in _cart) {
+        // Set persisted price and name from product target
+        item.price = item.product.target?.price;
+        item.productName = item.product.target?.name;
         // These are new OrderItem instances (id=0) or reused ones.
         // Since we created new objects in _loadOrderForEditing or _addToCart with id=0 (implied),
         // they will be inserted as new records.
@@ -788,6 +804,8 @@ class _OrderScreenState extends State<OrderScreen>
         orderNumber: orderCounter.value,
       );
       for (final item in _cart) {
+        item.price = item.product.target?.price;
+        item.productName = item.product.target?.name;
         order.items.add(item);
       }
       orderBox.put(order);

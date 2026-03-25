@@ -14,6 +14,7 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import 'models/app_user.dart';
 import 'models/catigory.dart';
 import 'models/daily_funds.dart';
 import 'models/expence.dart';
@@ -88,7 +89,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(2, 7719230692724575644),
     name: 'OrderItem',
-    lastPropertyId: const obx_int.IdUid(4, 3420416872380588178),
+    lastPropertyId: const obx_int.IdUid(6, 537470869254787763),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -114,6 +115,18 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(4, 3420416872380588178),
         name: 'extraQuantitiesJson',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 6264582929891489481),
+        name: 'price',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 537470869254787763),
+        name: 'productName',
         type: 9,
         flags: 0,
       ),
@@ -170,7 +183,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(5, 459141988423342695),
     name: 'Ruci',
-    lastPropertyId: const obx_int.IdUid(5, 8538196005444145719),
+    lastPropertyId: const obx_int.IdUid(6, 4334168741010396403),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -202,6 +215,14 @@ final _entities = <obx_int.ModelEntity>[
         name: 'isEdited',
         type: 1,
         flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 4334168741010396403),
+        name: 'userId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(2, 6747678160280048648),
+        relationTarget: 'AppUser',
       ),
     ],
     relations: <obx_int.ModelRelation>[
@@ -359,6 +380,28 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(11, 5447409109248621204),
+    name: 'AppUser',
+    lastPropertyId: const obx_int.IdUid(2, 6828018991168305233),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 1751455072111973181),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 6828018991168305233),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -399,8 +442,8 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(10, 8871212447154404771),
-    lastIndexId: const obx_int.IdUid(1, 4823262623031552778),
+    lastEntityId: const obx_int.IdUid(11, 5447409109248621204),
+    lastIndexId: const obx_int.IdUid(2, 6747678160280048648),
     lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [8743093086059233857],
@@ -519,11 +562,17 @@ obx_int.ModelDefinition getObjectBoxModel() {
             object.extraQuantitiesJson == null
                 ? null
                 : fbb.writeString(object.extraQuantitiesJson!);
-        fbb.startTable(5);
+        final productNameOffset =
+            object.productName == null
+                ? null
+                : fbb.writeString(object.productName!);
+        fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.product.targetId);
         fbb.addInt64(2, object.quantity);
         fbb.addOffset(3, extraQuantitiesJsonOffset);
+        fbb.addFloat64(4, object.price);
+        fbb.addOffset(5, productNameOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -545,10 +594,20 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final extraQuantitiesJsonParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 10);
+        final priceParam = const fb.Float64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          12,
+        );
+        final productNameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 14);
         final object = OrderItem(
           id: idParam,
           quantity: quantityParam,
           extraQuantitiesJson: extraQuantitiesJsonParam,
+          price: priceParam,
+          productName: productNameParam,
         );
         object.product.targetId = const fb.Int64Reader().vTableGet(
           buffer,
@@ -627,7 +686,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
     ),
     Ruci: obx_int.EntityDefinition<Ruci>(
       model: _entities[3],
-      toOneRelations: (Ruci object) => [],
+      toOneRelations: (Ruci object) => [object.user],
       toManyRelations:
           (Ruci object) => {
             obx_int.RelInfo<Ruci>.toMany(2, object.id): object.items,
@@ -637,12 +696,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
         object.id = id;
       },
       objectToFB: (Ruci object, fb.Builder fbb) {
-        fbb.startTable(6);
+        fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.date.millisecondsSinceEpoch);
         fbb.addInt64(2, object.orderNumber);
         fbb.addBool(3, object.isDeleted);
         fbb.addBool(4, object.isEdited);
+        fbb.addInt64(5, object.user.targetId);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -683,6 +743,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
           isDeleted: isDeletedParam,
           isEdited: isEditedParam,
         );
+        object.user.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          14,
+          0,
+        );
+        object.user.attach(store);
         obx_int.InternalToManyAccess.setRelInfo<Ruci>(
           object.items,
           store,
@@ -909,6 +976,39 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    AppUser: obx_int.EntityDefinition<AppUser>(
+      model: _entities[9],
+      toOneRelations: (AppUser object) => [],
+      toManyRelations: (AppUser object) => {},
+      getId: (AppUser object) => object.id,
+      setId: (AppUser object, int id) {
+        object.id = id;
+      },
+      objectToFB: (AppUser object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        fbb.startTable(3);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final object = AppUser(id: idParam, name: nameParam);
+
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -979,6 +1079,16 @@ class OrderItem_ {
     _entities[1].properties[3],
   );
 
+  /// See [OrderItem.price].
+  static final price = obx.QueryDoubleProperty<OrderItem>(
+    _entities[1].properties[4],
+  );
+
+  /// See [OrderItem.productName].
+  static final productName = obx.QueryStringProperty<OrderItem>(
+    _entities[1].properties[5],
+  );
+
   /// see [OrderItem.extras]
   static final extras = obx.QueryRelationToMany<OrderItem, Product>(
     _entities[1].relations[0],
@@ -1034,6 +1144,11 @@ class Ruci_ {
   /// See [Ruci.isEdited].
   static final isEdited = obx.QueryBooleanProperty<Ruci>(
     _entities[3].properties[4],
+  );
+
+  /// See [Ruci.user].
+  static final user = obx.QueryRelationToOne<Ruci, AppUser>(
+    _entities[3].properties[5],
   );
 
   /// see [Ruci.items]
@@ -1134,5 +1249,18 @@ class DailyFunds_ {
   /// See [DailyFunds.amount].
   static final amount = obx.QueryDoubleProperty<DailyFunds>(
     _entities[8].properties[2],
+  );
+}
+
+/// [AppUser] entity fields to define ObjectBox queries.
+class AppUser_ {
+  /// See [AppUser.id].
+  static final id = obx.QueryIntegerProperty<AppUser>(
+    _entities[9].properties[0],
+  );
+
+  /// See [AppUser.name].
+  static final name = obx.QueryStringProperty<AppUser>(
+    _entities[9].properties[1],
   );
 }

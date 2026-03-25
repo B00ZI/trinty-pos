@@ -3,13 +3,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/screens/history_screen.dart';
 import 'package:Easify/screens/order_screen.dart';
-import 'package:Easify/screens/products_screen.dart';
+import 'package:Easify/screens/management_screen.dart'; // Unified management
 import 'package:Easify/models/order_counter.dart';
 import 'package:Easify/screens/settings_screen.dart';
 import 'package:Easify/screens/dashboard_screen.dart';
 import 'service/activation_service.dart';
 import 'widgets/activation_dialog.dart';
-import 'screens/catigory_screen.dart';
+import 'models/app_user.dart';
+import 'package:objectbox/objectbox.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -144,21 +145,14 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  late final List<Widget> _widgetOptions;
   bool _isCheckingActivation = true;
+  AppUser? _selectedUser;
+  DateTime? _lastTabTap;
 
   @override
   void initState() {
     super.initState();
     _checkActivation();
-    _widgetOptions = <Widget>[
-      OrderScreen(objectbox: widget.objectbox),
-      HistoryScreen(objectbox: widget.objectbox),
-      DashboardScreen(objectbox: widget.objectbox),
-      ProductsScreen(objectbox: widget.objectbox),
-      CatigoryScreen(objectbox: widget.objectbox),
-      SettingsScreen(objectbox: widget.objectbox),
-    ];
   }
 
   Future<void> _checkActivation() async {
@@ -185,7 +179,69 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  void _showUserSelectionDialog() async {
+    final userBox = widget.objectbox.store.box<AppUser>();
+    final users = userBox.getAll();
+
+    if (users.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez d\'abord ajouter des utilisateurs dans les paramètres')),
+      );
+      return;
+    }
+
+    final selected = await showDialog<AppUser>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sélectionner l\'utilisateur'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              final user = users[index];
+              return ListTile(
+                title: Text(user.name),
+                leading: Radio<int>(
+                  value: user.id,
+                  groupValue: _selectedUser?.id,
+                  onChanged: (_) => Navigator.pop(context, user),
+                ),
+                onTap: () => Navigator.pop(context, user),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+        ],
+      ),
+    );
+
+    if (selected != null) {
+      setState(() {
+        _selectedUser = selected;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Utilisateur sélectionné : ${selected.name}')),
+      );
+    }
+  }
+
   void _onItemTapped(int index) {
+    if (index == 0) {
+      final now = DateTime.now();
+      if (_lastTabTap != null &&
+          now.difference(_lastTabTap!) < const Duration(milliseconds: 500)) {
+        _showUserSelectionDialog();
+      }
+      _lastTabTap = now;
+    }
+
     setState(() {
       _selectedIndex = index;
     });
@@ -200,14 +256,23 @@ class _MainScreenState extends State<MainScreen> {
         ),
       );
     }
+
+    final widgetOptions = <Widget>[
+      OrderScreen(objectbox: widget.objectbox, assignedUser: _selectedUser),
+      HistoryScreen(objectbox: widget.objectbox),
+      DashboardScreen(objectbox: widget.objectbox),
+      ManagementScreen(objectbox: widget.objectbox), // Unified
+      SettingsScreen(objectbox: widget.objectbox),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Easify'),
+        title: Text(_selectedUser != null ? 'Easify [${_selectedUser!.name}]' : 'Easify'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
       body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+        child: widgetOptions.elementAt(_selectedIndex),
       ), 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -226,12 +291,8 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Tableau de bord',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.apps),
-            label: 'Produits',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.category),
-            label: 'Catégories',
+            icon: Icon(Icons.inventory_2),
+            label: 'Gestion',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),

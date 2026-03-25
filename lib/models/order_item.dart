@@ -11,11 +11,15 @@ class OrderItem {
   final ToMany<Product> extras = ToMany<Product>();
   int quantity;
   String? extraQuantitiesJson;
+  double? price; // Persisted price at order time
+  String? productName; // Persisted name at order time
 
   OrderItem({
     this.id = 0,
     required this.quantity,
     this.extraQuantitiesJson,
+    this.price,
+    this.productName,
   });
 
   int getExtraQuantity(Product extra) {

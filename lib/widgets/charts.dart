@@ -93,7 +93,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     for (final order in dailyOrders) {
       for (final item in order.items) {
         // VALIDATION: Check for NaN and invalid values
-        final productPrice = item.product.target?.price;
+        // Use persisted price if available, otherwise fallback to current product price
+        final productPrice = item.price ?? item.product.target?.price;
         final quantity = item.quantity;
 
         if (productPrice == null ||

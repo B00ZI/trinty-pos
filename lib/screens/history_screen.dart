@@ -240,7 +240,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   double calculateItemTotal(OrderItem item) {
-    double total = item.quantity * (item.product.target?.price ?? 0).toDouble();
+    // Use persisted price if available, otherwise fallback to current product price
+    double basePrice = (item.price ?? item.product.target?.price ?? 0).toDouble();
+    double total = item.quantity * basePrice;
     for (final extra in item.extras) {
       total += extra.price * item.getExtraQuantity(extra);
     }
@@ -443,7 +445,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                      '- ${item.product.target != null ? item.product.target!.name : 'Produit Supprimé'} : ${item.product.target != null ? item.product.target!.price : 'N/A'} x ${item.quantity}'),
+                                      '- ${item.productName ?? item.product.target?.name ?? 'Produit Supprimé'} : ${(item.price ?? item.product.target?.price ?? 'N/A')} x ${item.quantity}'),
                                   if (item.extras.isNotEmpty)
                                     ...item.extras.map((extra) {
                                       final qty = item.getExtraQuantity(extra);
