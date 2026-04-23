@@ -232,7 +232,7 @@
     },
     {
       "id": "8:8382040067926750167",
-      "lastPropertyId": "4:1895794657527752576",
+      "lastPropertyId": "8:5491447122919380804",
       "name": "StoreConfig",
       "properties": [
         {
@@ -255,6 +255,26 @@
           "id": "4:1895794657527752576",
           "name": "storePhone",
           "type": 9
+        },
+        {
+          "id": "5:114700118219622626",
+          "name": "dayStartHour",
+          "type": 6
+        },
+        {
+          "id": "6:6136771565849482141",
+          "name": "dayStartMinute",
+          "type": 6
+        },
+        {
+          "id": "7:7656744246133514646",
+          "name": "dayEndHour",
+          "type": 6
+        },
+        {
+          "id": "8:5491447122919380804",
+          "name": "dayEndMinute",
+          "type": 6
         }
       ],
       "relations": []
@@ -309,7 +329,7 @@
     },
     {
       "id": "11:5447409109248621204",
-      "lastPropertyId": "2:6828018991168305233",
+      "lastPropertyId": "4:4492402646679945498",
       "name": "AppUser",
       "properties": [
         {
@@ -322,13 +342,170 @@
           "id": "2:6828018991168305233",
           "name": "name",
           "type": 9
+        },
+        {
+          "id": "3:2030339821486618349",
+          "name": "pin",
+          "type": 9
+        },
+        {
+          "id": "4:4492402646679945498",
+          "name": "createdAt",
+          "type": 10
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "12:680414984917669063",
+      "lastPropertyId": "3:7513724782313497559",
+      "name": "GamePost",
+      "properties": [
+        {
+          "id": "1:6217316652262355939",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:1980541883835102488",
+          "name": "label",
+          "type": 9
+        },
+        {
+          "id": "3:7513724782313497559",
+          "name": "isActive",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "13:1439284337015220727",
+      "lastPropertyId": "12:5703664352302800168",
+      "name": "GameSession",
+      "properties": [
+        {
+          "id": "1:1933847001096972258",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3766559140530137877",
+          "name": "postId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "7:6667979942551100473",
+          "relationTarget": "GamePost"
+        },
+        {
+          "id": "3:3754278261014097851",
+          "name": "tierId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "8:4180268364540104957",
+          "relationTarget": "PartyTier"
+        },
+        {
+          "id": "4:8950497809990404674",
+          "name": "postLabel",
+          "type": 9
+        },
+        {
+          "id": "5:3956734524955895778",
+          "name": "partyNumber",
+          "type": 6
+        },
+        {
+          "id": "6:8640456276260663367",
+          "name": "tierLabel",
+          "type": 9
+        },
+        {
+          "id": "7:6766015527194199547",
+          "name": "startTime",
+          "type": 10
+        },
+        {
+          "id": "8:8767743477259512368",
+          "name": "endTime",
+          "type": 10
+        },
+        {
+          "id": "9:826542544577552851",
+          "name": "actualEndTime",
+          "type": 10
+        },
+        {
+          "id": "10:3194993156347576147",
+          "name": "status",
+          "type": 6
+        },
+        {
+          "id": "11:7825579943444061866",
+          "name": "price",
+          "type": 8
+        },
+        {
+          "id": "12:5703664352302800168",
+          "name": "attributedUserId",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "14:659636168284188995",
+      "lastPropertyId": "2:4903537611411204355",
+      "name": "PartyCounter",
+      "properties": [
+        {
+          "id": "1:2217483276918265422",
+          "name": "id",
+          "type": 6,
+          "flags": 129
+        },
+        {
+          "id": "2:4903537611411204355",
+          "name": "value",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "15:669046788345874073",
+      "lastPropertyId": "4:5078494520558928854",
+      "name": "PartyTier",
+      "properties": [
+        {
+          "id": "1:3673660296306910325",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6842751777993601626",
+          "name": "label",
+          "type": 9
+        },
+        {
+          "id": "3:4019233350087229350",
+          "name": "durationMinutes",
+          "type": 6
+        },
+        {
+          "id": "4:5078494520558928854",
+          "name": "price",
+          "type": 8
         }
       ],
       "relations": []
     }
   ],
-  "lastEntityId": "11:5447409109248621204",
-  "lastIndexId": "2:6747678160280048648",
+  "lastEntityId": "15:669046788345874073",
+  "lastIndexId": "8:4180268364540104957",
   "lastRelationId": "3:14140742415403822",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
@@ -336,7 +513,12 @@
   "retiredEntityUids": [
     8743093086059233857
   ],
-  "retiredIndexUids": [],
+  "retiredIndexUids": [
+    3118756131642608832,
+    8275637429323390322,
+    3033342851423081825,
+    5972903834397249432
+  ],
   "retiredPropertyUids": [
     7625330162759834078,
     6675152637186099789,

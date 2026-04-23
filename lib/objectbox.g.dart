@@ -18,9 +18,13 @@ import 'models/app_user.dart';
 import 'models/catigory.dart';
 import 'models/daily_funds.dart';
 import 'models/expence.dart';
+import 'models/game_post.dart';
+import 'models/game_session.dart';
 import 'models/order.dart';
 import 'models/order_counter.dart';
 import 'models/order_item.dart';
+import 'models/party_counter.dart';
+import 'models/party_tier.dart';
 import 'models/printer_config.dart';
 import 'models/product.dart';
 import 'models/store_config.dart';
@@ -293,7 +297,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(8, 8382040067926750167),
     name: 'StoreConfig',
-    lastPropertyId: const obx_int.IdUid(4, 1895794657527752576),
+    lastPropertyId: const obx_int.IdUid(8, 5491447122919380804),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -318,6 +322,30 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(4, 1895794657527752576),
         name: 'storePhone',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 114700118219622626),
+        name: 'dayStartHour',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 6136771565849482141),
+        name: 'dayStartMinute',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 7656744246133514646),
+        name: 'dayEndHour',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 5491447122919380804),
+        name: 'dayEndMinute',
+        type: 6,
         flags: 0,
       ),
     ],
@@ -383,7 +411,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(11, 5447409109248621204),
     name: 'AppUser',
-    lastPropertyId: const obx_int.IdUid(2, 6828018991168305233),
+    lastPropertyId: const obx_int.IdUid(4, 4492402646679945498),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -396,6 +424,188 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(2, 6828018991168305233),
         name: 'name',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 2030339821486618349),
+        name: 'pin',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 4492402646679945498),
+        name: 'createdAt',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(12, 680414984917669063),
+    name: 'GamePost',
+    lastPropertyId: const obx_int.IdUid(3, 7513724782313497559),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 6217316652262355939),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 1980541883835102488),
+        name: 'label',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 7513724782313497559),
+        name: 'isActive',
+        type: 1,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(13, 1439284337015220727),
+    name: 'GameSession',
+    lastPropertyId: const obx_int.IdUid(12, 5703664352302800168),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 1933847001096972258),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 3766559140530137877),
+        name: 'postId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(7, 6667979942551100473),
+        relationTarget: 'GamePost',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 3754278261014097851),
+        name: 'tierId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(8, 4180268364540104957),
+        relationTarget: 'PartyTier',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 8950497809990404674),
+        name: 'postLabel',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 3956734524955895778),
+        name: 'partyNumber',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 8640456276260663367),
+        name: 'tierLabel',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 6766015527194199547),
+        name: 'startTime',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 8767743477259512368),
+        name: 'endTime',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 826542544577552851),
+        name: 'actualEndTime',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 3194993156347576147),
+        name: 'status',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 7825579943444061866),
+        name: 'price',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(12, 5703664352302800168),
+        name: 'attributedUserId',
+        type: 6,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(14, 659636168284188995),
+    name: 'PartyCounter',
+    lastPropertyId: const obx_int.IdUid(2, 4903537611411204355),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 2217483276918265422),
+        name: 'id',
+        type: 6,
+        flags: 129,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4903537611411204355),
+        name: 'value',
+        type: 6,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(15, 669046788345874073),
+    name: 'PartyTier',
+    lastPropertyId: const obx_int.IdUid(4, 5078494520558928854),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 3673660296306910325),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 6842751777993601626),
+        name: 'label',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 4019233350087229350),
+        name: 'durationMinutes',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 5078494520558928854),
+        name: 'price',
+        type: 8,
         flags: 0,
       ),
     ],
@@ -442,12 +652,17 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(11, 5447409109248621204),
-    lastIndexId: const obx_int.IdUid(2, 6747678160280048648),
+    lastEntityId: const obx_int.IdUid(15, 669046788345874073),
+    lastIndexId: const obx_int.IdUid(8, 4180268364540104957),
     lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [8743093086059233857],
-    retiredIndexUids: const [],
+    retiredIndexUids: const [
+      3118756131642608832,
+      8275637429323390322,
+      3033342851423081825,
+      5972903834397249432,
+    ],
     retiredPropertyUids: const [
       7625330162759834078,
       6675152637186099789,
@@ -863,11 +1078,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
             object.storePhone == null
                 ? null
                 : fbb.writeString(object.storePhone!);
-        fbb.startTable(5);
+        fbb.startTable(9);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, storeNameOffset);
         fbb.addOffset(2, storeLogoPathOffset);
         fbb.addOffset(3, storePhoneOffset);
+        fbb.addInt64(4, object.dayStartHour);
+        fbb.addInt64(5, object.dayStartMinute);
+        fbb.addInt64(6, object.dayEndHour);
+        fbb.addInt64(7, object.dayEndMinute);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -889,11 +1108,39 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final storeLogoPathParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 8);
+        final dayStartHourParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final dayStartMinuteParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          14,
+          0,
+        );
+        final dayEndHourParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          16,
+          0,
+        );
+        final dayEndMinuteParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          0,
+        );
         final object = StoreConfig(
           id: idParam,
           storeName: storeNameParam,
           storePhone: storePhoneParam,
           storeLogoPath: storeLogoPathParam,
+          dayStartHour: dayStartHourParam,
+          dayStartMinute: dayStartMinuteParam,
+          dayEndHour: dayEndHourParam,
+          dayEndMinute: dayEndMinuteParam,
         );
 
         return object;
@@ -986,9 +1233,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (AppUser object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
-        fbb.startTable(3);
+        final pinOffset =
+            object.pin == null ? null : fbb.writeString(object.pin!);
+        fbb.startTable(5);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
+        fbb.addOffset(2, pinOffset);
+        fbb.addInt64(3, object.createdAt.millisecondsSinceEpoch);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1004,7 +1255,258 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
-        final object = AppUser(id: idParam, name: nameParam);
+        final pinParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 8);
+        final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
+        );
+        final object = AppUser(
+          id: idParam,
+          name: nameParam,
+          pin: pinParam,
+          createdAt: createdAtParam,
+        );
+
+        return object;
+      },
+    ),
+    GamePost: obx_int.EntityDefinition<GamePost>(
+      model: _entities[10],
+      toOneRelations: (GamePost object) => [],
+      toManyRelations: (GamePost object) => {},
+      getId: (GamePost object) => object.id,
+      setId: (GamePost object, int id) {
+        object.id = id;
+      },
+      objectToFB: (GamePost object, fb.Builder fbb) {
+        final labelOffset = fbb.writeString(object.label);
+        fbb.startTable(4);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, labelOffset);
+        fbb.addBool(2, object.isActive);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final labelParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final isActiveParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          false,
+        );
+        final object = GamePost(
+          id: idParam,
+          label: labelParam,
+          isActive: isActiveParam,
+        );
+
+        return object;
+      },
+    ),
+    GameSession: obx_int.EntityDefinition<GameSession>(
+      model: _entities[11],
+      toOneRelations: (GameSession object) => [object.post, object.tier],
+      toManyRelations: (GameSession object) => {},
+      getId: (GameSession object) => object.id,
+      setId: (GameSession object, int id) {
+        object.id = id;
+      },
+      objectToFB: (GameSession object, fb.Builder fbb) {
+        final postLabelOffset = fbb.writeString(object.postLabel);
+        final tierLabelOffset = fbb.writeString(object.tierLabel);
+        fbb.startTable(13);
+        fbb.addInt64(0, object.id);
+        fbb.addInt64(1, object.post.targetId);
+        fbb.addInt64(2, object.tier.targetId);
+        fbb.addOffset(3, postLabelOffset);
+        fbb.addInt64(4, object.partyNumber);
+        fbb.addOffset(5, tierLabelOffset);
+        fbb.addInt64(6, object.startTime.millisecondsSinceEpoch);
+        fbb.addInt64(7, object.endTime.millisecondsSinceEpoch);
+        fbb.addInt64(8, object.actualEndTime?.millisecondsSinceEpoch);
+        fbb.addInt64(9, object.status);
+        fbb.addFloat64(10, object.price);
+        fbb.addInt64(11, object.attributedUserId);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final actualEndTimeValue = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          20,
+        );
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final postLabelParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final partyNumberParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final tierLabelParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final startTimeParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 16, 0),
+        );
+        final endTimeParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 18, 0),
+        );
+        final actualEndTimeParam =
+            actualEndTimeValue == null
+                ? null
+                : DateTime.fromMillisecondsSinceEpoch(actualEndTimeValue);
+        final statusParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          22,
+          0,
+        );
+        final priceParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          24,
+          0,
+        );
+        final attributedUserIdParam = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          26,
+        );
+        final object = GameSession(
+          id: idParam,
+          postLabel: postLabelParam,
+          partyNumber: partyNumberParam,
+          tierLabel: tierLabelParam,
+          startTime: startTimeParam,
+          endTime: endTimeParam,
+          actualEndTime: actualEndTimeParam,
+          status: statusParam,
+          price: priceParam,
+          attributedUserId: attributedUserIdParam,
+        );
+        object.post.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          6,
+          0,
+        );
+        object.post.attach(store);
+        object.tier.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        object.tier.attach(store);
+        return object;
+      },
+    ),
+    PartyCounter: obx_int.EntityDefinition<PartyCounter>(
+      model: _entities[12],
+      toOneRelations: (PartyCounter object) => [],
+      toManyRelations: (PartyCounter object) => {},
+      getId: (PartyCounter object) => object.id,
+      setId: (PartyCounter object, int id) {
+        object.id = id;
+      },
+      objectToFB: (PartyCounter object, fb.Builder fbb) {
+        fbb.startTable(3);
+        fbb.addInt64(0, object.id);
+        fbb.addInt64(1, object.value);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final valueParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          6,
+          0,
+        );
+        final object = PartyCounter(id: idParam, value: valueParam);
+
+        return object;
+      },
+    ),
+    PartyTier: obx_int.EntityDefinition<PartyTier>(
+      model: _entities[13],
+      toOneRelations: (PartyTier object) => [],
+      toManyRelations: (PartyTier object) => {},
+      getId: (PartyTier object) => object.id,
+      setId: (PartyTier object, int id) {
+        object.id = id;
+      },
+      objectToFB: (PartyTier object, fb.Builder fbb) {
+        final labelOffset = fbb.writeString(object.label);
+        fbb.startTable(5);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, labelOffset);
+        fbb.addInt64(2, object.durationMinutes);
+        fbb.addFloat64(3, object.price);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final labelParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final durationMinutesParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final priceParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
+        final object = PartyTier(
+          id: idParam,
+          label: labelParam,
+          durationMinutes: durationMinutesParam,
+          price: priceParam,
+        );
 
         return object;
       },
@@ -1214,6 +1716,26 @@ class StoreConfig_ {
   static final storePhone = obx.QueryStringProperty<StoreConfig>(
     _entities[6].properties[3],
   );
+
+  /// See [StoreConfig.dayStartHour].
+  static final dayStartHour = obx.QueryIntegerProperty<StoreConfig>(
+    _entities[6].properties[4],
+  );
+
+  /// See [StoreConfig.dayStartMinute].
+  static final dayStartMinute = obx.QueryIntegerProperty<StoreConfig>(
+    _entities[6].properties[5],
+  );
+
+  /// See [StoreConfig.dayEndHour].
+  static final dayEndHour = obx.QueryIntegerProperty<StoreConfig>(
+    _entities[6].properties[6],
+  );
+
+  /// See [StoreConfig.dayEndMinute].
+  static final dayEndMinute = obx.QueryIntegerProperty<StoreConfig>(
+    _entities[6].properties[7],
+  );
 }
 
 /// [Catigory] entity fields to define ObjectBox queries.
@@ -1262,5 +1784,132 @@ class AppUser_ {
   /// See [AppUser.name].
   static final name = obx.QueryStringProperty<AppUser>(
     _entities[9].properties[1],
+  );
+
+  /// See [AppUser.pin].
+  static final pin = obx.QueryStringProperty<AppUser>(
+    _entities[9].properties[2],
+  );
+
+  /// See [AppUser.createdAt].
+  static final createdAt = obx.QueryDateProperty<AppUser>(
+    _entities[9].properties[3],
+  );
+}
+
+/// [GamePost] entity fields to define ObjectBox queries.
+class GamePost_ {
+  /// See [GamePost.id].
+  static final id = obx.QueryIntegerProperty<GamePost>(
+    _entities[10].properties[0],
+  );
+
+  /// See [GamePost.label].
+  static final label = obx.QueryStringProperty<GamePost>(
+    _entities[10].properties[1],
+  );
+
+  /// See [GamePost.isActive].
+  static final isActive = obx.QueryBooleanProperty<GamePost>(
+    _entities[10].properties[2],
+  );
+}
+
+/// [GameSession] entity fields to define ObjectBox queries.
+class GameSession_ {
+  /// See [GameSession.id].
+  static final id = obx.QueryIntegerProperty<GameSession>(
+    _entities[11].properties[0],
+  );
+
+  /// See [GameSession.post].
+  static final post = obx.QueryRelationToOne<GameSession, GamePost>(
+    _entities[11].properties[1],
+  );
+
+  /// See [GameSession.tier].
+  static final tier = obx.QueryRelationToOne<GameSession, PartyTier>(
+    _entities[11].properties[2],
+  );
+
+  /// See [GameSession.postLabel].
+  static final postLabel = obx.QueryStringProperty<GameSession>(
+    _entities[11].properties[3],
+  );
+
+  /// See [GameSession.partyNumber].
+  static final partyNumber = obx.QueryIntegerProperty<GameSession>(
+    _entities[11].properties[4],
+  );
+
+  /// See [GameSession.tierLabel].
+  static final tierLabel = obx.QueryStringProperty<GameSession>(
+    _entities[11].properties[5],
+  );
+
+  /// See [GameSession.startTime].
+  static final startTime = obx.QueryDateProperty<GameSession>(
+    _entities[11].properties[6],
+  );
+
+  /// See [GameSession.endTime].
+  static final endTime = obx.QueryDateProperty<GameSession>(
+    _entities[11].properties[7],
+  );
+
+  /// See [GameSession.actualEndTime].
+  static final actualEndTime = obx.QueryDateProperty<GameSession>(
+    _entities[11].properties[8],
+  );
+
+  /// See [GameSession.status].
+  static final status = obx.QueryIntegerProperty<GameSession>(
+    _entities[11].properties[9],
+  );
+
+  /// See [GameSession.price].
+  static final price = obx.QueryDoubleProperty<GameSession>(
+    _entities[11].properties[10],
+  );
+
+  /// See [GameSession.attributedUserId].
+  static final attributedUserId = obx.QueryIntegerProperty<GameSession>(
+    _entities[11].properties[11],
+  );
+}
+
+/// [PartyCounter] entity fields to define ObjectBox queries.
+class PartyCounter_ {
+  /// See [PartyCounter.id].
+  static final id = obx.QueryIntegerProperty<PartyCounter>(
+    _entities[12].properties[0],
+  );
+
+  /// See [PartyCounter.value].
+  static final value = obx.QueryIntegerProperty<PartyCounter>(
+    _entities[12].properties[1],
+  );
+}
+
+/// [PartyTier] entity fields to define ObjectBox queries.
+class PartyTier_ {
+  /// See [PartyTier.id].
+  static final id = obx.QueryIntegerProperty<PartyTier>(
+    _entities[13].properties[0],
+  );
+
+  /// See [PartyTier.label].
+  static final label = obx.QueryStringProperty<PartyTier>(
+    _entities[13].properties[1],
+  );
+
+  /// See [PartyTier.durationMinutes].
+  static final durationMinutes = obx.QueryIntegerProperty<PartyTier>(
+    _entities[13].properties[2],
+  );
+
+  /// See [PartyTier.price].
+  static final price = obx.QueryDoubleProperty<PartyTier>(
+    _entities[13].properties[3],
   );
 }

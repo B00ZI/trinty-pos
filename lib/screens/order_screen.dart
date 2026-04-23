@@ -1,27 +1,24 @@
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:3632800846.
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:2817509952.
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:1286985924.
 import 'dart:async';
 import 'dart:math' as math;
-import '../models/printer_config.dart';
-// Import esc_pos_utils
-// Import esc_pos_printer
 import 'package:flutter/material.dart';
+import 'package:objectbox/objectbox.dart';
+import 'package:reorderable_grid_view/reorderable_grid_view.dart';
+import 'package:Easify/objectbox.dart';
 import '../models/order.dart';
 import '../models/order_item.dart';
 import '../models/product.dart';
-import 'package:Easify/objectbox.dart';
-import '../widgets/product_card.dart'; // Import the ProductCard widget
-import 'package:objectbox/objectbox.dart';
-import 'package:reorderable_grid_view/reorderable_grid_view.dart'; // Import ReorderableGridView
-import '../models/order_counter.dart'; // Import OrderCounter
-import '../service/printer_helper.dart'; // Import PrinterHelper
-import '../widgets/order_details.dart'; // Import OrderDetails
-import '../widgets/comment_dialog.dart'; // Import CommentDialog
-import '../models/catigory.dart'; // Import Catigory
-import '../widgets/catigory_card.dart'; // Import CatigoryCard
-import '../widgets/payment_dialog.dart'; // Import PaymentDialog
+import '../models/order_counter.dart';
 import '../models/app_user.dart';
+import '../models/printer_config.dart';
+import '../models/catigory.dart';
+import '../service/printer_helper.dart';
+import '../service/auth_service.dart';
+import '../widgets/product_card.dart';
+import '../widgets/order_details.dart';
+import '../widgets/comment_dialog.dart';
+import '../widgets/catigory_card.dart';
+import '../widgets/payment_dialog.dart';
+import '../widgets/user_selection_dialog.dart';
 
 class OrderScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -58,6 +55,8 @@ class _OrderScreenState extends State<OrderScreen>
   OrderItem? _activeParentForExtras; // item getting the extras
   bool _singleTicketMode = false;
   bool _enableChangeWindow = true;
+
+  AppUser? _currentAuthUser;
 
   @override
   void initState() {
@@ -616,6 +615,17 @@ class _OrderScreenState extends State<OrderScreen>
 
   Future<void> _handleCartAction(String actionType) async {
     // Calculate total
+    // Auth Flow B: Per-Order PIN
+    final authMode = await AuthService.getAuthMode();
+    if (authMode == AuthMode.perOrder) {
+      final selected = await showDialog<AppUser>(
+        context: context,
+        builder: (context) => UserSelectionDialog(objectbox: widget.objectbox),
+      );
+      if (selected == null) return; // Cancelled
+      _currentAuthUser = selected;
+    }
+
     final total =
         _cart.fold<double>(0, (sum, item) => sum + calculateItemTotal(item));
 
@@ -699,6 +709,8 @@ class _OrderScreenState extends State<OrderScreen>
       );
       if (widget.assignedUser != null) {
         order.user.target = widget.assignedUser;
+      } else if (_currentAuthUser != null) {
+        order.user.target = _currentAuthUser;
       }
       for (final item in _cart) {
         item.price = item.product.target?.price;

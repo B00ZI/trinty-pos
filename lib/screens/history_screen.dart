@@ -10,6 +10,12 @@ import '../models/order_counter.dart'; // Import OrderCounter
 import '../widgets/dialog.dart' as custom_dialog;
 import '../service/printer_helper.dart';
 import 'order_screen.dart' as custom_order_screen;
+import '../service/business_day_helper.dart';
+import 'package:intl/intl.dart';
+import '../widgets/business_day_filter.dart';
+import '../models/store_config.dart';
+import '../models/game_session.dart';
+import '../models/app_user.dart';
 
 class HistoryScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -23,7 +29,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   late final Box<Ruci> _orderBox;
   late final Box<PrinterConfig> _printerConfigBox;
   late final Box<OrderCounter> _orderCounterBox; // Declare OrderCounter box
+  late final Box<StoreConfig> _storeConfigBox;
   bool _showDeletedOrders = false;
+  DateTime _selectedBusinessDay = DateTime.now();
+  late StoreConfig _config;
 
   @override
   void initState() {
@@ -32,6 +41,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
     _orderCounterBox = widget.objectbox.store
         .box<OrderCounter>(); // Initialize OrderCounter box
+    _storeConfigBox = widget.objectbox.store.box<StoreConfig>();
+    _loadStoreConfig();
+  }
+
+  void _loadStoreConfig() {
+    final configs = _storeConfigBox.getAll();
+    _config = configs.isNotEmpty ? configs.first : StoreConfig();
+    _selectedBusinessDay = BusinessDayHelper.getBusinessDayDate(DateTime.now(), _config);
   }
 //printing dayliy summary and reset order counter
 //  Future<void> _archiveAndReset() async {
@@ -239,274 +256,275 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _orderCounterBox.put(orderCounter);
   }
 
+  Stream<List<GameSession>> _getGameSessionsStream() {
+    final startOfDay = BusinessDayHelper.getBusinessDayDate(_selectedBusinessDay, _config);
+    final endOfDay = startOfDay.add(const Duration(hours: 24));
+    return widget.objectbox.gameSessionBox
+        .query(GameSession_.startTime.between(startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch))
+        .watch(triggerImmediately: true)
+        .map((q) => q.find());
+  }
+
+  Stream<List<Ruci>> _getOrdersStream() {
+    final startOfDay = BusinessDayHelper.getBusinessDayDate(_selectedBusinessDay, _config);
+    final endOfDay = startOfDay.add(const Duration(hours: 24));
+    return _orderBox
+        .query(Ruci_.date.between(startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch))
+        .watch(triggerImmediately: true)
+        .map((q) => q.find());
+  }
+
   double calculateItemTotal(OrderItem item) {
-    // Use persisted price if available, otherwise fallback to current product price
-    double basePrice = (item.price ?? item.product.target?.price ?? 0).toDouble();
-    double total = item.quantity * basePrice;
+    double itemTotal = (item.price ?? item.product.target?.price ?? 0.0) * item.quantity;
     for (final extra in item.extras) {
-      total += extra.price * item.getExtraQuantity(extra);
+      itemTotal += extra.price * item.getExtraQuantity(extra);
     }
-    return total;
+    return itemTotal;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          // Add the button to the AppBar
-          Tooltip(
-            message: 'Afficher les commandes supprimées',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Historique'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Commandes', icon: Icon(Icons.receipt_long)),
+              Tab(text: 'Parties Jeux', icon: Icon(Icons.sports_esports)),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(_showDeletedOrders ? Icons.visibility : Icons.visibility_off),
+              onPressed: () => setState(() => _showDeletedOrders = !_showDeletedOrders),
+              tooltip: 'Afficher les commandes supprimées',
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            BusinessDayFilter(
+              selectedDate: _selectedBusinessDay,
+              onDateChanged: (date) => setState(() => _selectedBusinessDay = date),
+            ),
+            Expanded(
+              child: TabBarView(
                 children: [
-                  Checkbox(
-                    value: _showDeletedOrders,
-                    onChanged: (value) {
-                      setState(() {
-                        _showDeletedOrders = value ?? false;
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  const Text('Supprimées'),
+                  _buildOrdersTab(),
+                  _buildPartiesTab(),
                 ],
               ),
             ),
-          ),
-          IconButton(
-            onPressed: () => _resetOrderCounter(),
-            icon: const Icon(Icons.refresh),
-            color: Theme.of(context).colorScheme.secondary,
-          ),
-          IconButton(
-            onPressed: () =>
-                custom_dialog.showDailyDataDialog(context, widget.objectbox),
-            icon: const Icon(Icons.archive),
-            color: Theme.of(context).colorScheme.secondary,
-          )
-        ],
+          ],
+        ),
       ),
-      body: StreamBuilder<List<Ruci>>(
-        stream: _orderBox
-            .query()
-            .watch(triggerImmediately: true)
-            .map((query) => query.find()),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Erreur : ${snapshot.error}'));
-          }
+    );
+  }
+    Widget _buildOrdersTab() {
+    return StreamBuilder<List<Ruci>>(
+      stream: _getOrdersStream(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Center(child: Text('Erreur : ${snapshot.error}'));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        
+        final orders = snapshot.data!;
+        final filteredOrders = _showDeletedOrders 
+            ? orders.reversed.toList() 
+            : orders.reversed.where((o) => !o.isDeleted).toList();
 
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        if (filteredOrders.isEmpty) return const Center(child: Text('Aucune commande pour cette journée'));
+        
+        return ListView.builder(
+          itemCount: filteredOrders.length,
+          itemBuilder: (context, index) => _buildOrderCard(filteredOrders[index]),
+        );
+      },
+    );
+  }
 
-          final orders = snapshot.data!;
-          final reversedOrders = orders.reversed.toList();
-          final filteredOrders = _showDeletedOrders
-              ? reversedOrders
-              : reversedOrders.where((order) => !order.isDeleted).toList();
+  Widget _buildPartiesTab() {
+    return StreamBuilder<List<GameSession>>(
+      stream: _getGameSessionsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Center(child: Text('Erreur : ${snapshot.error}'));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        
+        final sessions = snapshot.data!;
+        if (sessions.isEmpty) return const Center(child: Text('Aucune partie pour cette journée'));
+        
+        return ListView.builder(
+          itemCount: sessions.length,
+          itemBuilder: (context, index) => _buildPartyCard(sessions[index]),
+        );
+      },
+    );
+  }
 
-          return ListView.builder(
-            itemCount: filteredOrders.length,
-            itemBuilder: (context, index) {
-              final order = filteredOrders[index];
-              return Card(
-                  margin: const EdgeInsets.all(8.0),
-                  color: order.isDeleted
-                      ? Colors.red.shade50
-                      : Theme.of(context).colorScheme.surface,
-                  child: Container(
-                    decoration: order.isDeleted
-                        ? BoxDecoration(
-                            border: Border.all(
-                                color: Colors.red.shade300, width: 2),
-                            borderRadius: BorderRadius.circular(12),
-                          )
-                        : null,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Commande N° ${order.orderNumber}',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      if (order.isEdited)
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(right: 8),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange,
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: const Text(
-                                            'MODIFIÉE',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 10),
-                                          ),
-                                        ),
-                                      if (order.isDeleted)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: const Text(
-                                            'SUPPRIMÉE',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 10),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const Spacer(),
-                              IconButton(
-                                icon: Icon(Icons.edit,
-                                    color: order.isDeleted
-                                        ? Colors.grey
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .secondary),
-                                onPressed: order.isDeleted
-                                    ? null
-                                    : () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                custom_order_screen.OrderScreen(
-                                              objectbox: widget.objectbox,
-                                              orderToEdit: order,
-                                            ),
-                                          ),
-                                        ).then((_) {
-                                          setState(() {});
-                                        });
-                                      },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                color:
-                                    order.isDeleted ? Colors.grey : Colors.red,
-                                onPressed: order.isDeleted
-                                    ? null
-                                    : () {
-                                        _deleteOrder(order);
-                                      },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                              'Date de commande : ${order.date.toLocal().toString().split('.')[0]}'),
-                          const SizedBox(height: 4),
-                          Text('Total d\'articles : ${order.items.length}'),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Montant Total : ${order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)).toStringAsFixed(2)} DH',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.green,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text('Articles :'),
-                          for (final item in order.items)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      '- ${item.productName ?? item.product.target?.name ?? 'Produit Supprimé'} : ${(item.price ?? item.product.target?.price ?? 'N/A')} x ${item.quantity}'),
-                                  if (item.extras.isNotEmpty)
-                                    ...item.extras.map((extra) {
-                                      final qty = item.getExtraQuantity(extra);
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(left: 16.0),
-                                        child: Text(
-                                          '  + ${extra.name} ${qty > 1 ? "x$qty" : ""}: ${(extra.price * qty).toStringAsFixed(2)} DH',
-                                          style: const TextStyle(
-                                              fontSize: 12, color: Colors.grey),
-                                        ),
-                                      );
-                                    }),
-                                ],
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: order.isDeleted
-                                    ? null
-                                    : () {
-                                        final receiptData = ReceiptData
-                                            .convertRuciToReceiptData(order);
-                                        PrinterHelper.printReceipt(
-                                            receiptData, widget.objectbox);
-                                      },
-                                icon: Icon(Icons.print,
-                                    color: order.isDeleted
-                                        ? Colors.grey
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary),
-                                label: Text('Imprimer',
-                                    style: TextStyle(
-                                        color: order.isDeleted
-                                            ? Colors.grey
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onPrimary)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: order.isDeleted
-                                      ? Colors.grey.shade300
-                                      : Theme.of(context).colorScheme.primary,
-                                  foregroundColor: order.isDeleted
-                                      ? Colors.grey
-                                      : Theme.of(context).colorScheme.onPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ));
-            },
+  Widget _buildPartyCard(GameSession session) {
+    final user = session.attributedUserId != null 
+        ? widget.objectbox.userBox.get(session.attributedUserId!)?.name ?? 'Inconnu'
+        : 'Système';
+
+    return Card(
+      child: ListTile(
+        title: Text('${session.postLabel} - Partie #${session.partyNumber}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Palier: ${session.tierLabel} - Staff: $user'),
+            Text('Debut: ${DateFormat('HH:mm').format(session.startTime)} - Fin: ${DateFormat('HH:mm').format(session.endTime)}'),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text('${session.price.toStringAsFixed(2)} DH', style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (session.status == 1)
+              const Text('Terminée', style: TextStyle(color: Colors.green, fontSize: 10))
+            else if (session.status == 2)
+              const Text('Annulée', style: TextStyle(color: Colors.red, fontSize: 10))
+            else
+              const Text('En cours', style: TextStyle(color: Colors.blue, fontSize: 10)),
+          ],
+        ),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Options de la partie'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    PrinterHelper.printGameTicket(session, widget.objectbox);
+                  },
+                  child: const Text('Réimprimer Ticket'),
+                ),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer')),
+              ],
+            ),
           );
         },
       ),
     );
+  }
+
+  Widget _buildOrderCard(Ruci order) {
+    return Card(
+      margin: const EdgeInsets.all(8.0),
+      color: order.isDeleted ? Colors.red.shade50 : Theme.of(context).colorScheme.surface,
+      child: Container(
+        decoration: order.isDeleted
+            ? BoxDecoration(
+                border: Border.all(color: Colors.red.shade300, width: 2),
+                borderRadius: BorderRadius.circular(12),
+              )
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Commande N° ${order.orderNumber}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      if (order.isEdited || order.isDeleted)
+                        Row(
+                          children: [
+                            if (order.isEdited)
+                              _buildBadge('MODIFIÉE', Colors.orange),
+                            if (order.isDeleted)
+                              _buildBadge('SUPPRIMÉE', Colors.red),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.edit, color: order.isDeleted ? Colors.grey : Theme.of(context).colorScheme.secondary),
+                    onPressed: order.isDeleted ? null : () => _editOrder(order),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete, color: order.isDeleted ? Colors.grey : Colors.red),
+                    onPressed: order.isDeleted ? null : () => _deleteOrder(order),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('Date : ${order.date.toLocal().toString().split('.')[0]}'),
+              Text('Articles : ${order.items.length}'),
+              Text(
+                'Total : ${order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)).toStringAsFixed(2)} DH',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
+              ),
+              const SizedBox(height: 8),
+              const Text('Articles :'),
+              for (final item in order.items)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('- ${item.productName ?? item.product.target?.name ?? 'Produit Supprimé'} : ${item.price ?? 'N/A'} x ${item.quantity}'),
+                      if (item.extras.isNotEmpty)
+                        ...item.extras.map((extra) {
+                          final qty = item.getExtraQuantity(extra);
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 16.0),
+                            child: Text(
+                              '  + ${extra.name} ${qty > 1 ? "x$qty" : ""}: ${(extra.price * qty).toStringAsFixed(2)} DH',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: order.isDeleted ? null : () => _printOrder(order),
+                    icon: const Icon(Icons.print),
+                    label: const Text('Imprimer'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8, top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+    );
+  }
+
+  void _editOrder(Ruci order) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => custom_order_screen.OrderScreen(objectbox: widget.objectbox, orderToEdit: order),
+      ),
+    ).then((_) => setState(() {}));
+  }
+
+  void _printOrder(Ruci order) {
+    final receiptData = ReceiptData.convertRuciToReceiptData(order);
+    PrinterHelper.printReceipt(receiptData, widget.objectbox);
   }
 }

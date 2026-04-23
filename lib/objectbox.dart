@@ -5,6 +5,11 @@ import 'models/printer_config.dart';
 import 'models/expence.dart';
 import 'models/store_config.dart';
 import 'models/catigory.dart';
+import 'models/app_user.dart';
+import 'models/game_post.dart';
+import 'models/party_tier.dart';
+import 'models/game_session.dart';
+import 'models/party_counter.dart';
 
 class ObjectBox {
   /// The Store of this app.
@@ -15,6 +20,11 @@ class ObjectBox {
   late final Box<expence> expenceBox;
   late final Box<StoreConfig> storeConfigBox;
   late final Box<Catigory> catigoryBox;
+  late final Box<AppUser> userBox;
+  late final Box<GamePost> gamePostBox;
+  late final Box<PartyTier> partyTierBox;
+  late final Box<GameSession> gameSessionBox;
+  late final Box<PartyCounter> partyCounterBox;
 
   ObjectBox._create(this.store) {
     productBox = Box<Product>(store);
@@ -23,6 +33,11 @@ class ObjectBox {
     expenceBox = Box<expence>(store);
     storeConfigBox = Box<StoreConfig>(store);
     catigoryBox = Box<Catigory>(store);
+    userBox = Box<AppUser>(store);
+    gamePostBox = Box<GamePost>(store);
+    partyTierBox = Box<PartyTier>(store);
+    gameSessionBox = Box<GameSession>(store);
+    partyCounterBox = Box<PartyCounter>(store);
   }
 
   /// Create an instance of ObjectBox to use throughout the app.

@@ -11,7 +11,9 @@ import 'package:image/image.dart' as img;
 import '../models/printer_config.dart';
 import 'package:Easify/objectbox.dart';
 import '../models/order.dart' show Ruci;
-import 'image_generatore.dart'; // Import ImageGenerator
+import '../models/game_session.dart';
+import 'image_generatore.dart';
+import 'package:intl/intl.dart';
 
 // final _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
 
@@ -517,9 +519,48 @@ class PrinterHelper {
     }
   }
 
-  static Future<bool> isPrinterConfigured() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ipAddress = prefs.getString('printer_ip') ?? '';
-    return ipAddress.isNotEmpty;
+  static String _formatTime(DateTime date) {
+    return DateFormat('HH:mm').format(date);
+  }
+
+  static Future<void> printGameTicket(GameSession session, ObjectBox objectbox) async {
+    final printerConfigBox = objectbox.store.box<PrinterConfig>();
+    final configs = printerConfigBox.getAll();
+    if (configs.isEmpty) return;
+    final config = configs.first;
+
+    final profile = await CapabilityProfile.load();
+    final printer = NetworkPrinter(PaperSize.mm80, profile);
+
+    try {
+      final PosPrintResult res = await printer.connect(config.ipAddress, port: config.port);
+      if (res != PosPrintResult.success) return;
+
+      printer.reset();
+      printer.text('===== TICKET JEUX =====',
+          styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2));
+      printer.feed(1);
+      
+      printer.text('Poste:       ${session.postLabel}', styles: const PosStyles(bold: true));
+      printer.text('Partie #:    ${session.partyNumber}');
+      printer.text('Palier:      ${session.tierLabel}');
+      printer.text('Prix:        ${session.price.toStringAsFixed(2)} DH');
+      printer.feed(1);
+      
+      printer.text('Debut:       ${_formatTime(session.startTime)}');
+      if (session.endTime.difference(session.startTime).inMinutes > 0) {
+        printer.text('Fin:         ${_formatTime(session.endTime)}', styles: const PosStyles(bold: true));
+      } else {
+        printer.text('Fin:         Ouvert');
+      }
+      
+      printer.feed(1);
+      printer.text('Merci de votre visite !', styles: const PosStyles(align: PosAlign.center));
+      printer.feed(2);
+      printer.cut();
+      printer.disconnect();
+    } catch (e) {
+      debugPrint('Printing error: $e');
+    }
   }
 }

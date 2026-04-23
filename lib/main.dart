@@ -3,17 +3,29 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/screens/history_screen.dart';
 import 'package:Easify/screens/order_screen.dart';
-import 'package:Easify/screens/management_screen.dart'; // Unified management
-import 'package:Easify/models/order_counter.dart';
-import 'package:Easify/screens/settings_screen.dart';
-import 'package:Easify/screens/dashboard_screen.dart';
-import 'service/activation_service.dart';
-import 'widgets/activation_dialog.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'models/order_counter.dart';
 import 'models/app_user.dart';
-import 'package:objectbox/objectbox.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/management_screen.dart';
+import 'screens/settings_screen.dart';
+import 'service/activation_service.dart';
+import 'service/auth_service.dart';
+import 'service/notification_service.dart';
+import 'widgets/activation_dialog.dart';
+import 'widgets/user_selection_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Timezone
+  tz.initializeTimeZones();
+  
+  // Initialize Notifications
+  await NotificationService.init();
+  
   final objectbox = await ObjectBox.create();
   final counterBox = objectbox.store.box<OrderCounter>();
   if (counterBox.isEmpty()) {
@@ -162,13 +174,23 @@ class _MainScreenState extends State<MainScreen> {
         _isCheckingActivation = false;
       });
       if (!activated) {
-        _showActivationDialog();
+        await _showActivationDialog();
       }
+      
+      // After activation, check auth mode
+      _checkSessionAuth();
     }
   }
 
-  void _showActivationDialog() {
-    showDialog(
+  Future<void> _checkSessionAuth() async {
+    final mode = await AuthService.getAuthMode();
+    if (mode == AuthMode.session) {
+      _showUserSelectionFlow(isCancelable: false);
+    }
+  }
+
+  Future<void> _showActivationDialog() async {
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => ActivationDialog(
@@ -179,46 +201,13 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _showUserSelectionDialog() async {
-    final userBox = widget.objectbox.store.box<AppUser>();
-    final users = userBox.getAll();
-
-    if (users.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez d\'abord ajouter des utilisateurs dans les paramètres')),
-      );
-      return;
-    }
-
+  void _showUserSelectionFlow({bool isCancelable = true}) async {
     final selected = await showDialog<AppUser>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sélectionner l\'utilisateur'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return ListTile(
-                title: Text(user.name),
-                leading: Radio<int>(
-                  value: user.id,
-                  groupValue: _selectedUser?.id,
-                  onChanged: (_) => Navigator.pop(context, user),
-                ),
-                onTap: () => Navigator.pop(context, user),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-        ],
+      barrierDismissible: isCancelable,
+      builder: (context) => UserSelectionDialog(
+        objectbox: widget.objectbox,
+        isCancelable: isCancelable,
       ),
     );
 
@@ -226,9 +215,11 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         _selectedUser = selected;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Utilisateur sélectionné : ${selected.name}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Connecté en tant que : ${selected.name}')),
+        );
+      }
     }
   }
 
@@ -237,7 +228,7 @@ class _MainScreenState extends State<MainScreen> {
       final now = DateTime.now();
       if (_lastTabTap != null &&
           now.difference(_lastTabTap!) < const Duration(milliseconds: 500)) {
-        _showUserSelectionDialog();
+        _showUserSelectionFlow();
       }
       _lastTabTap = now;
     }
@@ -267,9 +258,15 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedUser != null ? 'Easify [${_selectedUser!.name}]' : 'Easify'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        title: Text(_selectedUser != null ? 'Easify - ${_selectedUser!.name}' : 'Easify'),
+        actions: [
+          if (_selectedUser != null)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => _showUserSelectionFlow(),
+              tooltip: 'Changer d\'utilisateur',
+            ),
+        ],
       ),
       body: Center(
         child: widgetOptions.elementAt(_selectedIndex),

@@ -15,6 +15,8 @@ import '../models/daily_funds.dart';
 import '../widgets/daily_funds_dialog.dart';
 import '../models/app_user.dart';
 import 'package:intl/intl.dart';
+import '../service/business_day_helper.dart';
+import '../models/store_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -58,10 +60,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final Box<order_model.Ruci> _ruciBox;
   late final Box<DailyFunds> _dailyFundsBox;
   late final Box<AppUser> _userBox;
+  late final Box<StoreConfig> _storeConfigBox;
   Box<expence>? _expenceBox; // Change to nullable
 
-  DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-  DateTime _endDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 23, 59, 59);
+  late DateTime _startDate;
+  late DateTime _endDate;
+  late StoreConfig _config;
   AppUser? _selectedUserFilter;
   List<AppUser> _allUsers = [];
 
@@ -72,8 +76,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _dailyFundsBox = widget.objectbox.store.box<DailyFunds>();
     _userBox = widget.objectbox.store.box<AppUser>();
     _expenceBox = widget.objectbox.store.box<expence>(); // Initialize
+    _storeConfigBox = widget.objectbox.store.box<StoreConfig>();
+    _loadConfig();
     _allUsers = _userBox.getAll();
     _refreshData();
+  }
+
+  void _loadConfig() {
+    final configs = _storeConfigBox.getAll();
+    _config = configs.isNotEmpty ? configs.first : StoreConfig();
+    final businessDate = BusinessDayHelper.getBusinessDayDate(DateTime.now(), _config);
+    final range = BusinessDayHelper.getBusinessDayRange(businessDate, _config);
+    _startDate = range.$1;
+    _endDate = range.$2.subtract(const Duration(seconds: 1)); // End at 1 sec before next day start
   }
 
   void _refreshData() {
