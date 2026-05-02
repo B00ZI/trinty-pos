@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:Easify/objectbox.dart';
+import 'package:Easify/screens/games_screen.dart';
 import 'package:Easify/screens/history_screen.dart';
 import 'package:Easify/screens/order_screen.dart';
+import 'package:Easify/screens/dashboard_screen.dart';
+import 'package:Easify/screens/management_screen.dart';
+import 'package:Easify/screens/settings_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'models/order_counter.dart';
 import 'models/app_user.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/management_screen.dart';
-import 'screens/settings_screen.dart';
+import 'models/game_session.dart';
+import 'models/order.dart';
+import 'models/order_item.dart';
+import 'models/expence.dart';
+import 'models/daily_funds.dart';
 import 'service/activation_service.dart';
 import 'service/auth_service.dart';
 import 'service/notification_service.dart';
+import 'service/game_session_service.dart';
 import 'widgets/activation_dialog.dart';
 import 'widgets/user_selection_dialog.dart';
 
@@ -160,6 +167,52 @@ class _MainScreenState extends State<MainScreen> {
   bool _isCheckingActivation = true;
   AppUser? _selectedUser;
   DateTime? _lastTabTap;
+  DateTime? _lastHistoryTabTap;
+  int _historyTapCount = 0;
+
+  void _promptWipeAllOrders() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('⚠️ ATTENTION ⚠️', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: const Text('Voulez-vous vraiment supprimer TOUTES les données (Commandes, Sessions de jeux, Dépenses) et repartir à zéro ?\n\nCette action est IRRÉVERSIBLE.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('SUPPRIMER TOUT', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final store = widget.objectbox.store;
+      
+      store.box<Ruci>().removeAll();
+      store.box<OrderItem>().removeAll();
+      store.box<GameSession>().removeAll();
+      store.box<expence>().removeAll();
+      store.box<DailyFunds>().removeAll();
+
+      final orderCounterBox = store.box<OrderCounter>();
+      orderCounterBox.removeAll();
+      orderCounterBox.put(OrderCounter(id: 1, value: 1));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Toutes les données ont été supprimées.')),
+        );
+        setState(() {
+          _selectedIndex = 0;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -231,6 +284,20 @@ class _MainScreenState extends State<MainScreen> {
         _showUserSelectionFlow();
       }
       _lastTabTap = now;
+    } else if (index == 1) {
+      final now = DateTime.now();
+      if (_lastHistoryTabTap != null &&
+          now.difference(_lastHistoryTabTap!) < const Duration(milliseconds: 600)) {
+        _historyTapCount++;
+      } else {
+        _historyTapCount = 1;
+      }
+
+      if (_historyTapCount >= 5) {
+        _promptWipeAllOrders();
+        _historyTapCount = 0;
+      }
+      _lastHistoryTabTap = now;
     }
 
     setState(() {
@@ -248,11 +315,12 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
 
-    final widgetOptions = <Widget>[
+    final List<Widget> widgetOptions = [
       OrderScreen(objectbox: widget.objectbox, assignedUser: _selectedUser),
       HistoryScreen(objectbox: widget.objectbox),
+      GamesScreen(objectbox: widget.objectbox, assignedUser: _selectedUser),
       DashboardScreen(objectbox: widget.objectbox),
-      ManagementScreen(objectbox: widget.objectbox), // Unified
+      ManagementScreen(objectbox: widget.objectbox),
       SettingsScreen(objectbox: widget.objectbox),
     ];
 
@@ -268,9 +336,10 @@ class _MainScreenState extends State<MainScreen> {
             ),
         ],
       ),
-      body: Center(
-        child: widgetOptions.elementAt(_selectedIndex),
-      ), 
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: widgetOptions,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -284,8 +353,12 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Historique',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.sports_esports),
+            label: 'Jeux',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
-            label: 'Tableau de bord',
+            label: 'Dashboard',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory_2),

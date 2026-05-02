@@ -85,7 +85,6 @@ class _ProductsListSectionState extends State<ProductsListSection> {
   final _categoryController = TextEditingController();
   String? _selectedImagePath;
   final ImagePicker _picker = ImagePicker();
-
   @override
   void initState() {
     super.initState();
@@ -177,7 +176,10 @@ class _ProductsListSectionState extends State<ProductsListSection> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: StreamBuilder<List<Product>>(
-        stream: _productBox.query().watch(triggerImmediately: true).map((q) => q.find()),
+        stream: _productBox
+            .query()
+            .watch(triggerImmediately: true)
+            .map((q) => q.find()),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final products = snapshot.data!;
@@ -215,7 +217,6 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
   final _nameController = TextEditingController();
   String? _selectedImagePath;
   final ImagePicker _picker = ImagePicker();
-
   @override
   void initState() {
     super.initState();
@@ -279,7 +280,10 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: StreamBuilder<List<Catigory>>(
-        stream: _catigoryBox.query().watch(triggerImmediately: true).map((q) => q.find()),
+        stream: _catigoryBox
+            .query()
+            .watch(triggerImmediately: true)
+            .map((q) => q.find()),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final categories = snapshot.data!;

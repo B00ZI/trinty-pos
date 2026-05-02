@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 
 class PaymentDialog extends StatefulWidget {
   final double totalAmount;
+  final String? sessionDetails;
+  final bool isGameSession;
 
   const PaymentDialog({
     super.key,
     required this.totalAmount,
+    this.sessionDetails,
+    this.isGameSession = false,
   });
 
   @override
@@ -73,8 +77,20 @@ class _PaymentDialogState extends State<PaymentDialog> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
+                    if (widget.sessionDetails != null) ...[
+                      Text(
+                        widget.sessionDetails!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                    ],
                     Text(
-                      'Total de la Commande',
+                      'Total à Payer',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
@@ -92,23 +108,25 @@ class _PaymentDialogState extends State<PaymentDialog> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            // Amount input
-            TextField(
-              controller: _amountController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'Montant Reçu',
-                prefixIcon: const Icon(Icons.attach_money),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+            if (!widget.isGameSession) ...[
+              const SizedBox(height: 24),
+              // Amount input
+              TextField(
+                controller: _amountController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Montant Reçu',
+                  prefixIcon: const Icon(Icons.attach_money),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
             // Change calculation display
-            if (_changeStatus.isNotEmpty)
+            if (!widget.isGameSession && _changeStatus.isNotEmpty)
               Card(
                 color: _calculatedChange >= 0
                     ? Colors.green.shade50
@@ -150,9 +168,9 @@ class _PaymentDialogState extends State<PaymentDialog> {
           child: const Text('Annuler'),
         ),
         ElevatedButton(
-          onPressed: _amountController.text.isEmpty
-              ? null
-              : () => Navigator.pop(context, true),
+          onPressed: (widget.isGameSession || _amountController.text.isNotEmpty)
+              ? () => Navigator.pop(context, true)
+              : null,
           child: const Text('Valider'),
         ),
       ],

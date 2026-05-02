@@ -13,6 +13,8 @@ class Ruci {
   bool isDeleted = false;
 
   bool isEdited = false;
+  
+  int? relatedGameSessionId;
 
   final items = ToMany<OrderItem>();
   final user = ToOne<AppUser>();
@@ -23,5 +25,6 @@ class Ruci {
     this.id = 0,
     this.isDeleted = false,
     this.isEdited = false,
+    this.relatedGameSessionId,
   });
 }

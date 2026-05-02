@@ -4,6 +4,7 @@ import 'package:mrx_charts/mrx_charts.dart';
 import 'package:objectbox/objectbox.dart';
 import '../objectbox.g.dart';
 import '../models/order.dart' as order_model;
+import '../models/game_session.dart';
 
 class DailyData {
   final String day;
@@ -31,19 +32,25 @@ class WeeklyPerformanceChart extends StatefulWidget {
 
 class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   late final Box<order_model.Ruci> _ruciBox;
+  late final Box<GameSession> _gameSessionBox;
   List<DailyData> weeklyData = [];
   StreamSubscription? _orderSubscription;
+  StreamSubscription? _gameSubscription;
 
   @override
   void initState() {
     super.initState();
     _ruciBox = widget.store.box<order_model.Ruci>();
+    _gameSessionBox = widget.store.box<GameSession>();
     _loadWeeklyData();
-    _listenForNewOrders();
+    _listenForUpdates();
   }
 
-  void _listenForNewOrders() {
+  void _listenForUpdates() {
     _orderSubscription = _ruciBox.query().watch().listen((_) {
+      _loadWeeklyData();
+    });
+    _gameSubscription = _gameSessionBox.query().watch().listen((_) {
       _loadWeeklyData();
     });
   }
@@ -90,29 +97,36 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     }
 
     double dailyRevenue = 0;
+    int dailyOrdersCount = dailyOrders.length;
+
     for (final order in dailyOrders) {
       for (final item in order.items) {
-        // VALIDATION: Check for NaN and invalid values
-        // Use persisted price if available, otherwise fallback to current product price
         final productPrice = item.price ?? item.product.target?.price;
         final quantity = item.quantity;
-
-        if (productPrice == null ||
-            productPrice.isNaN ||
-            productPrice.isInfinite ||
-            quantity.isNaN ||
-            quantity.isInfinite) {
-          continue; // Skip invalid items
-        }
-
-        final itemTotal = quantity * productPrice;
-        if (!itemTotal.isNaN && !itemTotal.isInfinite) {
-          dailyRevenue += itemTotal;
-        }
+        if (productPrice == null || productPrice.isNaN || productPrice.isInfinite) continue;
+        dailyRevenue += quantity * productPrice;
       }
     }
 
-    // FINAL VALIDATION: Ensure revenue is a valid number
+    // Include Game Sessions
+    final gameQuery = _gameSessionBox
+        .query(GameSession_.startTime
+            .between(
+              startOfDay.millisecondsSinceEpoch,
+              endOfDay.millisecondsSinceEpoch,
+            )
+            .and(GameSession_.status.equals(1))) // Completed
+        .build();
+    final dailyGames = gameQuery.find();
+    gameQuery.close();
+
+    for (final session in dailyGames) {
+      if (session.relatedOrderId == null || session.relatedOrderId == 0) {
+        dailyRevenue += session.currentCalculatedPrice;
+        dailyOrdersCount++;
+      }
+    }
+
     if (dailyRevenue.isNaN || dailyRevenue.isInfinite) {
       dailyRevenue = 0;
     }
@@ -120,7 +134,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     return DailyData(
       day: _getDayName(date.weekday),
       revenue: dailyRevenue,
-      orders: dailyOrders.length,
+      orders: dailyOrdersCount,
     );
   }
 
@@ -132,6 +146,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   @override
   void dispose() {
     _orderSubscription?.cancel();
+    _gameSubscription?.cancel();
     super.dispose();
   }
 

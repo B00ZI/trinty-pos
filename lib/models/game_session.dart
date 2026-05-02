@@ -9,15 +9,15 @@ class GameSession {
 
   int postId;
   int tierId;
-  String postLabel;        // snapshot
+  String postLabel; // snapshot
   int partyNumber;
-  String tierLabel;        // snapshot
+  String tierLabel; // snapshot
   DateTime startTime;
-  DateTime endTime;
-  DateTime? actualEndTime; // set if ended early
-  int status;              // 0=active, 1=completed, 2=cancelled
-  double price;            // snapshot of tier price
+  DateTime? endTime; // null if session is active
+  int status; // 0=active, 1=completed, 2=cancelled
+  double ratePerHour; // snapshot of tier rate
   int? attributedUserId;
+  int? relatedOrderId;
 
   // Relations
   final post = ToOne<GamePost>();
@@ -31,16 +31,23 @@ class GameSession {
     required this.partyNumber,
     required this.tierLabel,
     required this.startTime,
-    required this.endTime,
-    this.actualEndTime,
+    this.endTime,
     this.status = 0,
-    required this.price,
+    required this.ratePerHour,
     this.attributedUserId,
+    this.relatedOrderId,
   });
 
   // Helpers
   bool get isActive => status == 0;
   bool get isCompleted => status == 1;
   bool get isCancelled => status == 2;
-  bool get isOpenSession => endTime.difference(startTime).inMinutes == 0;
+
+  double get currentCalculatedPrice {
+    final end = endTime ?? DateTime.now();
+    final duration = end.difference(startTime);
+    final seconds = duration.inSeconds;
+    // Price = (seconds / 3600) * ratePerHour
+    return (seconds / 3600.0) * ratePerHour;
+  }
 }

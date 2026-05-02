@@ -53,64 +53,50 @@ class _GamesSettingsSectionState extends State<GamesSettingsSection> {
     }
   }
 
-  Future<void> _addTier() async {
-    final labelController = TextEditingController();
-    final durationController = TextEditingController();
-    final priceController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ajouter un Palier'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: labelController,
-                decoration: const InputDecoration(labelText: 'Label (ex: 1 Heure)'),
-                validator: (v) => v == null || v.isEmpty ? 'Requis' : null,
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: durationController,
-                decoration: const InputDecoration(labelText: 'Durée (minutes, 0 = ouvert)'),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (v) => v == null || v.isEmpty ? 'Requis' : null,
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: priceController,
-                decoration: const InputDecoration(labelText: 'Prix (DH)'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) => v == null || double.tryParse(v) == null ? 'Prix invalide' : null,
-              ),
-            ],
-          ),
+  Widget _buildTierSection() {
+    final rateController = TextEditingController(
+      text: _tiers.isNotEmpty ? _tiers.first.ratePerHour.toString() : '',
+    );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tarif Horaire Global', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: rateController,
+                    decoration: const InputDecoration(labelText: 'Prix par Heure (DH)'),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    final rate = double.tryParse(rateController.text);
+                    if (rate != null) {
+                      final tier = _tiers.isNotEmpty ? _tiers.first : PartyTier(label: 'Tarif Standard', ratePerHour: rate);
+                      tier.ratePerHour = rate;
+                      tier.label = 'Tarif Standard';
+                      _tierBox.put(tier);
+                      _loadData();
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tarif enregistré')));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez entrer un tarif valide')));
+                    }
+                  },
+                  child: const Text('Enregistrer'),
+                ),
+              ],
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) Navigator.pop(context, true);
-            },
-            child: const Text('Ajouter'),
-          ),
-        ],
       ),
     );
-
-    if (result == true) {
-      _tierBox.put(PartyTier(
-        label: labelController.text.trim(),
-        durationMinutes: int.parse(durationController.text),
-        price: double.parse(priceController.text),
-      ));
-      _loadData();
-    }
   }
 
   @override
@@ -124,9 +110,7 @@ class _GamesSettingsSectionState extends State<GamesSettingsSection> {
           const SizedBox(height: 16),
           _buildPostList(),
           const SizedBox(height: 40),
-          _buildHeader('Paliers de Temps', _addTier),
-          const SizedBox(height: 16),
-          _buildTierList(),
+          _buildTierSection(),
         ],
       ),
     );
@@ -157,28 +141,5 @@ class _GamesSettingsSectionState extends State<GamesSettingsSection> {
     );
   }
 
-  Widget _buildTierList() {
-    if (_tiers.isEmpty) return const Text('Aucun palier configuré');
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _tiers.length,
-      itemBuilder: (context, index) {
-        final tier = _tiers[index];
-        return Card(
-          child: ListTile(
-            title: Text(tier.label),
-            subtitle: Text('${tier.durationMinutes == 0 ? "Ouvert" : "${tier.durationMinutes} min"} - ${tier.price.toStringAsFixed(2)} DH'),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () {
-                _tierBox.remove(tier.id);
-                _loadData();
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
+// Removed _buildTierList
 }

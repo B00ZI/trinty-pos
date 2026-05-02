@@ -44,7 +44,7 @@ class _OrderScreenState extends State<OrderScreen>
   late final Box<OrderCounter> _orderCounterBox;
   late final Box<OrderItem> _orderItemBox; // To manage item deletion
   late final Box<Catigory> _catigoryBox;
-  List<Catigory> _categories = [];
+  // List<Catigory> _categories = []; // Removed in favor of StreamBuilder
   bool _isTakeAway = false;
   String _comment = "";
   late AnimationController _shakeController;
@@ -55,6 +55,7 @@ class _OrderScreenState extends State<OrderScreen>
   OrderItem? _activeParentForExtras; // item getting the extras
   bool _singleTicketMode = false;
   bool _enableChangeWindow = true;
+  StreamSubscription<Query<PrinterConfig>>? _configSubscription;
 
   AppUser? _currentAuthUser;
 
@@ -67,7 +68,7 @@ class _OrderScreenState extends State<OrderScreen>
     _orderItemBox = widget.objectbox.store.box<OrderItem>();
     _catigoryBox = widget.objectbox.store.box<Catigory>();
     _categoryFilter = widget.initialCategory;
-    _categories = _catigoryBox.getAll();
+    // _categories = _catigoryBox.getAll(); // Removed
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -80,6 +81,7 @@ class _OrderScreenState extends State<OrderScreen>
 
     // Load toggle settings from PrinterConfig
     _loadToggleSettings();
+    _subscribeToToggleSettings();
 
     if (widget.orderToEdit != null) {
       _loadOrderForEditing();
@@ -101,9 +103,23 @@ class _OrderScreenState extends State<OrderScreen>
     }
   }
 
+  void _subscribeToToggleSettings() {
+    _configSubscription = _printerConfigBox
+        .query()
+        .watch(triggerImmediately: true)
+        .listen((query) {
+      if (mounted) {
+        setState(() {
+          _loadToggleSettings();
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _shakeController.dispose();
+    _configSubscription?.cancel();
     super.dispose();
   }
 
@@ -351,32 +367,52 @@ class _OrderScreenState extends State<OrderScreen>
   }
 
   Widget _buildCategoryGrid() {
-    if (_categories.isEmpty) {
-      return const Center(
-          child: Text('Aucune catégorie trouvée. Ajoutez-en dans Produits.'));
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = (constraints.maxWidth / 200).floor();
-        if (crossAxisCount < 2) crossAxisCount = 2;
-        return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: _categories.length,
-          itemBuilder: (context, index) {
-            final cat = _categories[index];
-            return CatigoryCard(
-              title: cat.name,
-              imageUrl: cat.imageUrl ?? '',
-              onTap: () {
-                setState(() {
-                  _categoryFilter = cat.name;
-                });
+    return StreamBuilder<List<Catigory>>(
+      stream: _catigoryBox
+          .query()
+          .watch(triggerImmediately: true)
+          .map((query) => query.find()),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Erreur : ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final categories = snapshot.data!;
+
+        if (categories.isEmpty) {
+          return const Center(
+              child:
+                  Text('Aucune catégorie trouvée. Ajoutez-en dans Produits.'));
+        }
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            int crossAxisCount = (constraints.maxWidth / 200).floor();
+            if (crossAxisCount < 2) crossAxisCount = 2;
+            return GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final cat = categories[index];
+                return CatigoryCard(
+                  title: cat.name,
+                  imageUrl: cat.imageUrl ?? '',
+                  onTap: () {
+                    setState(() {
+                      _categoryFilter = cat.name;
+                    });
+                  },
+                );
               },
             );
           },
@@ -389,25 +425,25 @@ class _OrderScreenState extends State<OrderScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        OrderDetails(
-          isTakeAway: _isTakeAway,
-          onTakeAwayChanged: (value) {
-            setState(() {
-              _isTakeAway = value ?? false;
-            });
-          },
-          onCommentPressed: () async {
-            final result = await showDialog<String>(
-              context: context,
-              builder: (context) => CommentDialog(initialComment: _comment),
-            );
-            if (result != null) {
-              setState(() {
-                _comment = result;
-              });
-            }
-          },
-        ),
+        // OrderDetails(
+        //   isTakeAway: _isTakeAway,
+        //   onTakeAwayChanged: (value) {
+        //     setState(() {
+        //       _isTakeAway = value ?? false;
+        //     });
+        //   },
+        //   onCommentPressed: () async {
+        //     final result = await showDialog<String>(
+        //       context: context,
+        //       builder: (context) => CommentDialog(initialComment: _comment),
+        //     );
+        //     if (result != null) {
+        //       setState(() {
+        //         _comment = result;
+        //       });
+        //     }
+        //   },
+        // ),
         Expanded(
           child: _cart.isEmpty
               ? const Center(child: Text('Votre panier est vide'))

@@ -4,14 +4,12 @@ import 'package:objectbox/objectbox.dart';
 class PartyTier {
   @Id()
   int id;
-  String label;          // e.g. "30 min"
-  int durationMinutes;   // 0 = open/unlimited
-  double price;
+  String label;          // e.g. "PS5"
+  double ratePerHour;
 
   PartyTier({
     this.id = 0,
     required this.label,
-    required this.durationMinutes,
-    required this.price,
+    required this.ratePerHour,
   });
 }

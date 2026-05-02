@@ -38,6 +38,7 @@ dependencies:
   reorderable_grid_view: ^2.2.8
   flutter_local_notifications: ^18.0.1
   timezone: ^0.10.0
+  audioplayers: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -59,6 +60,7 @@ flutter:
   uses-material-design: true
   assets:
     - lib/assets/frita.png
+    - lib/assets/notif.mp3
 
 dependency_overrides:
   pointycastle: ^4.0.0

@@ -14,7 +14,9 @@ import 'package:flutter/scheduler.dart';
 import '../models/daily_funds.dart';
 import '../widgets/daily_funds_dialog.dart';
 import '../models/app_user.dart';
+import '../models/game_session.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import '../service/business_day_helper.dart';
 import '../models/store_config.dart';
 
@@ -59,27 +61,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _fundsAlreadySet = false;
   late final Box<order_model.Ruci> _ruciBox;
   late final Box<DailyFunds> _dailyFundsBox;
+  late final Box<GameSession> _gameSessionBox;
   late final Box<AppUser> _userBox;
   late final Box<StoreConfig> _storeConfigBox;
-  Box<expence>? _expenceBox; // Change to nullable
+  Box<expence>? _expenceBox; 
 
   late DateTime _startDate;
   late DateTime _endDate;
   late StoreConfig _config;
-  AppUser? _selectedUserFilter;
+  int? _selectedUserId;
   List<AppUser> _allUsers = [];
+  final List<StreamSubscription> _subscriptions = [];
 
   @override
   void initState() {
     super.initState();
     _ruciBox = widget.objectbox.store.box<order_model.Ruci>();
     _dailyFundsBox = widget.objectbox.store.box<DailyFunds>();
+    _gameSessionBox = widget.objectbox.store.box<GameSession>();
     _userBox = widget.objectbox.store.box<AppUser>();
     _expenceBox = widget.objectbox.store.box<expence>(); // Initialize
     _storeConfigBox = widget.objectbox.store.box<StoreConfig>();
     _loadConfig();
+    
+    // Initial load
     _allUsers = _userBox.getAll();
     _refreshData();
+
+    // Setup real-time listeners
+    _subscriptions.add(_userBox.query().watch(triggerImmediately: true).listen((_) {
+      if (mounted) {
+        setState(() {
+          _allUsers = _userBox.getAll();
+        });
+      }
+    }));
+
+    _subscriptions.add(_ruciBox.query().watch().listen((_) => _refreshData()));
+    _subscriptions.add(_gameSessionBox.query().watch().listen((_) => _refreshData()));
+    _subscriptions.add(_expenceBox!.query().watch().listen((_) => _refreshData()));
   }
 
   void _loadConfig() {
@@ -91,12 +111,145 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _endDate = range.$2.subtract(const Duration(seconds: 1)); // End at 1 sec before next day start
   }
 
-  void _refreshData() {
-    _calculateRevenue();
-    _calculateOrderCount();
-    _calculateExpense(); // Calculate expenses
-    _calculateProfit(); // Calculate profit
-    _loadTodayFunds(); // Load today's funds
+  void _refreshData() async {
+    // Collect all data synchronously where possible or in parallel
+    final results = await Future.wait([
+      _getRevenue(),
+      _getOrderCount(),
+      _getExpense(),
+      _getTodayFunds(),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _todayRevenue = results[0];
+        _todayOrderCount = results[1];
+        _todayExpenses = results[2];
+        _todayFunds = results[3];
+        _todayProfit = _todayRevenue - _todayExpenses;
+        _fundsAlreadySet = _todayFunds > 0 || _checkIfFundsExist();
+      });
+    }
+  }
+
+  bool _checkIfFundsExist() {
+    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final query = _dailyFundsBox.query(DailyFunds_.date.equals(todayStart.millisecondsSinceEpoch)).build();
+    final count = query.count();
+    query.close();
+    return count > 0;
+  }
+
+  Future<double> _getRevenue() async {
+    // Implementation moved from _calculateRevenue but returning value
+    try {
+      final orderQueryBuilder = _ruciBox.query(Ruci_.date
+              .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
+              .and(Ruci_.isDeleted.equals(false)));
+      if (_selectedUserId != null) {
+        orderQueryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserId!));
+      }
+      final orderQuery = orderQueryBuilder.build();
+      final periodOrders = orderQuery.find();
+      orderQuery.close();
+
+      double totalRevenue = 0.0;
+      for (final ruci in periodOrders) {
+        for (final orderItem in ruci.items) {
+          totalRevenue += calculateItemTotal(orderItem);
+        }
+      }
+
+      Condition<GameSession> gameCondition = GameSession_.startTime
+          .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
+          .and(GameSession_.status.equals(1));
+      if (_selectedUserId != null) {
+        gameCondition = gameCondition.and(GameSession_.attributedUserId.equals(_selectedUserId!));
+      }
+      final gameQuery = _gameSessionBox.query(gameCondition).build();
+      final periodGames = gameQuery.find();
+      gameQuery.close();
+
+      for (final session in periodGames) {
+        if (session.relatedOrderId == null || session.relatedOrderId == 0) {
+          totalRevenue += session.currentCalculatedPrice;
+        }
+      }
+      return totalRevenue;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
+  Future<double> _getOrderCount() async {
+    try {
+      final orderQueryBuilder = _ruciBox.query(Ruci_.date
+              .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
+              .and(Ruci_.isDeleted.equals(false)));
+      if (_selectedUserId != null) {
+        orderQueryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserId!));
+      }
+      final orderQuery = orderQueryBuilder.build();
+      final orderCount = orderQuery.count();
+      orderQuery.close();
+
+      Condition<GameSession> gameCondition = GameSession_.startTime
+          .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
+          .and(GameSession_.status.equals(1));
+      if (_selectedUserId != null) {
+        gameCondition = gameCondition.and(GameSession_.attributedUserId.equals(_selectedUserId!));
+      }
+      final gameQuery = _gameSessionBox.query(gameCondition).build();
+      int unlinkedGames = 0;
+      for (final session in gameQuery.find()) {
+        if (session.relatedOrderId == null || session.relatedOrderId == 0) {
+          unlinkedGames++;
+        }
+      }
+      gameQuery.close();
+
+      return (orderCount + unlinkedGames).toDouble();
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
+  Future<double> _getExpense() async {
+    try {
+      final query = _expenceBox!.query(expence_.date.between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)).build();
+      final periodExpenses = query.find();
+      query.close();
+      double total = 0.0;
+      for (final exp in periodExpenses) total += exp.amount;
+      return total;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
+  Future<double> _getTodayFunds() async {
+    try {
+      final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      final todayEnd = todayStart.add(const Duration(days: 1));
+      
+      // Try to get today's funds first
+      final todayQuery = _dailyFundsBox.query(DailyFunds_.date.between(todayStart.millisecondsSinceEpoch, todayEnd.millisecondsSinceEpoch)).build();
+      final todayResult = todayQuery.find();
+      todayQuery.close();
+      
+      if (todayResult.isNotEmpty) {
+        return todayResult.first.amount;
+      }
+
+      // If not found, get the most recent funds from the past
+      final latestQuery = _dailyFundsBox.query().order(DailyFunds_.date, flags: Order.descending).build();
+      final latestResult = latestQuery.findFirst();
+      latestQuery.close();
+
+      return latestResult?.amount ?? 0.0;
+    } catch (e) {
+      return 0.0;
+    }
   }
 
   Future<void> _selectDateRange() async {
@@ -116,48 +269,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _calculateProfit() async {
-    try {
-      final profit = _todayRevenue - _todayExpenses;
-      if (mounted) {
-        setState(() {
-          _todayProfit = profit;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error calculating profit: $e');
-    }
-  }
 
-  Future<void> _loadTodayFunds() async {
-    try {
-      final DateTime todayStart = DateTime(
-          DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final DateTime todayEnd = todayStart.add(const Duration(days: 1));
-      final query = _dailyFundsBox
-          .query(DailyFunds_.date.between(
-            todayStart.millisecondsSinceEpoch,
-            todayEnd.millisecondsSinceEpoch,
-          ))
-          .build();
-      final result = query.find();
-      query.close();
-
-      if (mounted) {
-        setState(() {
-          if (result.isNotEmpty) {
-            _todayFunds = result.first.amount;
-            _fundsAlreadySet = true;
-          } else {
-            _todayFunds = 0.0;
-            _fundsAlreadySet = false;
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading today\'s funds: $e');
-    }
-  }
 
   Future<void> _saveFunds(double amount) async {
     try {
@@ -180,10 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
 
       if (mounted) {
-        setState(() {
-          _todayFunds = amount;
-          _fundsAlreadySet = true;
-        });
+        _refreshData();
       }
     } catch (e) {
       debugPrint('Error saving funds: $e');
@@ -206,58 +315,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Future<void> _calculateExpense() async {
-    try {
-      final queryBuilder = _expenceBox!
-          .query(expence_.date.between(
-            _startDate.millisecondsSinceEpoch,
-            _endDate.millisecondsSinceEpoch,
-          ));
-      
-      final query = queryBuilder.build();
-      final periodExpenses = query.find();
-      query.close();
-
-      double totalExpenses = 0.0;
-      for (final exp in periodExpenses) {
-        totalExpenses += exp.amount;
-      }
-      if (mounted) {
-        setState(() {
-          _todayExpenses = totalExpenses;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error calculating expenses: $e');
-    }
-  }
-
-  Future<void> _calculateOrderCount() async {
-    try {
-      final queryBuilder = _ruciBox.query(Ruci_.date
-              .between(
-                _startDate.millisecondsSinceEpoch,
-                _endDate.millisecondsSinceEpoch,
-              )
-              .and(Ruci_.isDeleted.equals(false)));
-      
-      if (_selectedUserFilter != null) {
-        queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserFilter!.id));
-      }
-
-      final query = queryBuilder.build();
-      final periodOrders = query.find();
-      query.close();
-      
-      if (mounted) {
-        setState(() {
-          _todayOrderCount = periodOrders.length.toDouble();
-        });
-      }
-    } catch (e) {
-      debugPrint('Error calculating order count: $e');
-    }
-  }
 
   double calculateItemTotal(OrderItem item) {
     // Use persisted price if available, otherwise fallback to current product price
@@ -269,39 +326,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return total;
   }
 
-  Future<void> _calculateRevenue() async {
-    try {
-      final queryBuilder = _ruciBox.query(Ruci_.date
-              .between(
-                _startDate.millisecondsSinceEpoch,
-                _endDate.millisecondsSinceEpoch,
-              )
-              .and(Ruci_.isDeleted.equals(false)));
-      
-      if (_selectedUserFilter != null) {
-        queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserFilter!.id));
-      }
-
-      final query = queryBuilder.build();
-      final periodOrders = query.find();
-      query.close();
-
-      double totalRevenue = 0.0;
-      for (final ruci in periodOrders) {
-        for (final orderItem in ruci.items) {
-          totalRevenue += calculateItemTotal(orderItem);
-        }
-      }
-      if (mounted) {
-        setState(() {
-          _todayRevenue = totalRevenue;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error calculating revenue: $e');
-    }
-  }
-
   void _showUnitsSoldPopup() {
     final queryBuilder = _ruciBox.query(Ruci_.date
             .between(
@@ -310,8 +334,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             )
             .and(Ruci_.isDeleted.equals(false)));
     
-    if (_selectedUserFilter != null) {
-      queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserFilter!.id));
+    if (_selectedUserId != null) {
+      queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserId!));
     }
 
     final query = queryBuilder.build();
@@ -321,9 +345,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final Map<String, int> productCounts = {};
     for (final ruci in periodOrders) {
       for (final item in ruci.items) {
-        // Use persisted name if available, otherwise fallback to current product name
         final productName = item.productName ?? item.product.target?.name ?? 'Inconnu';
         productCounts[productName] = (productCounts[productName] ?? 0) + item.quantity;
+      }
+    }
+
+    // 2. Add Game Sessions
+    Condition<GameSession> gameCondition = GameSession_.startTime
+        .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
+        .and(GameSession_.status.equals(1)); // Completed only
+    
+    if (_selectedUserId != null) {
+      gameCondition = gameCondition.and(GameSession_.attributedUserId.equals(_selectedUserId!));
+    }
+
+    final gameQuery = _gameSessionBox.query(gameCondition).build();
+    final periodGames = gameQuery.find();
+    gameQuery.close();
+
+    for (final session in periodGames) {
+      if (session.relatedOrderId == null || session.relatedOrderId == 0) {
+        final gameLabel = 'Jeux: ${session.tierLabel}';
+        productCounts[gameLabel] = (productCounts[gameLabel] ?? 0) + 1;
       }
     }
 
@@ -407,23 +450,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonHideUnderline(
-                      child: DropdownButton<AppUser?>(
-                        value: _selectedUserFilter,
+                      child: DropdownButton<int?>(
+                        value: _selectedUserId,
                         hint: const Text('Tous les Utilisateurs', style: TextStyle(fontSize: 13)),
                         isExpanded: true,
                         items: [
-                          const DropdownMenuItem<AppUser?>(
+                          const DropdownMenuItem<int?>(
                             value: null,
                             child: Text('Tous les Utilisateurs', style: TextStyle(fontSize: 13)),
                           ),
-                          ..._allUsers.map((user) => DropdownMenuItem<AppUser?>(
-                                value: user,
+                          ..._allUsers.map((user) => DropdownMenuItem<int?>(
+                                value: user.id,
                                 child: Text(user.name, style: const TextStyle(fontSize: 13)),
                               )),
                         ],
-                        onChanged: (user) {
+                        onChanged: (userId) {
                           setState(() {
-                            _selectedUserFilter = user;
+                            _selectedUserId = userId;
                           });
                           _refreshData();
                         },
@@ -597,6 +640,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    for (var sub in _subscriptions) {
+      sub.cancel();
+    }
     super.dispose();
   }
 }

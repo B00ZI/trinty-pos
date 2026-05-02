@@ -71,10 +71,13 @@ class ReceiptData {
       id: order.id.toString(),
       dailyNumber: order.orderNumber.toString(),
       createdAt: order.date.toIso8601String(),
-      total: order.items.fold<double>(
-        0,
-        (sum, item) => sum + (item.quantity * (item.product.target?.price ?? 0)),
-      ).toStringAsFixed(2),
+      total: order.items
+          .fold<double>(
+            0,
+            (sum, item) =>
+                sum + (item.quantity * (item.product.target?.price ?? 0)),
+          )
+          .toStringAsFixed(2),
       items: order.items.map((item) {
         return ReceiptItem(
           id: item.id.toString(),
@@ -84,7 +87,6 @@ class ReceiptData {
         );
       }).toList(),
       paymentMethod: 'cash', // Add a default payment method if needed
-      
     );
   }
 }
@@ -127,7 +129,9 @@ class ReceiptItem {
     };
   }
 
-  double get total => (quantity * price) + extras.fold(0.0, (sum, e) => sum + (e.price * e.quantity));
+  double get total =>
+      (quantity * price) +
+      extras.fold(0.0, (sum, e) => sum + (e.price * e.quantity));
 }
 
 class PrinterHelper {
@@ -154,14 +158,14 @@ class PrinterHelper {
     return printer;
   }
 
-  static Future<void> printReceipt( ReceiptData receipt, ObjectBox objectbox, {String comment="", bool isTakeAway = false}) async {
-
+  static Future<void> printReceipt(ReceiptData receipt, ObjectBox objectbox,
+      {String comment = "", bool isTakeAway = false}) async {
     final printer = await connectToPrinter(objectbox);
 
     try {
       final storeConfigBox = objectbox.store.box<StoreConfig>();
-      final storeConfig = storeConfigBox.getAll().isNotEmpty 
-          ? storeConfigBox.getAll().first 
+      final storeConfig = storeConfigBox.getAll().isNotEmpty
+          ? storeConfigBox.getAll().first
           : null;
 
       printer.reset();
@@ -171,7 +175,7 @@ class PrinterHelper {
       debugPrint('Items to print: ${receipt.items}');
 
       _printItems(printer, receipt.items);
-      _printTotals(printer, receipt , isTakeAway);
+      _printTotals(printer, receipt, isTakeAway);
       _printFooter(printer, receipt);
       printer.cut(mode: PosCutMode.partial);
     } finally {
@@ -179,17 +183,12 @@ class PrinterHelper {
     }
   }
 
-  static Future<void> _printHeader(
-    NetworkPrinter printer,
-    ReceiptData receipt,
-    StoreConfig? config,
-    String comment
-  ) async {
+  static Future<void> _printHeader(NetworkPrinter printer, ReceiptData receipt,
+      StoreConfig? config, String comment) async {
     await _printLogoImage(printer, config?.storeLogoPath);
 
-    final storeName = config?.storeName?.isNotEmpty == true 
-        ? config!.storeName! 
-        : 'FRITA';
+    final storeName =
+        config?.storeName?.isNotEmpty == true ? config!.storeName! : 'FRITA';
 
     printer.text(
       storeName,
@@ -266,7 +265,8 @@ class PrinterHelper {
     printer.hr();
   }
 
-  static Future<void> _printLogoImage(NetworkPrinter printer, String? logoPath) async {
+  static Future<void> _printLogoImage(
+      NetworkPrinter printer, String? logoPath) async {
     try {
       Uint8List? imgBytes;
 
@@ -353,7 +353,9 @@ class PrinterHelper {
       for (final extra in item.extras) {
         printer.row([
           PosColumn(
-            text: '  + ${extra.title} ${extra.quantity > 1 ? "x${extra.quantity}" : ""}'.trimRight(),
+            text:
+                '  + ${extra.title} ${extra.quantity > 1 ? "x${extra.quantity}" : ""}'
+                    .trimRight(),
             width: 8,
             styles: const PosStyles(align: PosAlign.left),
           ),
@@ -369,7 +371,8 @@ class PrinterHelper {
     printer.hr();
   }
 
-  static void _printTotals(NetworkPrinter printer, ReceiptData receipt, bool isTakeAway) {
+  static void _printTotals(
+      NetworkPrinter printer, ReceiptData receipt, bool isTakeAway) {
     final subtotal = receipt.items.fold(0.0, (sum, item) => sum + item.total);
     final total = double.tryParse(receipt.total) ?? subtotal;
 
@@ -392,7 +395,7 @@ class PrinterHelper {
 
     printer.hr();
 
-      if (isTakeAway) {
+    if (isTakeAway) {
       final takeAwayStrip = ImageGenerator.generateTakeAwayStrip();
       printer.image(takeAwayStrip);
       printer.feed(1);
@@ -404,16 +407,17 @@ class PrinterHelper {
     );
   }
 
-  static void _printFooter(NetworkPrinter printer, ReceiptData receipt,) {
-   
-
+  static void _printFooter(
+    NetworkPrinter printer,
+    ReceiptData receipt,
+  ) {
     printer.feed(2);
-   
-      printer.text(
-    "Thank you for your order! Come Again!", 
-        styles: const PosStyles(align: PosAlign.center, bold: true),
-      );
-  
+
+    printer.text(
+      "Thank you for your order! Come Again!",
+      styles: const PosStyles(align: PosAlign.center, bold: true),
+    );
+
     printer.feed(2);
   }
 
@@ -441,15 +445,15 @@ class PrinterHelper {
 
   static Future<void> testPrinter(ObjectBox objectBox) async {
     final printer = await connectToPrinter(objectBox);
-    
+
     // Fetch store config
     final storeConfigBox = objectBox.store.box<StoreConfig>();
-    final storeConfig = storeConfigBox.getAll().isNotEmpty 
-          ? storeConfigBox.getAll().first 
-          : null;
-    final storeName = storeConfig?.storeName?.isNotEmpty == true 
-          ? storeConfig!.storeName! 
-          : 'Easify POS System';
+    final storeConfig = storeConfigBox.getAll().isNotEmpty
+        ? storeConfigBox.getAll().first
+        : null;
+    final storeName = storeConfig?.storeName?.isNotEmpty == true
+        ? storeConfig!.storeName!
+        : 'Easify POS System';
 
     try {
       printer.text(
@@ -482,12 +486,12 @@ class PrinterHelper {
 
     try {
       final storeConfigBox = objectbox.store.box<StoreConfig>();
-      final storeConfig = storeConfigBox.getAll().isNotEmpty 
-          ? storeConfigBox.getAll().first 
+      final storeConfig = storeConfigBox.getAll().isNotEmpty
+          ? storeConfigBox.getAll().first
           : null;
 
       printer.reset();
-      
+
       // Print logo and store name/phone using the header logic (minimal receipt data)
       final dummyReceipt = ReceiptData(
         id: 'CONFIG-TEST',
@@ -497,10 +501,10 @@ class PrinterHelper {
         items: [],
         paymentMethod: 'TEST',
       );
-      final comment = ''; 
+      final comment = '';
 
       await _printHeader(printer, dummyReceipt, storeConfig, comment);
-      
+
       printer.feed(2);
       printer.text(
         'STORE CONFIGURATION TEST',
@@ -511,7 +515,7 @@ class PrinterHelper {
         '✅ Connection: OK',
         styles: const PosStyles(align: PosAlign.center),
       );
-      
+
       printer.feed(3);
       printer.cut(mode: PosCutMode.partial);
     } finally {
@@ -523,7 +527,8 @@ class PrinterHelper {
     return DateFormat('HH:mm').format(date);
   }
 
-  static Future<void> printGameTicket(GameSession session, ObjectBox objectbox) async {
+  static Future<void> printGameTicket(
+      GameSession session, ObjectBox objectbox) async {
     final printerConfigBox = objectbox.store.box<PrinterConfig>();
     final configs = printerConfigBox.getAll();
     if (configs.isEmpty) return;
@@ -533,29 +538,79 @@ class PrinterHelper {
     final printer = NetworkPrinter(PaperSize.mm80, profile);
 
     try {
-      final PosPrintResult res = await printer.connect(config.ipAddress, port: config.port);
+      final PosPrintResult res =
+          await printer.connect(config.ipAddress, port: config.port);
       if (res != PosPrintResult.success) return;
 
       printer.reset();
       printer.text('===== TICKET JEUX =====',
-          styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2));
+          styles: const PosStyles(
+              align: PosAlign.center,
+              bold: true,
+              height: PosTextSize.size2,
+              width: PosTextSize.size2));
       printer.feed(1);
-      
-      printer.text('Poste:       ${session.postLabel}', styles: const PosStyles(bold: true));
+
+      printer.text('Poste:       ${session.postLabel}',
+          styles: const PosStyles(bold: true));
       printer.text('Partie #:    ${session.partyNumber}');
       printer.text('Palier:      ${session.tierLabel}');
-      printer.text('Prix:        ${session.price.toStringAsFixed(2)} DH');
+      printer.text('Tarif:       ${session.ratePerHour.toStringAsFixed(2)} DH/H');
       printer.feed(1);
-      
+
       printer.text('Debut:       ${_formatTime(session.startTime)}');
-      if (session.endTime.difference(session.startTime).inMinutes > 0) {
-        printer.text('Fin:         ${_formatTime(session.endTime)}', styles: const PosStyles(bold: true));
-      } else {
-        printer.text('Fin:         Ouvert');
-      }
+      final end = session.endTime ?? DateTime.now();
+      final duration = end.difference(session.startTime);
+      final minutes = duration.inMinutes;
       
+      printer.text('Fin:         ${_formatTime(end)}');
+      printer.text('Temps:       ${minutes} min', styles: const PosStyles(bold: true));
+      printer.text('Total:       ${session.currentCalculatedPrice.toStringAsFixed(2)} DH', styles: const PosStyles(bold: true));
+
       printer.feed(1);
-      printer.text('Merci de votre visite !', styles: const PosStyles(align: PosAlign.center));
+      printer.text('Merci de votre visite !',
+          styles: const PosStyles(align: PosAlign.center));
+      printer.feed(2);
+      printer.cut();
+      printer.disconnect();
+    } catch (e) {
+      debugPrint('Printing error: $e');
+    }
+  }
+
+  static Future<void> printSessionStartTicket(GameSession session, ObjectBox objectbox) async {
+    final configBox = objectbox.store.box<PrinterConfig>();
+    if (configBox.isEmpty()) return;
+    final config = configBox.getAll().first;
+
+    final profile = await CapabilityProfile.load();
+    final printer = NetworkPrinter(PaperSize.mm80, profile);
+
+    try {
+      final PosPrintResult res =
+          await printer.connect(config.ipAddress, port: config.port);
+      if (res != PosPrintResult.success) return;
+
+      printer.reset();
+      printer.text('===== DEBUT PARTIE =====',
+          styles: const PosStyles(
+              align: PosAlign.center,
+              bold: true,
+              height: PosTextSize.size2,
+              width: PosTextSize.size2));
+      printer.feed(1);
+
+      printer.text('Poste:       ${session.postLabel}',
+          styles: const PosStyles(bold: true));
+      printer.text('Partie #:    ${session.partyNumber}');
+      printer.text('Tarif:       ${session.ratePerHour.toStringAsFixed(2)} DH/H');
+      printer.feed(1);
+
+      printer.text('Debut:       ${_formatTime(session.startTime)}');
+
+      printer.feed(1);
+      printer.text('Bon jeu !',
+          styles: const PosStyles(align: PosAlign.center));
       printer.feed(2);
       printer.cut();
       printer.disconnect();
