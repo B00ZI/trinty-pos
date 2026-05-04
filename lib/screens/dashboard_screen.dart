@@ -134,7 +134,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _todayFunds = result.first.amount;
             _fundsAlreadySet = true;
           } else {
-            _todayFunds = 0.0;
+            // Find the latest recorded funds as a fallback
+            final latestQuery = _dailyFundsBox
+                .query()
+                .order(DailyFunds_.date, flags: Order.descending)
+                .build();
+            final latestResult = latestQuery.findFirst();
+            latestQuery.close();
+
+            _todayFunds = latestResult?.amount ?? 0.0;
             _fundsAlreadySet = false;
           }
         });
@@ -176,14 +184,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showFundsDialog() {
-    final currentFunds = _fundsAlreadySet
-        ? DailyFunds(date: DateTime.now(), amount: _todayFunds)
-        : null;
+    final currentFunds = DailyFunds(date: DateTime.now(), amount: _todayFunds);
 
     showDialog(
       context: context,
       builder: (ctx) => DailyFundsDialog(
         currentFunds: currentFunds,
+        isAlreadySet: _fundsAlreadySet,
         onSave: (amount) {
           _saveFunds(amount);
         },

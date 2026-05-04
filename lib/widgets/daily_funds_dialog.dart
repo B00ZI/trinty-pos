@@ -3,11 +3,13 @@ import '../models/daily_funds.dart';
 
 class DailyFundsDialog extends StatefulWidget {
   final DailyFunds? currentFunds;
+  final bool isAlreadySet;
   final Function(double) onSave;
 
   const DailyFundsDialog({
     super.key,
     required this.currentFunds,
+    this.isAlreadySet = false,
     required this.onSave,
   });
 
@@ -17,14 +19,14 @@ class DailyFundsDialog extends StatefulWidget {
 
 class _DailyFundsDialogState extends State<DailyFundsDialog> {
   late TextEditingController _controller;
-  bool _alreadySet = false;
+  bool _alreadySetForToday = false;
 
   @override
   void initState() {
     super.initState();
-    _alreadySet = widget.currentFunds != null;
+    _alreadySetForToday = widget.isAlreadySet;
     _controller = TextEditingController(
-      text: _alreadySet ? widget.currentFunds!.amount.toStringAsFixed(2) : '',
+      text: widget.currentFunds != null ? widget.currentFunds!.amount.toStringAsFixed(2) : '',
     );
   }
 
@@ -52,7 +54,7 @@ class _DailyFundsDialogState extends State<DailyFundsDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_alreadySet)
+            if (_alreadySetForToday)
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
