@@ -175,8 +175,9 @@ class PrinterHelper {
       debugPrint('Items to print: ${receipt.items}');
 
       _printItems(printer, receipt.items);
-      _printTotals(printer, receipt, isTakeAway);
+      _printTotals(printer, receipt, isTakeAway, storeConfig);
       _printFooter(printer, receipt);
+
       printer.cut(mode: PosCutMode.partial);
     } finally {
       printer.disconnect();
@@ -372,7 +373,8 @@ class PrinterHelper {
   }
 
   static void _printTotals(
-      NetworkPrinter printer, ReceiptData receipt, bool isTakeAway) {
+      NetworkPrinter printer, ReceiptData receipt, bool isTakeAway, StoreConfig? config) {
+
     final subtotal = receipt.items.fold(0.0, (sum, item) => sum + item.total);
     final total = double.tryParse(receipt.total) ?? subtotal;
 
@@ -401,10 +403,13 @@ class PrinterHelper {
       printer.feed(1);
     }
 
-    printer.text(
-      'Payment: ${_formatPaymentMethod(receipt.paymentMethod)}',
-      styles: const PosStyles(align: PosAlign.left, bold: true),
-    );
+    if (config?.wifiPassword?.isNotEmpty == true) {
+      printer.text(
+        'WIFI: ${config!.wifiPassword!}',
+        styles: const PosStyles(align: PosAlign.left, bold: true),
+      );
+    }
+
   }
 
   static void _printFooter(
@@ -607,6 +612,12 @@ class PrinterHelper {
       printer.feed(1);
 
       printer.text('Debut:       ${_formatTime(session.startTime)}');
+      
+      if (session.isLimitedDuration) {
+        printer.text('Duree:       ${session.limitedDurationMinutes} min', styles: const PosStyles(bold: true));
+        printer.text('Fin prevue:  ${_formatTime(session.startTime.add(Duration(minutes: session.limitedDurationMinutes)))}');
+        printer.text('Total Paye:  ${session.currentCalculatedPrice.toStringAsFixed(2)} DH', styles: const PosStyles(bold: true));
+      }
 
       printer.feed(1);
       printer.text('Bon jeu !',

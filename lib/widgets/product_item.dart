@@ -5,23 +5,35 @@ import 'dart:io';
 class ProductItem extends StatelessWidget {
   final Product product;
   final void Function(Product) onAddToCart;
-  final void Function(Product)? onDelete;
-  final void Function(Product)? onEdit;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
 
   const ProductItem({
     super.key,
     required this.product,
     required this.onAddToCart,
-    this.onDelete,
-    this.onEdit,
+    this.onLongPress,
+    this.isSelected = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: isSelected ? 8 : 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isSelected
+            ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
+            : BorderSide.none,
+      ),
+      color: isSelected
+          ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+          : null,
       child: InkWell(
         onTap: () => onAddToCart(product),
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -63,16 +75,10 @@ class ProductItem extends StatelessWidget {
                   ],
                 ),
               ),
-              // Actions
-              if (onEdit != null)
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () => onEdit!(product),
-                ),
-              if (onDelete != null)
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => onDelete!(product),
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
             ],
           ),

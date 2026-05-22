@@ -303,7 +303,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(8, 8382040067926750167),
     name: 'StoreConfig',
-    lastPropertyId: const obx_int.IdUid(8, 5491447122919380804),
+    lastPropertyId: const obx_int.IdUid(12, 3603508863797609553),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -354,6 +354,30 @@ final _entities = <obx_int.ModelEntity>[
         type: 6,
         flags: 0,
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 5196049406087064036),
+        name: 'wifiPassword',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 8339774986471081483),
+        name: 'isSurgePriceEnabled',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 5699677611349971816),
+        name: 'surgePriceAmount',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(12, 3603508863797609553),
+        name: 'surgeProductIds',
+        type: 27,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
@@ -361,7 +385,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(9, 2621355858066362497),
     name: 'Catigory',
-    lastPropertyId: const obx_int.IdUid(3, 1815411420379856413),
+    lastPropertyId: const obx_int.IdUid(4, 6107928378652126699),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -380,6 +404,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(3, 1815411420379856413),
         name: 'imageUrl',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 6107928378652126699),
+        name: 'displayOrder',
+        type: 6,
         flags: 0,
       ),
     ],
@@ -417,7 +447,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(11, 5447409109248621204),
     name: 'AppUser',
-    lastPropertyId: const obx_int.IdUid(4, 4492402646679945498),
+    lastPropertyId: const obx_int.IdUid(5, 6077942907396794054),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -442,6 +472,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(4, 4492402646679945498),
         name: 'createdAt',
         type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 6077942907396794054),
+        name: 'isAdmin',
+        type: 1,
         flags: 0,
       ),
     ],
@@ -479,7 +515,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(13, 1439284337015220727),
     name: 'GameSession',
-    lastPropertyId: const obx_int.IdUid(14, 5371541489601292714),
+    lastPropertyId: const obx_int.IdUid(16, 4364332307112873347),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -493,7 +529,7 @@ final _entities = <obx_int.ModelEntity>[
         name: 'postId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(15, 5120190148008823260),
+        indexId: const obx_int.IdUid(25, 8046807335310555673),
         relationTarget: 'GamePost',
       ),
       obx_int.ModelProperty(
@@ -501,7 +537,7 @@ final _entities = <obx_int.ModelEntity>[
         name: 'tierId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(16, 1548075592408049392),
+        indexId: const obx_int.IdUid(26, 9193408218415038704),
         relationTarget: 'PartyTier',
       ),
       obx_int.ModelProperty(
@@ -555,6 +591,18 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(14, 5371541489601292714),
         name: 'relatedOrderId',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(15, 3315188612904673333),
+        name: 'isLimitedDuration',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(16, 4364332307112873347),
+        name: 'limitedDurationMinutes',
         type: 6,
         flags: 0,
       ),
@@ -653,7 +701,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
     lastEntityId: const obx_int.IdUid(15, 669046788345874073),
-    lastIndexId: const obx_int.IdUid(16, 1548075592408049392),
+    lastIndexId: const obx_int.IdUid(26, 9193408218415038704),
     lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [8743093086059233857],
@@ -670,6 +718,16 @@ obx_int.ModelDefinition getObjectBoxModel() {
       5371259390164855513,
       2235570861111614,
       4451680796616417350,
+      5120190148008823260,
+      1548075592408049392,
+      1857149748643918373,
+      8729521018092737300,
+      5964875735200113887,
+      3818360594508173648,
+      5325984547637129488,
+      7005251809735891263,
+      305667341455062955,
+      1462311232118323923,
     ],
     retiredPropertyUids: const [
       7625330162759834078,
@@ -1094,7 +1152,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
             object.storePhone == null
                 ? null
                 : fbb.writeString(object.storePhone!);
-        fbb.startTable(9);
+        final wifiPasswordOffset =
+            object.wifiPassword == null
+                ? null
+                : fbb.writeString(object.wifiPassword!);
+        final surgeProductIdsOffset = fbb.writeListInt64(
+          object.surgeProductIds,
+        );
+        fbb.startTable(13);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, storeNameOffset);
         fbb.addOffset(2, storeLogoPathOffset);
@@ -1103,6 +1168,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(5, object.dayStartMinute);
         fbb.addInt64(6, object.dayEndHour);
         fbb.addInt64(7, object.dayEndMinute);
+        fbb.addOffset(8, wifiPasswordOffset);
+        fbb.addBool(9, object.isSurgePriceEnabled);
+        fbb.addFloat64(10, object.surgePriceAmount);
+        fbb.addOffset(11, surgeProductIdsOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1124,6 +1193,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final storeLogoPathParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 8);
+        final wifiPasswordParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 20);
         final dayStartHourParam = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -1148,15 +1220,35 @@ obx_int.ModelDefinition getObjectBoxModel() {
           18,
           0,
         );
+        final isSurgePriceEnabledParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          22,
+          false,
+        );
+        final surgePriceAmountParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          24,
+          0,
+        );
+        final surgeProductIdsParam = const fb.ListReader<int>(
+          fb.Int64Reader(),
+          lazy: false,
+        ).vTableGet(buffer, rootOffset, 26, []);
         final object = StoreConfig(
           id: idParam,
           storeName: storeNameParam,
           storePhone: storePhoneParam,
           storeLogoPath: storeLogoPathParam,
+          wifiPassword: wifiPasswordParam,
           dayStartHour: dayStartHourParam,
           dayStartMinute: dayStartMinuteParam,
           dayEndHour: dayEndHourParam,
           dayEndMinute: dayEndMinuteParam,
+          isSurgePriceEnabled: isSurgePriceEnabledParam,
+          surgePriceAmount: surgePriceAmountParam,
+          surgeProductIds: surgeProductIdsParam,
         );
 
         return object;
@@ -1174,10 +1266,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameOffset = fbb.writeString(object.name);
         final imageUrlOffset =
             object.imageUrl == null ? null : fbb.writeString(object.imageUrl!);
-        fbb.startTable(4);
+        fbb.startTable(5);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addOffset(2, imageUrlOffset);
+        fbb.addInt64(3, object.displayOrder);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1196,10 +1289,17 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final imageUrlParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 8);
+        final displayOrderParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
         final object = Catigory(
           id: idParam,
           name: nameParam,
           imageUrl: imageUrlParam,
+          displayOrder: displayOrderParam,
         );
 
         return object;
@@ -1251,11 +1351,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameOffset = fbb.writeString(object.name);
         final pinOffset =
             object.pin == null ? null : fbb.writeString(object.pin!);
-        fbb.startTable(5);
+        fbb.startTable(6);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addOffset(2, pinOffset);
         fbb.addInt64(3, object.createdAt.millisecondsSinceEpoch);
+        fbb.addBool(4, object.isAdmin);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1274,6 +1375,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final pinParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 8);
+        final isAdminParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          false,
+        );
         final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
         );
@@ -1281,6 +1388,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           id: idParam,
           name: nameParam,
           pin: pinParam,
+          isAdmin: isAdminParam,
           createdAt: createdAtParam,
         );
 
@@ -1342,7 +1450,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectToFB: (GameSession object, fb.Builder fbb) {
         final postLabelOffset = fbb.writeString(object.postLabel);
         final tierLabelOffset = fbb.writeString(object.tierLabel);
-        fbb.startTable(15);
+        fbb.startTable(17);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.post.targetId);
         fbb.addInt64(2, object.tier.targetId);
@@ -1355,6 +1463,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(11, object.attributedUserId);
         fbb.addFloat64(12, object.ratePerHour);
         fbb.addInt64(13, object.relatedOrderId);
+        fbb.addBool(14, object.isLimitedDuration);
+        fbb.addInt64(15, object.limitedDurationMinutes);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1413,6 +1523,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
           rootOffset,
           30,
         );
+        final isLimitedDurationParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          32,
+          false,
+        );
+        final limitedDurationMinutesParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          34,
+          0,
+        );
         final object = GameSession(
           id: idParam,
           postLabel: postLabelParam,
@@ -1424,6 +1546,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
           ratePerHour: ratePerHourParam,
           attributedUserId: attributedUserIdParam,
           relatedOrderId: relatedOrderIdParam,
+          isLimitedDuration: isLimitedDurationParam,
+          limitedDurationMinutes: limitedDurationMinutesParam,
         );
         object.post.targetId = const fb.Int64Reader().vTableGet(
           buffer,
@@ -1751,6 +1875,26 @@ class StoreConfig_ {
   static final dayEndMinute = obx.QueryIntegerProperty<StoreConfig>(
     _entities[6].properties[7],
   );
+
+  /// See [StoreConfig.wifiPassword].
+  static final wifiPassword = obx.QueryStringProperty<StoreConfig>(
+    _entities[6].properties[8],
+  );
+
+  /// See [StoreConfig.isSurgePriceEnabled].
+  static final isSurgePriceEnabled = obx.QueryBooleanProperty<StoreConfig>(
+    _entities[6].properties[9],
+  );
+
+  /// See [StoreConfig.surgePriceAmount].
+  static final surgePriceAmount = obx.QueryDoubleProperty<StoreConfig>(
+    _entities[6].properties[10],
+  );
+
+  /// See [StoreConfig.surgeProductIds].
+  static final surgeProductIds = obx.QueryIntegerVectorProperty<StoreConfig>(
+    _entities[6].properties[11],
+  );
 }
 
 /// [Catigory] entity fields to define ObjectBox queries.
@@ -1768,6 +1912,11 @@ class Catigory_ {
   /// See [Catigory.imageUrl].
   static final imageUrl = obx.QueryStringProperty<Catigory>(
     _entities[7].properties[2],
+  );
+
+  /// See [Catigory.displayOrder].
+  static final displayOrder = obx.QueryIntegerProperty<Catigory>(
+    _entities[7].properties[3],
   );
 }
 
@@ -1809,6 +1958,11 @@ class AppUser_ {
   /// See [AppUser.createdAt].
   static final createdAt = obx.QueryDateProperty<AppUser>(
     _entities[9].properties[3],
+  );
+
+  /// See [AppUser.isAdmin].
+  static final isAdmin = obx.QueryBooleanProperty<AppUser>(
+    _entities[9].properties[4],
   );
 }
 
@@ -1890,6 +2044,16 @@ class GameSession_ {
   /// See [GameSession.relatedOrderId].
   static final relatedOrderId = obx.QueryIntegerProperty<GameSession>(
     _entities[11].properties[11],
+  );
+
+  /// See [GameSession.isLimitedDuration].
+  static final isLimitedDuration = obx.QueryBooleanProperty<GameSession>(
+    _entities[11].properties[12],
+  );
+
+  /// See [GameSession.limitedDurationMinutes].
+  static final limitedDurationMinutes = obx.QueryIntegerProperty<GameSession>(
+    _entities[11].properties[13],
   );
 }
 

@@ -18,6 +18,8 @@ class GameSession {
   double ratePerHour; // snapshot of tier rate
   int? attributedUserId;
   int? relatedOrderId;
+  bool isLimitedDuration;
+  int limitedDurationMinutes;
 
   // Relations
   final post = ToOne<GamePost>();
@@ -36,6 +38,8 @@ class GameSession {
     required this.ratePerHour,
     this.attributedUserId,
     this.relatedOrderId,
+    this.isLimitedDuration = false,
+    this.limitedDurationMinutes = 0,
   });
 
   // Helpers
@@ -44,6 +48,9 @@ class GameSession {
   bool get isCancelled => status == 2;
 
   double get currentCalculatedPrice {
+    if (isLimitedDuration) {
+      return (limitedDurationMinutes / 60.0) * ratePerHour;
+    }
     final end = endTime ?? DateTime.now();
     final duration = end.difference(startTime);
     final seconds = duration.inSeconds;

@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'models/order_counter.dart';
 import 'models/app_user.dart';
+import 'screens/dev_panel_screen.dart';
 import 'models/game_session.dart';
 import 'models/order.dart';
 import 'models/order_item.dart';
@@ -23,6 +24,7 @@ import 'service/notification_service.dart';
 import 'service/game_session_service.dart';
 import 'widgets/activation_dialog.dart';
 import 'widgets/user_selection_dialog.dart';
+import 'widgets/admin_pin_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +39,18 @@ Future<void> main() async {
   final counterBox = objectbox.store.box<OrderCounter>();
   if (counterBox.isEmpty()) {
     counterBox.put(OrderCounter(value: 1));
+  }
+
+  // Seed default admin user if no admin exists
+  final userBox = objectbox.userBox;
+  final allUsers = userBox.getAll();
+  final hasAdmin = allUsers.any((u) => u.isAdmin);
+  if (!hasAdmin) {
+    userBox.put(AppUser(
+      name: 'Admin',
+      pin: AppUser.hashPin('0000'),
+      isAdmin: true,
+    ));
   }
 
   runApp(Easify(objectbox: objectbox));
@@ -169,6 +183,9 @@ class _MainScreenState extends State<MainScreen> {
   DateTime? _lastTabTap;
   DateTime? _lastHistoryTabTap;
   int _historyTapCount = 0;
+  
+  DateTime? _lastTitleTap;
+  int _titleTapCount = 0;
 
   void _promptWipeAllOrders() async {
     final confirm = await showDialog<bool>(
@@ -276,7 +293,20 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(int index) async {
+    // If the user selects the Dashboard (index 3), verify admin status
+    if (index == 3) {
+      final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+      if (!isAdmin) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Accès au Dashboard restreint aux administrateurs')),
+          );
+        }
+        return; // Don't switch tab
+      }
+    }
+
     if (index == 0) {
       final now = DateTime.now();
       if (_lastTabTap != null &&
@@ -305,6 +335,25 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  void _onTitleTap() {
+    final now = DateTime.now();
+    if (_lastTitleTap != null &&
+        now.difference(_lastTitleTap!) < const Duration(milliseconds: 600)) {
+      _titleTapCount++;
+    } else {
+      _titleTapCount = 1;
+    }
+    _lastTitleTap = now;
+
+    if (_titleTapCount >= 5) {
+      _titleTapCount = 0;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => DevPanelScreen(objectbox: widget.objectbox)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isCheckingActivation) {
@@ -326,7 +375,10 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedUser != null ? 'Easify - ${_selectedUser!.name}' : 'Easify'),
+        title: GestureDetector(
+          onTap: _onTitleTap,
+          child: Text(_selectedUser != null ? 'Easify - ${_selectedUser!.name}' : 'Easify'),
+        ),
         actions: [
           if (_selectedUser != null)
             IconButton(

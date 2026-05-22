@@ -26,6 +26,7 @@ class GameSessionService {
     required PartyTier tier,
     required int? userId,
     required ObjectBox objectbox,
+    int? durationMinutes,
   }) async {
     final partyNumber = await getNextPartyNumber(objectbox);
     final startTime = DateTime.now();
@@ -36,6 +37,8 @@ class GameSessionService {
       startTime: startTime,
       ratePerHour: tier.ratePerHour,
       attributedUserId: userId,
+      isLimitedDuration: durationMinutes != null,
+      limitedDurationMinutes: durationMinutes ?? 0,
     );
 
     session.post.target = post;

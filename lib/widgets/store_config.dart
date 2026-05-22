@@ -22,6 +22,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
   final _formKey = GlobalKey<FormState>();
   final _storeNameController = TextEditingController();
   final _storePhoneController = TextEditingController();
+  final _wifiPasswordController = TextEditingController();
+
   File? _logoImage;
   final ImagePicker _picker = ImagePicker();
   StoreConfig? _currentConfig;
@@ -38,6 +40,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
       _currentConfig = configs.first;
       _storeNameController.text = _currentConfig?.storeName ?? '';
       _storePhoneController.text = _currentConfig?.storePhone ?? '';
+      _wifiPasswordController.text = _currentConfig?.wifiPassword ?? '';
+
       if (_currentConfig?.storeLogoPath != null) {
         final file = File(_currentConfig!.storeLogoPath!);
         if (file.existsSync()) {
@@ -78,6 +82,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
       final config = _currentConfig ?? StoreConfig();
       config.storeName = _storeNameController.text;
       config.storePhone = _storePhoneController.text;
+      config.wifiPassword = _wifiPasswordController.text;
+
       config.storeLogoPath = _logoImage?.path;
       
       // If we're updating, we need to make sure we keep the ID if it was loaded
@@ -100,6 +106,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
   void dispose() {
     _storeNameController.dispose();
     _storePhoneController.dispose();
+    _wifiPasswordController.dispose();
+
     super.dispose();
   }
 
@@ -139,14 +147,25 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer le numéro de téléphone';
-                  }
-                  return null;
-                },
+                // validator: (value) {
+                //   if (value == null || value.isEmpty) {
+                //     return 'Veuillez entrer le numéro de téléphone';
+                //   }
+                //   return null;
+                // },
+
               ),
               const SizedBox(height: 16),
+              TextFormField(
+                controller: _wifiPasswordController,
+                decoration: const InputDecoration(
+                  labelText: 'Mot de passe WIFI',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.wifi_password),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               Row(
                 children: [
                   Container(

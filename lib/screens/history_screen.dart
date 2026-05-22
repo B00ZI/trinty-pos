@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/admin_pin_dialog.dart';
 import '../models/order_item.dart';
 import '../objectbox.dart';
 import '../objectbox.g.dart';
@@ -104,8 +105,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
           IconButton(
             icon: Icon(
                 _showDeletedOrders ? Icons.visibility : Icons.visibility_off),
-            onPressed: () =>
-                setState(() => _showDeletedOrders = !_showDeletedOrders),
+            onPressed: () async {
+              if (!_showDeletedOrders) {
+                // Toggling ON: require admin
+                final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+                if (isAdmin) {
+                  setState(() => _showDeletedOrders = true);
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Accès refusé : Admin requis')),
+                    );
+                  }
+                }
+              } else {
+                // Toggling OFF: just do it
+                setState(() => _showDeletedOrders = false);
+              }
+            },
             tooltip: 'Afficher les commandes supprimées',
           ),
         ],
@@ -301,6 +318,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(height: 8),
               Text('Date : ${order.date.toLocal().toString().split('.')[0]}'),
+              Text('Staff : ${order.user.target?.name ?? "Inconnu"}'),
               Text('Articles : ${order.items.length}'),
               Text(
                 'Total : ${order.items.fold<double>(0, (sum, item) => sum + calculateItemTotal(item)).toStringAsFixed(2)} DH',

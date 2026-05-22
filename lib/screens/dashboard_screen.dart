@@ -100,6 +100,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _subscriptions.add(_ruciBox.query().watch().listen((_) => _refreshData()));
     _subscriptions.add(_gameSessionBox.query().watch().listen((_) => _refreshData()));
     _subscriptions.add(_expenceBox!.query().watch().listen((_) => _refreshData()));
+    _subscriptions.add(_storeConfigBox.query().watch().listen((_) {
+      if (mounted) {
+        setState(() {
+          _loadConfig();
+          _refreshData();
+        });
+      }
+    }));
   }
 
   void _loadConfig() {
@@ -319,6 +327,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double calculateItemTotal(OrderItem item) {
     // Use persisted price if available, otherwise fallback to current product price
     double basePrice = (item.price ?? item.product.target?.price ?? 0.0).toDouble();
+
+    // Apply surge if it's a transient item (no fixed price) and surge is active
+    if (item.price == null && _config.isSurgePriceEnabled) {
+      if (_config.surgeProductIds.contains(item.product.target?.id)) {
+        basePrice += _config.surgePriceAmount;
+      }
+    }
+
     double total = item.quantity * basePrice;
     for (final extra in item.extras) {
       total += extra.price * item.getExtraQuantity(extra);

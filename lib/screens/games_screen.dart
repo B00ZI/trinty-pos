@@ -32,16 +32,128 @@ class _GamesScreenState extends State<GamesScreen> {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
-        // _checkAndAutoEndSessions removed
+        _checkLimitedSessions();
         setState(() {});
       }
     });
+  }
+
+  void _checkLimitedSessions() {
+    final activeSessions = widget.objectbox.gameSessionBox
+        .query(GameSession_.status.equals(0))
+        .build()
+        .find();
+    
+    for (final session in activeSessions) {
+      if (session.isLimitedDuration) {
+        final endAt = session.startTime.add(Duration(minutes: session.limitedDurationMinutes));
+        if (DateTime.now().isAfter(endAt)) {
+          GameSessionService.endSession(session, widget.objectbox);
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  void _showDurationSelection(GamePost post) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Choisir la durée pour ${post.label}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('1 Heure'),
+              onTap: () {
+                Navigator.pop(context);
+                _startFixedDurationSession(post, 60);
+              },
+            ),
+            ListTile(
+              title: const Text('30 Minutes'),
+              onTap: () {
+                Navigator.pop(context);
+                _startFixedDurationSession(post, 30);
+              },
+            ),
+            ListTile(
+              title: const Text('15 Minutes'),
+              onTap: () {
+                Navigator.pop(context);
+                _startFixedDurationSession(post, 15);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _startFixedDurationSession(GamePost post, int minutes) async {
+    final tiers = widget.objectbox.partyTierBox.getAll();
+    if (tiers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez d\'abord configurer des paliers dans les paramètres')));
+      return;
+    }
+    final tier = tiers.first;
+
+    int? userId;
+    final authMode = await AuthService.getAuthMode();
+    if (authMode == AuthMode.perOrder) {
+      final user = await showDialog<AppUser>(
+        context: context,
+        builder: (context) => UserSelectionDialog(objectbox: widget.objectbox),
+      );
+      if (user == null) return;
+      userId = user.id;
+    } else if (authMode == AuthMode.session) {
+      userId = widget.assignedUser?.id;
+    }
+
+    final price = (minutes / 60.0) * tier.ratePerHour;
+    
+    // Create Order directly
+    final orderCounterBox = widget.objectbox.store.box<OrderCounter>();
+    final orderBox = widget.objectbox.store.box<Ruci>();
+    
+    final orderCounter = orderCounterBox.isEmpty() ? OrderCounter(id: 1, value: 1) : orderCounterBox.getAll().first;
+    final order = Ruci(
+      date: DateTime.now(),
+      orderNumber: orderCounter.value,
+    );
+    if (userId != null) {
+      final user = widget.objectbox.userBox.get(userId);
+      if (user != null) order.user.target = user;
+    }
+    
+    final item = OrderItem(quantity: 1);
+    item.price = price;
+    item.productName = 'Jeu (${minutes}min): ${post.label}';
+    order.items.add(item);
+    
+    orderBox.put(order);
+    orderCounter.value += 1;
+    orderCounterBox.put(orderCounter);
+
+    // Start Session
+    final session = await GameSessionService.startSession(
+      post: post,
+      tier: tier,
+      userId: userId,
+      objectbox: widget.objectbox,
+      durationMinutes: minutes,
+    );
+    session.relatedOrderId = order.id;
+    widget.objectbox.gameSessionBox.put(session);
+
+    PrinterHelper.printSessionStartTicket(session, widget.objectbox);
+    setState(() {});
   }
 
   void _startSession(GamePost post, {bool isQueue = false}) async {
@@ -100,6 +212,13 @@ class _GamesScreenState extends State<GamesScreen> {
             Text('Partie #${session.partyNumber} - ${session.postLabel}', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text('Palier : ${session.tierLabel}'),
+            if (session.isLimitedDuration || session.relatedOrderId != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Durée Prédéfinie : ${session.limitedDurationMinutes > 0 ? "${session.limitedDurationMinutes} min" : "Payée d\'avance"}',
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+              ),
+            ],
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.print),
@@ -114,6 +233,13 @@ class _GamesScreenState extends State<GamesScreen> {
               title: const Text('Terminer la partie'),
               onTap: () async {
                 Navigator.pop(context);
+                
+                // If it's a prepaid session (either by flag or because an order is already linked)
+                if (session.isLimitedDuration || session.relatedOrderId != null) {
+                  GameSessionService.endSession(session, widget.objectbox);
+                  setState(() {});
+                  return;
+                }
                 
                 final price = session.currentCalculatedPrice;
                 final duration = DateTime.now().difference(session.startTime);
@@ -211,8 +337,14 @@ class _GamesScreenState extends State<GamesScreen> {
                   final session = sessionMap[post.id];
 
                   final isBusy = post.isActive && session != null;
-                  final Color color = isBusy ? Colors.orange.shade100 : Colors.green.shade100;
-                  final Color textColor = isBusy ? Colors.orange.shade900 : Colors.green.shade900;
+                  final isPrepaid = isBusy && (session!.isLimitedDuration || session.relatedOrderId != null);
+                  
+                  final Color color = isPrepaid 
+                      ? Colors.blue.shade100 
+                      : (isBusy ? Colors.orange.shade100 : Colors.green.shade100);
+                  final Color textColor = isPrepaid 
+                      ? Colors.blue.shade900 
+                      : (isBusy ? Colors.orange.shade900 : Colors.green.shade900);
 
                   Duration remaining = Duration.zero;
                   if (isBusy) {
@@ -229,6 +361,7 @@ class _GamesScreenState extends State<GamesScreen> {
                       
                       return InkWell(
                         onTap: isBusy ? () => _manageSession(session!) : () => _startSession(post),
+                        onLongPress: isBusy ? null : () => _showDurationSelection(post),
                         child: Card(
                           color: color,
                           elevation: isBusy ? 4 : 1,
@@ -245,7 +378,14 @@ class _GamesScreenState extends State<GamesScreen> {
                                       Text('Partie #${session!.partyNumber}', style: TextStyle(color: textColor, fontSize: 12)),
                                       const SizedBox(height: 4),
                                       Text(
-                                        _formatDuration(remaining),
+                                        session.isLimitedDuration
+                                            ? _formatDuration(() {
+                                                final diff = session.startTime
+                                                    .add(Duration(minutes: session.limitedDurationMinutes))
+                                                    .difference(DateTime.now());
+                                                return diff.isNegative ? Duration.zero : diff;
+                                              }())
+                                            : _formatDuration(remaining),
                                         style: TextStyle(
                                           fontSize: 22,
                                           fontWeight: FontWeight.bold,

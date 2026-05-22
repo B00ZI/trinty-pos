@@ -11,6 +11,7 @@ import '../models/order_counter.dart';
 import '../models/app_user.dart';
 import '../models/printer_config.dart';
 import '../models/catigory.dart';
+import '../models/store_config.dart';
 import '../service/printer_helper.dart';
 import '../service/auth_service.dart';
 import '../widgets/product_card.dart';
@@ -44,6 +45,8 @@ class _OrderScreenState extends State<OrderScreen>
   late final Box<OrderCounter> _orderCounterBox;
   late final Box<OrderItem> _orderItemBox; // To manage item deletion
   late final Box<Catigory> _catigoryBox;
+  late final Box<StoreConfig> _storeConfigBox;
+  StoreConfig? _storeConfig;
   // List<Catigory> _categories = []; // Removed in favor of StreamBuilder
   bool _isTakeAway = false;
   String _comment = "";
@@ -56,6 +59,7 @@ class _OrderScreenState extends State<OrderScreen>
   bool _singleTicketMode = false;
   bool _enableChangeWindow = true;
   StreamSubscription<Query<PrinterConfig>>? _configSubscription;
+  StreamSubscription<Query<StoreConfig>>? _storeConfigSubscription;
 
   AppUser? _currentAuthUser;
 
@@ -67,7 +71,9 @@ class _OrderScreenState extends State<OrderScreen>
     _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
     _orderItemBox = widget.objectbox.store.box<OrderItem>();
     _catigoryBox = widget.objectbox.store.box<Catigory>();
+    _storeConfigBox = widget.objectbox.store.box<StoreConfig>();
     _categoryFilter = widget.initialCategory;
+    _loadStoreConfig();
     // _categories = _catigoryBox.getAll(); // Removed
     _shakeController = AnimationController(
       vsync: this,
@@ -82,6 +88,7 @@ class _OrderScreenState extends State<OrderScreen>
     // Load toggle settings from PrinterConfig
     _loadToggleSettings();
     _subscribeToToggleSettings();
+    _subscribeToStoreConfig();
 
     if (widget.orderToEdit != null) {
       _loadOrderForEditing();
@@ -103,6 +110,13 @@ class _OrderScreenState extends State<OrderScreen>
     }
   }
 
+  void _loadStoreConfig() {
+    final configs = _storeConfigBox.getAll();
+    if (configs.isNotEmpty) {
+      _storeConfig = configs.first;
+    }
+  }
+
   void _subscribeToToggleSettings() {
     _configSubscription = _printerConfigBox
         .query()
@@ -116,10 +130,24 @@ class _OrderScreenState extends State<OrderScreen>
     });
   }
 
+  void _subscribeToStoreConfig() {
+    _storeConfigSubscription = _storeConfigBox
+        .query()
+        .watch(triggerImmediately: true)
+        .listen((query) {
+      if (mounted) {
+        setState(() {
+          _loadStoreConfig();
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _shakeController.dispose();
     _configSubscription?.cancel();
+    _storeConfigSubscription?.cancel();
     super.dispose();
   }
 
@@ -131,6 +159,8 @@ class _OrderScreenState extends State<OrderScreen>
       // Simple approach: Create new OrderItem with same properties.
       final cartItem = OrderItem(quantity: item.quantity);
       cartItem.product.target = item.product.target;
+      cartItem.price = item.price;
+      cartItem.productName = item.productName;
       for (final extra in item.extras) {
         cartItem.extras.add(extra);
       }
@@ -183,6 +213,16 @@ class _OrderScreenState extends State<OrderScreen>
   double calculateItemTotal(OrderItem item) {
     // Use persisted price if available, otherwise fallback to current product price
     double basePrice = (item.price ?? item.product.target?.price ?? 0).toDouble();
+
+    // If item is new (no price yet) and surge is active, add it
+    if (item.price == null &&
+        _storeConfig != null &&
+        _storeConfig!.isSurgePriceEnabled) {
+      if (_storeConfig!.surgeProductIds.contains(item.product.target?.id)) {
+        basePrice += _storeConfig!.surgePriceAmount;
+      }
+    }
+
     double total = item.quantity * basePrice;
     for (final extra in item.extras) {
       total += extra.price * item.getExtraQuantity(extra);
@@ -382,6 +422,7 @@ class _OrderScreenState extends State<OrderScreen>
         }
 
         final categories = snapshot.data!;
+        categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
         if (categories.isEmpty) {
           return const Center(
@@ -393,7 +434,7 @@ class _OrderScreenState extends State<OrderScreen>
           builder: (context, constraints) {
             int crossAxisCount = (constraints.maxWidth / 200).floor();
             if (crossAxisCount < 2) crossAxisCount = 2;
-            return GridView.builder(
+            return ReorderableGridView.builder(
               padding: const EdgeInsets.all(12),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
@@ -401,10 +442,21 @@ class _OrderScreenState extends State<OrderScreen>
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  final cat = categories.removeAt(oldIndex);
+                  categories.insert(newIndex, cat);
+                  for (int i = 0; i < categories.length; i++) {
+                    categories[i].displayOrder = i;
+                  }
+                  _catigoryBox.putMany(categories);
+                });
+              },
               itemCount: categories.length,
               itemBuilder: (context, index) {
                 final cat = categories[index];
                 return CatigoryCard(
+                  key: ValueKey(cat.id),
                   title: cat.name,
                   imageUrl: cat.imageUrl ?? '',
                   onTap: () {
@@ -714,8 +766,15 @@ class _OrderScreenState extends State<OrderScreen>
 
       // 2. Add new items from cart
       for (final item in _cart) {
-        // Set persisted price and name from product target
-        item.price = item.product.target?.price;
+        if (item.price == null) {
+          double price = item.product.target?.price ?? 0;
+          if (_storeConfig != null &&
+              _storeConfig!.isSurgePriceEnabled &&
+              _storeConfig!.surgeProductIds.contains(item.product.target?.id)) {
+            price += _storeConfig!.surgePriceAmount;
+          }
+          item.price = price;
+        }
         item.productName = item.product.target?.name;
         // These are new OrderItem instances (id=0) or reused ones.
         // Since we created new objects in _loadOrderForEditing or _addToCart with id=0 (implied),
@@ -749,7 +808,13 @@ class _OrderScreenState extends State<OrderScreen>
         order.user.target = _currentAuthUser;
       }
       for (final item in _cart) {
-        item.price = item.product.target?.price;
+        double price = item.product.target?.price ?? 0;
+        if (_storeConfig != null &&
+            _storeConfig!.isSurgePriceEnabled &&
+            _storeConfig!.surgeProductIds.contains(item.product.target?.id)) {
+          price += _storeConfig!.surgePriceAmount;
+        }
+        item.price = price;
         item.productName = item.product.target?.name;
         order.items.add(item);
       }

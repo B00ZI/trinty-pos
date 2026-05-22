@@ -9,12 +9,14 @@ class AppUser {
 
   String name;
   String? pin; // SHA-256 hashed
+  bool isAdmin;
   DateTime createdAt;
 
   AppUser({
     this.id = 0,
     required this.name,
     this.pin,
+    this.isAdmin = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 

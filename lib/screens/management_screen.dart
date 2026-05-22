@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 
 class ManagementScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -85,6 +86,8 @@ class _ProductsListSectionState extends State<ProductsListSection> {
   final _categoryController = TextEditingController();
   String? _selectedImagePath;
   final ImagePicker _picker = ImagePicker();
+  Product? _selectedProduct;
+
   @override
   void initState() {
     super.initState();
@@ -124,7 +127,11 @@ class _ProductsListSectionState extends State<ProductsListSection> {
                     decoration: const InputDecoration(labelText: 'Catégorie'),
                     items: [
                       const DropdownMenuItem(value: 'Extra', child: Text('Supplément')),
-                      ...widget.objectbox.store.box<Catigory>().getAll().map((cat) => DropdownMenuItem(value: cat.name, child: Text(cat.name))),
+                      ...(() {
+                        final cats = widget.objectbox.store.box<Catigory>().getAll();
+                        cats.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+                        return cats.map((cat) => DropdownMenuItem(value: cat.name, child: Text(cat.name)));
+                      })(),
                     ],
                     onChanged: (v) => setDialogState(() => _categoryController.text = v ?? ''),
                   ),
@@ -172,9 +179,55 @@ class _ProductsListSectionState extends State<ProductsListSection> {
     );
   }
 
+  void _deselectProduct() {
+    setState(() {
+      _selectedProduct = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: _selectedProduct == null
+          ? null
+          : AppBar(
+              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _deselectProduct,
+              ),
+              title: Text(_selectedProduct!.name),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () {
+                    final p = _selectedProduct;
+                    _deselectProduct();
+                    _showProductDialog(p);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Supprimer Produit'),
+                        content: Text('Voulez-vous vraiment supprimer ${_selectedProduct!.name} ?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer', style: TextStyle(color: Colors.red))),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      _productBox.remove(_selectedProduct!.id);
+                      _deselectProduct();
+                    }
+                  },
+                ),
+              ],
+            ),
       body: StreamBuilder<List<Product>>(
         stream: _productBox
             .query()
@@ -186,12 +239,25 @@ class _ProductsListSectionState extends State<ProductsListSection> {
           return ListView.builder(
             padding: const EdgeInsets.only(bottom: 80),
             itemCount: products.length,
-            itemBuilder: (ctx, i) => ProductItem(
-              product: products[i],
-              onAddToCart: (_) {},
-              onDelete: (p) => _productBox.remove(p.id),
-              onEdit: (p) => _showProductDialog(p),
-            ),
+            itemBuilder: (ctx, i) {
+              final product = products[i];
+              return ProductItem(
+                product: product,
+                isSelected: _selectedProduct?.id == product.id,
+                onAddToCart: (_) {
+                  if (_selectedProduct != null) {
+                    if (_selectedProduct?.id == product.id) {
+                      _deselectProduct();
+                    } else {
+                      setState(() => _selectedProduct = product);
+                    }
+                  }
+                },
+                onLongPress: () {
+                  setState(() => _selectedProduct = product);
+                },
+              );
+            },
           );
         },
       ),
@@ -287,13 +353,25 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final categories = snapshot.data!;
-          return GridView.builder(
+          categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+          return ReorderableGridView.builder(
             padding: const EdgeInsets.all(12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6, childAspectRatio: 0.7, crossAxisSpacing: 8, mainAxisSpacing: 8),
             itemCount: categories.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                final cat = categories.removeAt(oldIndex);
+                categories.insert(newIndex, cat);
+                for (int i = 0; i < categories.length; i++) {
+                  categories[i].displayOrder = i;
+                }
+                _catigoryBox.putMany(categories);
+              });
+            },
             itemBuilder: (ctx, i) {
               final c = categories[i];
               return CatigoryCard(
+                key: ValueKey(c.id),
                 title: c.name,
                 imageUrl: c.imageUrl ?? '',
                 onTap: () {},
