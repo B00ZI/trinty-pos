@@ -81,18 +81,34 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+
+    final bool isShort = screenHeight < 600;
+    final bool isNarrow = screenWidth < 360;
+    
+    final double padding = isShort ? 12.0 : 24.0;
+    final double keySize = isShort ? 44.0 : 64.0;
+    final double keySpacing = isShort ? 6.0 : 12.0;
+    final double headerIconSize = isShort ? 30.0 : 40.0;
+    final double titleFontSize = isShort ? 16.0 : 20.0;
+    final double subTitleFontSize = isShort ? 11.0 : 13.0;
+    
+    final double dialogWidth = isNarrow ? (screenWidth * 0.85) : 320.0;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
-        width: 320,
-        padding: const EdgeInsets.all(24),
+        width: dialogWidth,
+        padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -102,33 +118,33 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isShort ? 10 : 16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.admin_panel_settings,
-                size: 40,
+                size: headerIconSize,
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 20),
-            const Text(
+            SizedBox(height: isShort ? 10 : 20),
+            Text(
               'Accès Administrateur',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: titleFontSize,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.5,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: isShort ? 4 : 8),
+            Text(
               'Veuillez entrer le code administrateur',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(color: Colors.grey, fontSize: subTitleFontSize),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: isShort ? 12 : 32),
             AnimatedBuilder(
               animation: _shakeAnimation,
               builder: (context, child) {
@@ -140,8 +156,8 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
                       bool isFilled = index < _enteredPin.length;
                       return Container(
                         margin: const EdgeInsets.symmetric(horizontal: 10),
-                        width: 14,
-                        height: 14,
+                        width: isShort ? 10 : 14,
+                        height: isShort ? 10 : 14,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: isFilled
@@ -150,7 +166,7 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
                           boxShadow: isFilled
                               ? [
                                   BoxShadow(
-                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                                     blurRadius: 8,
                                     spreadRadius: 1,
                                   )
@@ -163,14 +179,14 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
                 );
               },
             ),
-            const SizedBox(height: 40),
-            _buildKeypad(),
-            const SizedBox(height: 24),
+            SizedBox(height: isShort ? 16 : 40),
+            _buildKeypad(keySize, keySpacing),
+            SizedBox(height: isShort ? 12 : 24),
             TextButton(
               onPressed: () => Navigator.pop(context, null),
               style: TextButton.styleFrom(
                 foregroundColor: Colors.grey.shade600,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: isShort ? 8 : 12),
               ),
               child: const Text('ANNULER', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
             ),
@@ -180,47 +196,47 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
     );
   }
 
-  Widget _buildKeypad() {
+  Widget _buildKeypad(double keySize, double keySpacing) {
     return Column(
       children: [
         for (var row in [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']])
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.only(bottom: keySpacing),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: row.map((d) => _buildKey(d)).toList(),
+              children: row.map((d) => _buildKey(d, keySize)).toList(),
             ),
           ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            const SizedBox(width: 64),
-            _buildKey('0'),
-            _buildKey('⌫', isIcon: true, onTap: _onBackspace),
+            SizedBox(width: keySize),
+            _buildKey('0', keySize),
+            _buildKey('⌫', keySize, isIcon: true, onTap: _onBackspace),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildKey(String label, {bool isIcon = false, VoidCallback? onTap}) {
+  Widget _buildKey(String label, double keySize, {bool isIcon = false, VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap ?? () => _onDigitTap(label),
-      borderRadius: BorderRadius.circular(32),
+      borderRadius: BorderRadius.circular(keySize / 2),
       child: Container(
-        width: 64,
-        height: 64,
+        width: keySize,
+        height: keySize,
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
           shape: BoxShape.circle,
         ),
         child: Center(
           child: isIcon
-              ? Icon(Icons.backspace_outlined, size: 20, color: Colors.grey.shade800)
+              ? Icon(Icons.backspace_outlined, size: keySize * 0.35, color: Colors.grey.shade800)
               : Text(
                   label,
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: TextStyle(
+                    fontSize: keySize * 0.35,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

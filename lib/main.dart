@@ -168,6 +168,8 @@ class Easify extends StatelessWidget {
 }
 
 
+enum MainTab { order, history, games, dashboard, management, settings }
+
 class MainScreen extends StatefulWidget {
   final ObjectBox objectbox;
   const MainScreen({super.key, required this.objectbox});
@@ -177,7 +179,9 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
+  MainTab _selectedTab = MainTab.order;
+  bool _showGames = false;
+  bool _isLoadingSettings = true;
   bool _isCheckingActivation = true;
   AppUser? _selectedUser;
   DateTime? _lastTabTap;
@@ -225,7 +229,7 @@ class _MainScreenState extends State<MainScreen> {
           const SnackBar(content: Text('Toutes les données ont été supprimées.')),
         );
         setState(() {
-          _selectedIndex = 0;
+          _selectedTab = MainTab.order;
         });
       }
     }
@@ -234,7 +238,30 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _loadGamesTabVisibility();
     _checkActivation();
+  }
+
+  Future<void> _loadGamesTabVisibility() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _showGames = prefs.getBool('show_games_tab') ?? false;
+      _isLoadingSettings = false;
+    });
+  }
+
+  List<MainTab> get _enabledTabs => [
+        MainTab.order,
+        MainTab.history,
+        if (_showGames) MainTab.games,
+        MainTab.dashboard,
+        MainTab.management,
+        MainTab.settings,
+      ];
+
+  int get _selectedIndex {
+    final index = _enabledTabs.indexOf(_selectedTab);
+    return index != -1 ? index : 0;
   }
 
   Future<void> _checkActivation() async {
@@ -294,8 +321,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onItemTapped(int index) async {
-    // If the user selects the Dashboard (index 3), verify admin status
-    if (index == 3) {
+    final selectedTab = _enabledTabs[index];
+
+    // If the user selects the Dashboard, verify admin status
+    if (selectedTab == MainTab.dashboard) {
       final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
       if (!isAdmin) {
         if (mounted) {
@@ -307,14 +336,14 @@ class _MainScreenState extends State<MainScreen> {
       }
     }
 
-    if (index == 0) {
+    if (selectedTab == MainTab.order) {
       final now = DateTime.now();
       if (_lastTabTap != null &&
           now.difference(_lastTabTap!) < const Duration(milliseconds: 500)) {
         _showUserSelectionFlow();
       }
       _lastTabTap = now;
-    } else if (index == 1) {
+    } else if (selectedTab == MainTab.history) {
       final now = DateTime.now();
       if (_lastHistoryTabTap != null &&
           now.difference(_lastHistoryTabTap!) < const Duration(milliseconds: 600)) {
@@ -331,7 +360,7 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     setState(() {
-      _selectedIndex = index;
+      _selectedTab = selectedTab;
     });
   }
 
@@ -356,7 +385,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isCheckingActivation) {
+    if (_isCheckingActivation || _isLoadingSettings) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -364,14 +393,25 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
 
-    final List<Widget> widgetOptions = [
-      OrderScreen(objectbox: widget.objectbox, assignedUser: _selectedUser),
-      HistoryScreen(objectbox: widget.objectbox),
-      GamesScreen(objectbox: widget.objectbox, assignedUser: _selectedUser),
-      DashboardScreen(objectbox: widget.objectbox),
-      ManagementScreen(objectbox: widget.objectbox),
-      SettingsScreen(objectbox: widget.objectbox),
-    ];
+    final List<Widget> widgetOptions = _enabledTabs.map((tab) {
+      switch (tab) {
+        case MainTab.order:
+          return OrderScreen(objectbox: widget.objectbox, assignedUser: _selectedUser);
+        case MainTab.history:
+          return HistoryScreen(objectbox: widget.objectbox);
+        case MainTab.games:
+          return GamesScreen(objectbox: widget.objectbox, assignedUser: _selectedUser);
+        case MainTab.dashboard:
+          return DashboardScreen(objectbox: widget.objectbox);
+        case MainTab.management:
+          return ManagementScreen(objectbox: widget.objectbox);
+        case MainTab.settings:
+          return SettingsScreen(
+            objectbox: widget.objectbox,
+            onSettingsChanged: _loadGamesTabVisibility,
+          );
+      }
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -395,32 +435,40 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Commande',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Historique',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_esports),
-            label: 'Jeux',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory_2),
-            label: 'Gestion',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Paramètres',
-          ),
-        ],
+        items: _enabledTabs.map((tab) {
+          switch (tab) {
+            case MainTab.order:
+              return const BottomNavigationBarItem(
+                icon: Icon(Icons.shopping_cart),
+                label: 'Commande',
+              );
+            case MainTab.history:
+              return const BottomNavigationBarItem(
+                icon: Icon(Icons.history),
+                label: 'Historique',
+              );
+            case MainTab.games:
+              return const BottomNavigationBarItem(
+                icon: Icon(Icons.sports_esports),
+                label: 'Jeux',
+              );
+            case MainTab.dashboard:
+              return const BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard),
+                label: 'Dashboard',
+              );
+            case MainTab.management:
+              return const BottomNavigationBarItem(
+                icon: Icon(Icons.inventory_2),
+                label: 'Gestion',
+              );
+            case MainTab.settings:
+              return const BottomNavigationBarItem(
+                icon: Icon(Icons.settings),
+                label: 'Paramètres',
+              );
+          }
+        }).toList(),
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.black45,
         onTap: _onItemTapped,

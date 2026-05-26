@@ -18,7 +18,8 @@ import 'package:objectbox/objectbox.dart';
 
 class SettingsScreen extends StatefulWidget {
   final ObjectBox objectbox;
-  const SettingsScreen({super.key, required this.objectbox});
+  final VoidCallback? onSettingsChanged;
+  const SettingsScreen({super.key, required this.objectbox, this.onSettingsChanged});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -33,50 +34,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: Row(
         children: [
           // Sidebar Icons
-          NavigationRail(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (int index) async {
-              if (index == 4) {
-                final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
-                if (!isAdmin) return;
-              }
-              setState(() {
-                _currentIndex = index;
-              });
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: NavigationRail(
+                      selectedIndex: _currentIndex,
+                      onDestinationSelected: (int index) async {
+                        if (index == 4) {
+                          final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+                          if (!isAdmin) return;
+                        }
+                        setState(() {
+                          _currentIndex = index;
+                        });
+                      },
+                      labelType: NavigationRailLabelType.all,
+                      destinations: const <NavigationRailDestination>[
+                        NavigationRailDestination(
+                          icon: Icon(Icons.print_outlined),
+                          selectedIcon: Icon(Icons.print),
+                          label: Text('Imprimante'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.people_outline),
+                          selectedIcon: Icon(Icons.people),
+                          label: Text('Utilisateurs'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.store_outlined),
+                          selectedIcon: Icon(Icons.store),
+                          label: Text('Boutique'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.schedule_outlined),
+                          selectedIcon: Icon(Icons.schedule),
+                          label: Text('Horaires'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.security_outlined),
+                          selectedIcon: Icon(Icons.security),
+                          label: Text('Sécurité'),
+                        ),
+                        NavigationRailDestination(
+                          icon: Icon(Icons.sports_esports_outlined),
+                          selectedIcon: Icon(Icons.sports_esports),
+                          label: Text('Jeux'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
             },
-            labelType: NavigationRailLabelType.all,
-            destinations: const <NavigationRailDestination>[
-              NavigationRailDestination(
-                icon: Icon(Icons.print_outlined),
-                selectedIcon: Icon(Icons.print),
-                label: Text('Imprimante'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people),
-                label: Text('Utilisateurs'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.store_outlined),
-                selectedIcon: Icon(Icons.store),
-                label: Text('Boutique'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.schedule_outlined),
-                selectedIcon: Icon(Icons.schedule),
-                label: Text('Horaires'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.security_outlined),
-                selectedIcon: Icon(Icons.security),
-                label: Text('Sécurité'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.sports_esports_outlined),
-                selectedIcon: Icon(Icons.sports_esports),
-                label: Text('Jeux'),
-              ),
-            ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
           // Main Content
@@ -89,7 +101,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 StoreSettingsSection(objectbox: widget.objectbox),
                 BusinessDaySettingsWidget(objectbox: widget.objectbox),
                 AuthModeSection(objectbox: widget.objectbox),
-                GamesSettingsSection(objectbox: widget.objectbox),
+                GamesSettingsSection(
+                  objectbox: widget.objectbox,
+                  onSettingsChanged: widget.onSettingsChanged,
+                ),
               ],
             ),
           ),
@@ -609,210 +624,7 @@ class _UserManagementSectionState extends State<UserManagementSection> {
   }
 }
 
-/// Dialog for verifying admin PIN before sensitive operations
-class _AdminPinDialog extends StatefulWidget {
-  @override
-  State<_AdminPinDialog> createState() => _AdminPinDialogState();
-}
 
-class _AdminPinDialogState extends State<_AdminPinDialog> with SingleTickerProviderStateMixin {
-  String _enteredPin = '';
-  late AnimationController _shakeController;
-  late Animation<double> _shakeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-    _shakeAnimation = Tween<double>(begin: 0, end: 10)
-        .chain(CurveTween(curve: Curves.elasticIn))
-        .animate(_shakeController)
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          _shakeController.reverse();
-        }
-      });
-  }
-
-  @override
-  void dispose() {
-    _shakeController.dispose();
-    super.dispose();
-  }
-
-  void _onDigitTap(String digit) {
-    if (_enteredPin.length < 4) {
-      setState(() {
-        _enteredPin += digit;
-      });
-      if (_enteredPin.length == 4) {
-        // Automatically return the PIN to the caller for verification
-        Navigator.pop(context, _enteredPin);
-      }
-    }
-  }
-
-  void _onBackspace() {
-    if (_enteredPin.isNotEmpty) {
-      setState(() {
-        _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Container(
-        width: 320,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.admin_panel_settings,
-                size: 40,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Accès Administrateur',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Veuillez entrer le code administrateur',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 13),
-            ),
-            const SizedBox(height: 32),
-            AnimatedBuilder(
-              animation: _shakeAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(_shakeAnimation.value, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(4, (index) {
-                      bool isFilled = index < _enteredPin.length;
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 10),
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isFilled
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey.shade200,
-                          boxShadow: isFilled
-                              ? [
-                                  BoxShadow(
-                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  )
-                                ]
-                              : null,
-                        ),
-                      );
-                    }),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 40),
-            _buildKeypad(),
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey.shade600,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-              child: const Text('ANNULER', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKeypad() {
-    return Column(
-      children: [
-        for (var row in [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']])
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: row.map((d) => _buildKey(d)).toList(),
-            ),
-          ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            const SizedBox(width: 64),
-            _buildKey('0'),
-            _buildKey('⌫', isIcon: true, onTap: _onBackspace),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildKey(String label, {bool isIcon = false, VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap ?? () => _onDigitTap(label),
-      borderRadius: BorderRadius.circular(32),
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: isIcon
-              ? Icon(Icons.backspace_outlined, size: 20, color: Colors.grey.shade800)
-              : Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
 
 class StoreSettingsSection extends StatelessWidget {
   final ObjectBox objectbox;

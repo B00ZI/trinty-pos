@@ -79,26 +79,41 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+
+    final bool isShort = screenHeight < 600;
+    final bool isNarrow = screenWidth < 360;
+
+    final double padding = isShort ? 12.0 : 24.0;
+    final double dialogWidth = isNarrow ? (screenWidth * 0.9) : 400.0;
+
     return PopScope(
       canPop: widget.isCancelable,
       child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: _selectedUser == null ? _buildUserSelection() : _buildPinEntry(),
+          width: dialogWidth,
+          padding: EdgeInsets.all(padding),
+          child: _selectedUser == null ? _buildUserSelection(isShort) : _buildPinEntry(isShort, isNarrow),
         ),
       ),
     );
   }
 
-  Widget _buildUserSelection() {
+  Widget _buildUserSelection(bool isShort) {
     final users = widget.objectbox.userBox.getAll();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Sélectionner un utilisateur', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 24),
+        Text(
+          'Sélectionner un utilisateur',
+          style: isShort 
+              ? Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)
+              : Theme.of(context).textTheme.headlineSmall,
+        ),
+        SizedBox(height: isShort ? 12 : 24),
         if (users.isEmpty)
           const Padding(
             padding: EdgeInsets.all(16.0),
@@ -114,7 +129,11 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: CircleAvatar(child: Text(user.name[0].toUpperCase())),
+                    dense: isShort,
+                    leading: CircleAvatar(
+                      radius: isShort ? 16 : 20,
+                      child: Text(user.name[0].toUpperCase()),
+                    ),
                     title: Text(user.name),
                     onTap: () => setState(() => _selectedUser = user),
                   ),
@@ -122,16 +141,21 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
               },
             ),
           ),
-        if (widget.isCancelable)
+        if (widget.isCancelable) ...[
+          SizedBox(height: isShort ? 4 : 12),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Annuler'),
           ),
+        ],
       ],
     );
   }
 
-  Widget _buildPinEntry() {
+  Widget _buildPinEntry(bool isShort, bool isNarrow) {
+    final double keySize = isShort ? 48.0 : 70.0;
+    final double keySpacing = isShort ? 6.0 : 12.0;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -139,6 +163,9 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
           children: [
             IconButton(
               icon: const Icon(Icons.arrow_back),
+              iconSize: isShort ? 20 : 24,
+              padding: EdgeInsets.zero,
+              constraints: isShort ? const BoxConstraints(minWidth: 32, minHeight: 32) : null,
               onPressed: () => setState(() {
                 _selectedUser = null;
                 _enteredPin = "";
@@ -148,16 +175,24 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
             Expanded(
               child: Text(
                 'Bonjour, ${_selectedUser!.name}',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: isShort 
+                    ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+                    : Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(width: 48), // Spacer for centering
+            SizedBox(width: isShort ? 32 : 48), // Spacer for centering
           ],
         ),
-        const SizedBox(height: 8),
-        const Text('Entrez votre PIN', style: TextStyle(color: Colors.grey)),
-        const SizedBox(height: 24),
+        SizedBox(height: isShort ? 4 : 8),
+        Text(
+          'Entrez votre PIN',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: isShort ? 12 : 14,
+          ),
+        ),
+        SizedBox(height: isShort ? 12 : 24),
         AnimatedBuilder(
           animation: _shakeAnimation,
           builder: (context, child) {
@@ -166,16 +201,17 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(4, (index) {
+                  final bool isFilled = index < _enteredPin.length;
                   return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                    width: 20,
-                    height: 20,
+                    margin: EdgeInsets.symmetric(horizontal: isShort ? 8 : 12),
+                    width: isShort ? 12 : 20,
+                    height: isShort ? 12 : 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: index < _enteredPin.length
+                      color: isFilled
                           ? (_isError ? Colors.red : Theme.of(context).colorScheme.primary)
                           : Colors.grey.shade300,
-                      border: _isError && index < _enteredPin.length
+                      border: _isError && isFilled
                           ? Border.all(color: Colors.red.shade900, width: 2)
                           : null,
                     ),
@@ -185,52 +221,52 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
             );
           },
         ),
-        const SizedBox(height: 32),
-        _buildNumericKeypad(),
+        SizedBox(height: isShort ? 16 : 32),
+        _buildNumericKeypad(keySize, keySpacing),
       ],
     );
   }
 
-  Widget _buildNumericKeypad() {
+  Widget _buildNumericKeypad(double keySize, double keySpacing) {
     return Column(
       children: [
         for (var row in [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']])
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.only(bottom: keySpacing),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: row.map((digit) => _buildKeypadButton(digit)).toList(),
+              children: row.map((digit) => _buildKeypadButton(digit, keySize)).toList(),
             ),
           ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildKeypadButton('⌫', isAction: true, onTap: _onBackspace),
-            _buildKeypadButton('0'),
-            _buildKeypadButton('✓', isAction: true, onTap: _verifyPin, color: Colors.green),
+            _buildKeypadButton('⌫', keySize, isAction: true, onTap: _onBackspace),
+            _buildKeypadButton('0', keySize),
+            _buildKeypadButton('✓', keySize, isAction: true, onTap: _verifyPin, color: Colors.green),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildKeypadButton(String label, {bool isAction = false, VoidCallback? onTap, Color? color}) {
+  Widget _buildKeypadButton(String label, double keySize, {bool isAction = false, VoidCallback? onTap, Color? color}) {
     return InkWell(
       onTap: onTap ?? () => _onDigitTap(label),
-      borderRadius: BorderRadius.circular(100),
+      borderRadius: BorderRadius.circular(keySize / 2),
       child: Container(
-        width: 70,
-        height: 70,
+        width: keySize,
+        height: keySize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color?.withOpacity(0.1) ?? (isAction ? Colors.grey.shade100 : null),
-          border: Border.all(color: color?.withOpacity(0.5) ?? Colors.grey.shade300),
+          color: color?.withValues(alpha: 0.1) ?? (isAction ? Colors.grey.shade100 : null),
+          border: Border.all(color: color?.withValues(alpha: 0.5) ?? Colors.grey.shade300),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: keySize * 0.35,
               fontWeight: FontWeight.bold,
               color: color ?? (isAction ? Colors.grey.shade700 : null),
             ),
