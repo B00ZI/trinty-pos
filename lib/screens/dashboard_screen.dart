@@ -1,26 +1,19 @@
-import 'package:Easify/widgets/expenceTracking.dart';
 import 'package:flutter/material.dart';
-import 'package:Easify/widgets/insight_item.dart';
-import '../widgets/charts.dart';
-import '../widgets/bestSellr.dart' as best_seller;
-import '../models/product.dart' as product_model;
-import '../models/order.dart' as order_model;
-import '../models/order_item.dart';
-import '../objectbox.g.dart';
-import '../objectbox.dart';
-import 'package:objectbox/objectbox.dart';
-import '../models/expence.dart';
-import 'package:flutter/scheduler.dart';
-import '../models/daily_funds.dart';
-import '../widgets/daily_funds_dialog.dart';
-import '../models/app_user.dart';
-import '../models/game_session.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'dart:async';
-import '../service/business_day_helper.dart';
-import '../models/store_config.dart';
 
-class DashboardScreen extends StatefulWidget {
+import '../objectbox.dart';
+import '../objectbox.g.dart';
+import '../models/product.dart' as product_model;
+import '../models/app_user.dart';
+import '../models/expence.dart';
+import '../providers/dashboard_provider.dart';
+import '../widgets/insight_item.dart';
+import '../widgets/charts.dart';
+import '../widgets/daily_funds_dialog.dart';
+import '../widgets/expenceTracking.dart';
+
+class DashboardScreen extends ConsumerStatefulWidget {
   final ObjectBox objectbox;
   final List<product_model.Product> myProducts;
 
@@ -49,368 +42,100 @@ class DashboardScreen extends StatefulWidget {
         ];
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  double _todayRevenue = 0.0;
-  double _todayOrderCount = 0.0;
-  double _todayExpenses = 0.0;
-  double _todayProfit = 0.0;
-  double _todayFunds = 0.0;
-  bool _fundsAlreadySet = false;
-  late final Box<order_model.Ruci> _ruciBox;
-  late final Box<DailyFunds> _dailyFundsBox;
-  late final Box<GameSession> _gameSessionBox;
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late final Box<AppUser> _userBox;
-  late final Box<StoreConfig> _storeConfigBox;
-  Box<expence>? _expenceBox; 
-
-  late DateTime _startDate;
-  late DateTime _endDate;
-  late StoreConfig _config;
-  int? _selectedUserId;
+  late final Box<expence> _expenceBox;
   List<AppUser> _allUsers = [];
-  final List<StreamSubscription> _subscriptions = [];
 
   @override
   void initState() {
     super.initState();
-    _ruciBox = widget.objectbox.store.box<order_model.Ruci>();
-    _dailyFundsBox = widget.objectbox.store.box<DailyFunds>();
-    _gameSessionBox = widget.objectbox.store.box<GameSession>();
     _userBox = widget.objectbox.store.box<AppUser>();
-    _expenceBox = widget.objectbox.store.box<expence>(); // Initialize
-    _storeConfigBox = widget.objectbox.store.box<StoreConfig>();
-    _loadConfig();
-    
-    // Initial load
+    _expenceBox = widget.objectbox.store.box<expence>();
     _allUsers = _userBox.getAll();
-    _refreshData();
-
-    // Setup real-time listeners
-    _subscriptions.add(_userBox.query().watch(triggerImmediately: true).listen((_) {
+    
+    // Listen to user changes to update dropdown
+    _userBox.query().watch().listen((_) {
       if (mounted) {
         setState(() {
           _allUsers = _userBox.getAll();
         });
       }
-    }));
-
-    _subscriptions.add(_ruciBox.query().watch().listen((_) => _refreshData()));
-    _subscriptions.add(_gameSessionBox.query().watch().listen((_) => _refreshData()));
-    _subscriptions.add(_expenceBox!.query().watch().listen((_) => _refreshData()));
-    _subscriptions.add(_storeConfigBox.query().watch().listen((_) {
-      if (mounted) {
-        setState(() {
-          _loadConfig();
-          _refreshData();
-        });
-      }
-    }));
-  }
-
-  void _loadConfig() {
-    final configs = _storeConfigBox.getAll();
-    _config = configs.isNotEmpty ? configs.first : StoreConfig();
-    final businessDate = BusinessDayHelper.getBusinessDayDate(DateTime.now(), _config);
-    final range = BusinessDayHelper.getBusinessDayRange(businessDate, _config);
-    _startDate = range.$1;
-    _endDate = range.$2.subtract(const Duration(seconds: 1)); // End at 1 sec before next day start
-  }
-
-  void _refreshData() async {
-    // Collect all data synchronously where possible or in parallel
-    final results = await Future.wait([
-      _getRevenue(),
-      _getOrderCount(),
-      _getExpense(),
-      _getTodayFunds(),
-    ]);
-
-    if (mounted) {
-      setState(() {
-        _todayRevenue = results[0];
-        _todayOrderCount = results[1];
-        _todayExpenses = results[2];
-        _todayFunds = results[3];
-        _todayProfit = _todayRevenue - _todayExpenses;
-        _fundsAlreadySet = _todayFunds > 0 || _checkIfFundsExist();
-      });
-    }
-  }
-
-  bool _checkIfFundsExist() {
-    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final query = _dailyFundsBox.query(DailyFunds_.date.equals(todayStart.millisecondsSinceEpoch)).build();
-    final count = query.count();
-    query.close();
-    return count > 0;
-  }
-
-  Future<double> _getRevenue() async {
-    // Implementation moved from _calculateRevenue but returning value
-    try {
-      final orderQueryBuilder = _ruciBox.query(Ruci_.date
-              .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
-              .and(Ruci_.isDeleted.equals(false)));
-      if (_selectedUserId != null) {
-        orderQueryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserId!));
-      }
-      final orderQuery = orderQueryBuilder.build();
-      final periodOrders = orderQuery.find();
-      orderQuery.close();
-
-      double totalRevenue = 0.0;
-      for (final ruci in periodOrders) {
-        for (final orderItem in ruci.items) {
-          totalRevenue += calculateItemTotal(orderItem);
-        }
-      }
-
-      Condition<GameSession> gameCondition = GameSession_.startTime
-          .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
-          .and(GameSession_.status.equals(1));
-      if (_selectedUserId != null) {
-        gameCondition = gameCondition.and(GameSession_.attributedUserId.equals(_selectedUserId!));
-      }
-      final gameQuery = _gameSessionBox.query(gameCondition).build();
-      final periodGames = gameQuery.find();
-      gameQuery.close();
-
-      for (final session in periodGames) {
-        if (session.relatedOrderId == null || session.relatedOrderId == 0) {
-          totalRevenue += session.currentCalculatedPrice;
-        }
-      }
-      return totalRevenue;
-    } catch (e) {
-      return 0.0;
-    }
-  }
-
-  Future<double> _getOrderCount() async {
-    try {
-      final orderQueryBuilder = _ruciBox.query(Ruci_.date
-              .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
-              .and(Ruci_.isDeleted.equals(false)));
-      if (_selectedUserId != null) {
-        orderQueryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserId!));
-      }
-      final orderQuery = orderQueryBuilder.build();
-      final orderCount = orderQuery.count();
-      orderQuery.close();
-
-      Condition<GameSession> gameCondition = GameSession_.startTime
-          .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
-          .and(GameSession_.status.equals(1));
-      if (_selectedUserId != null) {
-        gameCondition = gameCondition.and(GameSession_.attributedUserId.equals(_selectedUserId!));
-      }
-      final gameQuery = _gameSessionBox.query(gameCondition).build();
-      int unlinkedGames = 0;
-      for (final session in gameQuery.find()) {
-        if (session.relatedOrderId == null || session.relatedOrderId == 0) {
-          unlinkedGames++;
-        }
-      }
-      gameQuery.close();
-
-      return (orderCount + unlinkedGames).toDouble();
-    } catch (e) {
-      return 0.0;
-    }
-  }
-
-  Future<double> _getExpense() async {
-    try {
-      final query = _expenceBox!.query(expence_.date.between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)).build();
-      final periodExpenses = query.find();
-      query.close();
-      double total = 0.0;
-      for (final exp in periodExpenses) total += exp.amount;
-      return total;
-    } catch (e) {
-      return 0.0;
-    }
-  }
-
-  Future<double> _getTodayFunds() async {
-    try {
-      final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final todayEnd = todayStart.add(const Duration(days: 1));
-      
-      // Try to get today's funds first
-      final todayQuery = _dailyFundsBox.query(DailyFunds_.date.between(todayStart.millisecondsSinceEpoch, todayEnd.millisecondsSinceEpoch)).build();
-      final todayResult = todayQuery.find();
-      todayQuery.close();
-      
-      if (todayResult.isNotEmpty) {
-        return todayResult.first.amount;
-      }
-
-      // If not found, get the most recent funds from the past
-      final latestQuery = _dailyFundsBox.query().order(DailyFunds_.date, flags: Order.descending).build();
-      final latestResult = latestQuery.findFirst();
-      latestQuery.close();
-
-      return latestResult?.amount ?? 0.0;
-    } catch (e) {
-      return 0.0;
-    }
+    });
   }
 
   Future<void> _selectDateRange() async {
+    final currentParams = ref.read(dashboardParamsProvider);
+    final initialStart = currentParams.startDate ?? DateTime.now();
+    final initialEnd = currentParams.endDate ?? DateTime.now();
+
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime(2101),
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+      initialDateRange: DateTimeRange(start: initialStart, end: initialEnd),
     );
 
     if (picked != null) {
-      setState(() {
-        _startDate = DateTime(picked.start.year, picked.start.month, picked.start.day);
-        _endDate = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
-      });
-      _refreshData();
+      final newStart = DateTime(picked.start.year, picked.start.month, picked.start.day);
+      final newEnd = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
+      ref.read(dashboardParamsProvider.notifier).state = currentParams.copyWith(
+        startDate: newStart,
+        endDate: newEnd,
+      );
     }
   }
 
-
-
-  Future<void> _saveFunds(double amount) async {
-    try {
-      final DateTime todayStart = DateTime(
-          DateTime.now().year, DateTime.now().month, DateTime.now().day);
-
-      // Check if funds already exist for today
-      final query = _dailyFundsBox
-          .query(DailyFunds_.date.equals(todayStart.millisecondsSinceEpoch))
-          .build();
-      final result = query.find();
-      query.close();
-
-      if (result.isNotEmpty) {
-        result.first.amount = amount;
-        _dailyFundsBox.put(result.first);
-      } else {
-        final newFunds = DailyFunds(date: todayStart, amount: amount);
-        _dailyFundsBox.put(newFunds);
-      }
-
-      if (mounted) {
-        _refreshData();
-      }
-    } catch (e) {
-      debugPrint('Error saving funds: $e');
-    }
-  }
-
-  void _showFundsDialog() {
-    final currentFunds = _fundsAlreadySet
-        ? DailyFunds(date: DateTime.now(), amount: _todayFunds)
-        : null;
-
+  void _showFundsDialog(double currentAmount, bool fundsAlreadySet) {
     showDialog(
       context: context,
       builder: (ctx) => DailyFundsDialog(
-        currentFunds: currentFunds,
+        currentFunds: null, // Let user input the amount
         onSave: (amount) {
-          _saveFunds(amount);
+          ref.read(fundsRepositoryProvider).saveFunds(amount);
         },
       ),
     );
   }
 
-
-  double calculateItemTotal(OrderItem item) {
-    // Use persisted price if available, otherwise fallback to current product price
-    double basePrice = (item.price ?? item.product.target?.price ?? 0.0).toDouble();
-
-    // Apply surge if it's a transient item (no fixed price) and surge is active
-    if (item.price == null && _config.isSurgePriceEnabled) {
-      if (_config.surgeProductIds.contains(item.product.target?.id)) {
-        basePrice += _config.surgePriceAmount;
-      }
-    }
-
-    double total = item.quantity * basePrice;
-    for (final extra in item.extras) {
-      total += extra.price * item.getExtraQuantity(extra);
-    }
-    return total;
-  }
-
   void _showUnitsSoldPopup() {
-    final queryBuilder = _ruciBox.query(Ruci_.date
-            .between(
-              _startDate.millisecondsSinceEpoch,
-              _endDate.millisecondsSinceEpoch,
-            )
-            .and(Ruci_.isDeleted.equals(false)));
-    
-    if (_selectedUserId != null) {
-      queryBuilder.link(Ruci_.user, AppUser_.id.equals(_selectedUserId!));
-    }
-
-    final query = queryBuilder.build();
-    final periodOrders = query.find();
-    query.close();
-
-    final Map<String, int> productCounts = {};
-    for (final ruci in periodOrders) {
-      for (final item in ruci.items) {
-        final productName = item.productName ?? item.product.target?.name ?? 'Inconnu';
-        productCounts[productName] = (productCounts[productName] ?? 0) + item.quantity;
-      }
-    }
-
-    // 2. Add Game Sessions
-    Condition<GameSession> gameCondition = GameSession_.startTime
-        .between(_startDate.millisecondsSinceEpoch, _endDate.millisecondsSinceEpoch)
-        .and(GameSession_.status.equals(1)); // Completed only
-    
-    if (_selectedUserId != null) {
-      gameCondition = gameCondition.and(GameSession_.attributedUserId.equals(_selectedUserId!));
-    }
-
-    final gameQuery = _gameSessionBox.query(gameCondition).build();
-    final periodGames = gameQuery.find();
-    gameQuery.close();
-
-    for (final session in periodGames) {
-      if (session.relatedOrderId == null || session.relatedOrderId == 0) {
-        final gameLabel = 'Jeux: ${session.tierLabel}';
-        productCounts[gameLabel] = (productCounts[gameLabel] ?? 0) + 1;
-      }
-    }
-
-    final sortedItems = productCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unités Vendues'),
         content: SizedBox(
-          width: 400, // Fixed width
-          height: 500, // Fixed height
-          child: sortedItems.isEmpty
-              ? const Center(child: Text('Aucune vente sur cette période'))
-              : ListView.builder(
-                  itemCount: sortedItems.length,
-                  itemBuilder: (context, index) {
-                    final entry = sortedItems[index];
-                    return ListTile(
-                      title: Text(entry.key),
-                      trailing: Text(
-                        '${entry.value}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  },
-                ),
+          width: 400,
+          height: 500,
+          child: Consumer(
+            builder: (context, ref, child) {
+              final unitsAsync = ref.watch(unitsSoldProvider);
+              return unitsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(child: Text('Erreur: $err')),
+                data: (sortedItems) {
+                  if (sortedItems.isEmpty) {
+                    return const Center(child: Text('Aucune vente sur cette période'));
+                  }
+                  return ListView.builder(
+                    itemCount: sortedItems.length,
+                    itemBuilder: (context, index) {
+                      final entry = sortedItems[index];
+                      return ListTile(
+                        title: Text(entry.key),
+                        trailing: Text(
+                          '${entry.value}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
         ),
         actions: [
           TextButton(
@@ -424,67 +149,126 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final metricsAsync = ref.watch(dashboardMetricsProvider);
+    final params = ref.watch(dashboardParamsProvider);
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      floatingActionButton: metricsAsync.when(
+        data: (metrics) => FloatingActionButton.extended(
+          onPressed: () => _showFundsDialog(metrics.todayFunds, metrics.fundsAlreadySet),
+          backgroundColor: const Color(0xFF0F172A),
+          elevation: 6,
+          icon: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 18),
+          label: Text(
+            'Fond de caisse: ${metrics.todayFunds.toStringAsFixed(2)} DH',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Filters Section
+            // Date Range & User Selector Row
             Row(
               children: [
                 Expanded(
                   child: InkWell(
                     onTap: _selectDateRange,
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.withOpacity(0.08)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.date_range, size: 20),
-                          const SizedBox(width: 8),
+                          Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              '${DateFormat('dd/MM').format(_startDate)} - ${DateFormat('dd/MM').format(_endDate)}',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              params.startDate != null && params.endDate != null
+                                  ? '${DateFormat('MMM dd').format(params.startDate!)} – ${DateFormat('MMM dd, yyyy').format(params.endDate!)}'
+                                  : 'Période Actuelle',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[600]),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.withOpacity(0.08)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int?>(
-                        value: _selectedUserId,
-                        hint: const Text('Tous les Utilisateurs', style: TextStyle(fontSize: 13)),
+                        value: params.selectedUserId,
+                        hint: Text(
+                          'Tous les Utilisateurs',
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                        ),
                         isExpanded: true,
+                        icon: Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[600]),
                         items: [
-                          const DropdownMenuItem<int?>(
+                          DropdownMenuItem<int?>(
                             value: null,
-                            child: Text('Tous les Utilisateurs', style: TextStyle(fontSize: 13)),
+                            child: Text(
+                              'Tous les Utilisateurs',
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w600),
+                            ),
                           ),
                           ..._allUsers.map((user) => DropdownMenuItem<int?>(
                                 value: user.id,
-                                child: Text(user.name, style: const TextStyle(fontSize: 13)),
+                                child: Text(
+                                  user.name,
+                                  style: TextStyle(
+                                      fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w600),
+                                ),
                               )),
                         ],
                         onChanged: (userId) {
-                          setState(() {
-                            _selectedUserId = userId;
-                          });
-                          _refreshData();
+                          ref.read(dashboardParamsProvider.notifier).state =
+                              params.copyWith(selectedUserId: userId);
                         },
                       ),
                     ),
@@ -492,173 +276,121 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            Stack(
-              children: [
-                // 2x2 Grid of Cards
-                Column(
+            // Metrics Cards
+            metricsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Erreur: $err')),
+              data: (metrics) => Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InfoCard(
+                          title: "Revenue",
+                          value: '${metrics.todayRevenue.toStringAsFixed(2)} DH',
+                          icon: Icons.attach_money,
+                          color: Colors.teal,
+                          trendText: '${metrics.revenueTrend.toStringAsFixed(1)}%',
+                          isPositive: metrics.revenueTrendPositive,
+                          comparisonLabel: metrics.comparisonLabel,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _showUnitsSoldPopup,
+                          child: InfoCard(
+                            title: 'Orders',
+                            value: '${metrics.todayOrderCount.toInt()}',
+                            icon: Icons.shopping_bag_outlined,
+                            color: Colors.deepPurple,
+                            trendText: '${metrics.ordersTrend.toStringAsFixed(1)}%',
+                            isPositive: metrics.ordersTrendPositive,
+                            comparisonLabel: metrics.comparisonLabel,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InfoCard(
+                          title: 'Spend',
+                          value: '${metrics.todayExpenses.toInt()} DH',
+                          icon: Icons.credit_card_outlined,
+                          color: Colors.blue,
+                          trendText: '${metrics.expensesTrend.toStringAsFixed(1)}%',
+                          isPositive: !metrics.expensesTrendPositive,
+                          comparisonLabel: metrics.comparisonLabel,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: InfoCard(
+                          title: 'Profit',
+                          value: '${metrics.todayProfit.toStringAsFixed(2)} DH',
+                          icon: Icons.trending_up,
+                          color: Colors.orange,
+                          trendText: '${metrics.profitTrend.toStringAsFixed(1)}%',
+                          isPositive: metrics.profitTrendPositive,
+                          comparisonLabel: metrics.comparisonLabel,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            WeeklyPerformanceChart(
+              store: widget.objectbox.store,
+              title: 'Weekly Performance',
+              maxYValue: 2000.0,
+            ),
+
+            const SizedBox(height: 24),
+
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.withOpacity(0.08)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Top Row: Revenue + Orders
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InfoCard(
-                            title: "Revenu",
-                            value: '${_todayRevenue.toStringAsFixed(2)} DH',
-                            icon: Icons.attach_money,
-                            color: Colors.green,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _showUnitsSoldPopup,
-                            child: InfoCard(
-                              title: 'Commandes',
-                              value: '${_todayOrderCount.toInt()}',
-                              icon: Icons.shopping_cart,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // Bottom Row: Expenses + Profit
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InfoCard(
-                            title: 'Dépenses',
-                            value: '${_todayExpenses.toInt()} DH',
-                            icon: Icons.money_off,
-                            color: Colors.red,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: InfoCard(
-                            title: 'Bénéfice',
-                            value: '${_todayProfit.toStringAsFixed(2)} DH',
-                            icon: Icons.trending_up,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
+                    SizedBox(
+                      height: 240,
+                      child: AddableListWidget(
+                        expenceBox: _expenceBox,
+                        onListChanged: (newExpenses) {
+                          ref.invalidate(dashboardMetricsProvider);
+                        },
+                      ),
                     ),
                   ],
                 ),
-
-                // Circular Funds Widget
-                Positioned(
-                  top: 70,
-                  left: 10,
-                  right: 20,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: _showFundsDialog,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Theme.of(context).colorScheme.primaryContainer,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 3,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  '${_todayFunds.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                                Text(
-                                  'DH',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  'Fond de caisse',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // Chart
-            SizedBox(
-              height: 300,
-              child: WeeklyPerformanceChart(
-                store: widget.objectbox.store,
-                title: 'Performance Hebdomadaire',
-                maxYValue: 2000.0,
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // Expense Tracking Section
-            if (_expenceBox != null)
-              SizedBox(
-                height: 200,
-                child: AddableListWidget(
-                  expenceBox: _expenceBox!,
-                  onListChanged: (newExpenses) {
-                    SchedulerBinding.instance.addPostFrameCallback((_) {
-                      _refreshData();
-                    });
-                  },
-                ),
-              )
-            else
-              const SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
-              ),
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    for (var sub in _subscriptions) {
-      sub.cancel();
-    }
-    super.dispose();
   }
 }

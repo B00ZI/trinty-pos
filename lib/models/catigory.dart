@@ -15,4 +15,20 @@ class Catigory {
     this.imageUrl,
     this.displayOrder = 0,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'imageUrl': imageUrl,
+      'displayOrder': displayOrder,
+    };
+  }
+
+  factory Catigory.fromJson(Map<String, dynamic> json) {
+    return Catigory(
+      name: json['name'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String?,
+      displayOrder: json['displayOrder'] as int? ?? 0,
+    );
+  }
 }

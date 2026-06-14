@@ -529,7 +529,7 @@ final _entities = <obx_int.ModelEntity>[
         name: 'postId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(25, 8046807335310555673),
+        indexId: const obx_int.IdUid(27, 4740814047389283495),
         relationTarget: 'GamePost',
       ),
       obx_int.ModelProperty(
@@ -537,7 +537,7 @@ final _entities = <obx_int.ModelEntity>[
         name: 'tierId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(26, 9193408218415038704),
+        indexId: const obx_int.IdUid(28, 5360175655222454778),
         relationTarget: 'PartyTier',
       ),
       obx_int.ModelProperty(
@@ -701,7 +701,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
     lastEntityId: const obx_int.IdUid(15, 669046788345874073),
-    lastIndexId: const obx_int.IdUid(26, 9193408218415038704),
+    lastIndexId: const obx_int.IdUid(28, 5360175655222454778),
     lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [8743093086059233857],
@@ -728,6 +728,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
       7005251809735891263,
       305667341455062955,
       1462311232118323923,
+      8046807335310555673,
+      9193408218415038704,
     ],
     retiredPropertyUids: const [
       7625330162759834078,

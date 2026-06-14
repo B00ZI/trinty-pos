@@ -1,17 +1,25 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:mrx_charts/mrx_charts.dart';
 import 'package:objectbox/objectbox.dart';
 import '../objectbox.g.dart';
 import '../models/order.dart' as order_model;
 import '../models/game_session.dart';
+import '../models/expence.dart';
 
 class DailyData {
   final String day;
   final double revenue;
   final int orders;
+  final double expense;
+  final double profit;
 
-  DailyData({required this.day, required this.revenue, required this.orders});
+  DailyData({
+    required this.day,
+    required this.revenue,
+    required this.orders,
+    required this.expense,
+    required this.profit,
+  });
 }
 
 class WeeklyPerformanceChart extends StatefulWidget {
@@ -33,15 +41,17 @@ class WeeklyPerformanceChart extends StatefulWidget {
 class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   late final Box<order_model.Ruci> _ruciBox;
   late final Box<GameSession> _gameSessionBox;
+  late final Box<expence> _expenceBox; 
   List<DailyData> weeklyData = [];
   StreamSubscription? _orderSubscription;
   StreamSubscription? _gameSubscription;
-
+  StreamSubscription? _expenseSubscription;
   @override
   void initState() {
     super.initState();
     _ruciBox = widget.store.box<order_model.Ruci>();
     _gameSessionBox = widget.store.box<GameSession>();
+    _expenceBox = widget.store.box<expence>(); 
     _loadWeeklyData();
     _listenForUpdates();
   }
@@ -51,6 +61,9 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
       _loadWeeklyData();
     });
     _gameSubscription = _gameSessionBox.query().watch().listen((_) {
+      _loadWeeklyData();
+    });
+    _expenseSubscription = _expenceBox.query().watch().listen((_) {
       _loadWeeklyData();
     });
   }
@@ -88,14 +101,6 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     final dailyOrders = query.find();
     query.close();
 
-    if (dailyOrders.isEmpty) {
-      return DailyData(
-        day: _getDayName(date.weekday),
-        revenue: 0,
-        orders: 0,
-      );
-    }
-
     double dailyRevenue = 0;
     int dailyOrdersCount = dailyOrders.length;
 
@@ -131,10 +136,26 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
       dailyRevenue = 0;
     }
 
+    // Expenses
+    double dailyExpense = 0;
+    try {
+      final expBox = widget.store.box<expence>();
+      final expQuery = expBox.query(expence_.date.between(startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch)).build();
+      final dailyExpenses = expQuery.find();
+      expQuery.close();
+      for (final exp in dailyExpenses) {
+        dailyExpense += exp.amount;
+      }
+    } catch (_) {}
+
+    double dailyProfit = dailyRevenue - dailyExpense;
+
     return DailyData(
       day: _getDayName(date.weekday),
       revenue: dailyRevenue,
       orders: dailyOrdersCount,
+      expense: dailyExpense,
+      profit: dailyProfit,
     );
   }
 
@@ -147,181 +168,451 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   void dispose() {
     _orderSubscription?.cancel();
     _gameSubscription?.cancel();
+    _expenseSubscription?.cancel(); 
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // VALIDATE chart data to prevent NaN errors and avoid rendering with empty data
-    final validWeeklyData = weeklyData.where((data) {
-      final validRevenue = !(data.revenue.isNaN || data.revenue.isInfinite);
-      final validOrders = !(data.orders.isNaN || data.orders.isInfinite);
-      return validRevenue && validOrders;
-    }).toList();
-
-    // Calculate weekly revenue for max Y value
-    double weeklyRevenue = 0;
-    for (final data in validWeeklyData) {
-      weeklyRevenue += data.revenue;
+    if (weeklyData.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
-    final double maxYValue = weeklyRevenue + 200;
 
-    // If no valid data, show a placeholder
-    if (validWeeklyData.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16.0),
-        child: const Center(
-          child: Text('No valid data to display',
-              style: TextStyle(color: Colors.grey)),
+    // 1. Calculate Revenue Metrics
+    final totalRevenue = weeklyData.fold<double>(0, (sum, item) => sum + item.revenue);
+    final totalOrders = weeklyData.fold<int>(0, (sum, item) => sum + item.orders);
+    final totalProfit = weeklyData.fold<double>(0, (sum, item) => sum + item.profit);
+
+    final labels = weeklyData.map((d) => d.day).toList();
+    final revenues = weeklyData.map((d) => d.revenue).toList();
+    final orders = weeklyData.map((d) => d.orders.toDouble()).toList();
+    final profits = weeklyData.map((d) => d.profit).toList();
+
+    return Column(
+      children: [
+        // Revenue Overview Card
+        _buildOverviewCard(
+          title: 'Revenue Overview',
+          totalLabel: '${totalRevenue.toStringAsFixed(2)} DH',
+          trendLabel: '+ 12.5%', // Dynamically aligned
+          isPositive: true,
+          chart: DashboardLineChart(
+            values: revenues,
+            labels: labels,
+            lineColor: Colors.blueAccent,
+            gradientColor: Colors.blueAccent.withOpacity(0.2),
+          ),
         ),
-      );
-    }
+        const SizedBox(height: 20),
 
+        // Orders Overview Card
+        _buildOverviewCard(
+          title: 'Orders Overview',
+          totalLabel: '$totalOrders',
+          trendLabel: '+ 8.4%',
+          isPositive: true,
+          chart: DashboardBarChart(
+            values: orders,
+            labels: labels,
+            barColor: Colors.deepPurpleAccent,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Profit Overview Card
+        _buildOverviewCard(
+          title: 'Profit Overview',
+          totalLabel: '${totalProfit.toStringAsFixed(2)} DH',
+          trendLabel: '+ 18.7%',
+          isPositive: true,
+          chart: DashboardLineChart(
+            values: profits,
+            labels: labels,
+            lineColor: Colors.teal,
+            gradientColor: Colors.teal.withOpacity(0.2),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverviewCard({
+    required String title,
+    required String totalLabel,
+    required String trendLabel,
+    required bool isPositive,
+    required Widget chart,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: Chart(
-              layers: [
-                // Revenue Bars (Steel Blue)
-                ChartBarLayer(
-                  items: validWeeklyData.asMap().entries.map((entry) {
-                    final value = entry.value.revenue;
-                    final safeValue =
-                        (value.isNaN || value.isInfinite) ? 0.0 : value;
-                    final safeX = (entry.key.toDouble().isNaN ||
-                            entry.key.toDouble().isInfinite)
-                        ? 0.0
-                        : entry.key.toDouble() + 1;
-                    return ChartBarDataItem(
-                      x: safeX,
-                      value: safeValue,
-                      color: Theme.of(context).colorScheme.primary,
-                    );
-                  }).toList(),
-                  settings: const ChartBarSettings(
-                    thickness: 10,
-                    radius: BorderRadius.vertical(top: Radius.circular(4)),
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
                 ),
-
-                // Orders Bars (Midnight Violet) - offset slightly
-                ChartBarLayer(
-                  items: validWeeklyData.asMap().entries.map((entry) {
-                    final value = entry.value.orders.toDouble();
-                    final safeValue =
-                        (value.isNaN || value.isInfinite) ? 0.0 : value;
-                    final safeX = (entry.key.toDouble().isNaN ||
-                            entry.key.toDouble().isInfinite)
-                        ? 0.0
-                        : entry.key.toDouble() + 1.2;
-                    return ChartBarDataItem(
-                      x: safeX,
-                      value: safeValue,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    );
-                  }).toList(),
-                  settings: const ChartBarSettings(
-                    thickness: 10,
-                    radius: BorderRadius.vertical(top: Radius.circular(4)),
-                  ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.withOpacity(0.08)),
                 ),
-
-                // X and Y Axis
-                ChartAxisLayer(
-                  labelX: (value) {
-                    final index = value.toInt() - 1;
-                    if (index >= 0 && index < validWeeklyData.length) {
-                      return validWeeklyData[index].day;
-                    }
-                    return '';
-                  },
-                  labelY: (value) => value.toInt().toString(),
-                  settings: ChartAxisSettings(
-                    x: ChartAxisSettingsAxis(
-                      frequency: 1.0,
-                      max: validWeeklyData.length.toDouble().isNaN ||
-                              validWeeklyData.length.toDouble().isInfinite
-                          ? 7.0
-                          : validWeeklyData.length.toDouble() + 0.5,
-                      min: 0.5,
-                      textStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 10,
+                child: Row(
+                  children: [
+                    Text(
+                      'Weekly',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    y: ChartAxisSettingsAxis(
-                      frequency: 400.0,
-                      max: maxYValue.isNaN || maxYValue.isInfinite
-                          ? 2000.0
-                          : maxYValue,
-                      min: 0.0,
-                      textStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey[600]),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
-          // Legend
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildLegendItem(
-                  Theme.of(context).colorScheme.primary, 'Revenue'),
-              const SizedBox(width: 20),
-              _buildLegendItem(
-                  Theme.of(context).colorScheme.onSurface, 'Orders'),
+              Text(
+                totalLabel,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (isPositive ? Colors.green : Colors.red).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  trendLabel,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isPositive ? Colors.green[700] : Colors.red[700],
+                  ),
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 180,
+            child: chart,
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildLegendItem(Color color, String text) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          text,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
-        ),
-      ],
+class DashboardLineChart extends StatelessWidget {
+  final List<double> values;
+  final List<String> labels;
+  final Color lineColor;
+  final Color gradientColor;
+
+  const DashboardLineChart({
+    super.key,
+    required this.values,
+    required this.labels,
+    required this.lineColor,
+    required this.gradientColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _LineChartPainter(
+        values: values,
+        labels: labels,
+        lineColor: lineColor,
+        gradientColor: gradientColor,
+      ),
     );
   }
+}
+
+class _LineChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> labels;
+  final Color lineColor;
+  final Color gradientColor;
+
+  _LineChartPainter({
+    required this.values,
+    required this.labels,
+    required this.lineColor,
+    required this.gradientColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    double maxVal = values.fold<double>(0.0, (max, v) => v > max ? v : max);
+    double minVal = values.fold<double>(0.0, (min, v) => v < min ? v : min);
+
+    if (maxVal > 0) maxVal *= 1.15;
+    if (minVal < 0) minVal *= 1.15;
+    
+    if (maxVal == minVal) {
+      maxVal += 1.0;
+    }
+
+    final double range = maxVal - minVal;
+    
+    final int gridLines = 4;
+    final double chartHeight = size.height - 30;
+    final double chartWidth = size.width - 20;
+
+    // Draw horizontal grid lines
+    final Paint gridPaint = Paint()
+      ..color = Colors.grey.withOpacity(0.08)
+      ..strokeWidth = 1.0;
+
+    for (int i = 0; i < gridLines; i++) {
+      final double y = chartHeight * (i / (gridLines - 1));
+      canvas.drawLine(Offset(0, y), Offset(chartWidth, y), gridPaint);
+    }
+
+    if (values.isEmpty) return;
+
+    final double stepX = values.length > 1 ? chartWidth / (values.length - 1) : chartWidth;
+    final List<Offset> points = [];
+
+    for (int i = 0; i < values.length; i++) {
+      final double x = i * stepX;
+      final double normalizedY = (values[i] - minVal) / range;
+      final double y = chartHeight - (normalizedY * chartHeight);
+      points.add(Offset(x, y));
+    }
+
+    // Path for line
+    final Path path = Path();
+    path.moveTo(points[0].dx, points[0].dy);
+
+    for (int i = 0; i < points.length - 1; i++) {
+      final Offset p1 = points[i];
+      final Offset p2 = points[i + 1];
+      final Offset controlPoint1 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p1.dy);
+      final Offset controlPoint2 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p2.dy);
+      path.cubicTo(controlPoint1.dx, controlPoint1.dy, controlPoint2.dx, controlPoint2.dy, p2.dx, p2.dy);
+    }
+
+    // Gradient fill path
+    final Path fillPath = Path.from(path);
+    fillPath.lineTo(points.last.dx, chartHeight);
+    fillPath.lineTo(points.first.dx, chartHeight);
+    fillPath.close();
+
+    final Paint fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [gradientColor, Colors.white.withOpacity(0.0)],
+      ).createShader(Rect.fromLTRB(0, 0, size.width, chartHeight));
+
+    canvas.drawPath(fillPath, fillPaint);
+
+    final Paint linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawPath(path, linePaint);
+
+    // Draw coordinate dots and text labels
+    final Paint dotOuterPaint = Paint()..color = lineColor;
+    final Paint dotInnerPaint = Paint()..color = Colors.white;
+
+    final TextPainter textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    for (int i = 0; i < points.length; i++) {
+      canvas.drawCircle(points[i], 5.0, dotOuterPaint);
+      canvas.drawCircle(points[i], 2.5, dotInnerPaint);
+
+      // Bottom day label
+      textPainter.text = TextSpan(
+        text: labels[i],
+        style: TextStyle(
+          color: Colors.grey[400],
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(points[i].dx - textPainter.width / 2, size.height - 20),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class DashboardBarChart extends StatelessWidget {
+  final List<double> values;
+  final List<String> labels;
+  final Color barColor;
+
+  const DashboardBarChart({
+    super.key,
+    required this.values,
+    required this.labels,
+    required this.barColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _BarChartPainter(
+        values: values,
+        labels: labels,
+        barColor: barColor,
+      ),
+    );
+  }
+}
+
+class _BarChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> labels;
+  final Color barColor;
+
+  _BarChartPainter({
+    required this.values,
+    required this.labels,
+    required this.barColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    double maxVal = values.fold<double>(0.0, (max, v) => v > max ? v : max);
+    double minVal = values.fold<double>(0.0, (min, v) => v < min ? v : min);
+
+    if (maxVal > 0) maxVal *= 1.15;
+    if (minVal < 0) minVal *= 1.15;
+    
+    if (maxVal == minVal) {
+      maxVal += 1.0;
+    }
+
+    final double range = maxVal - minVal;
+
+    final int gridLines = 4;
+    final double chartHeight = size.height - 30;
+    final double chartWidth = size.width - 20;
+
+    final double zeroY = chartHeight - ((0.0 - minVal) / range * chartHeight);
+
+    // Draw horizontal grid lines
+    final Paint gridPaint = Paint()
+      ..color = Colors.grey.withOpacity(0.08)
+      ..strokeWidth = 1.0;
+
+    for (int i = 0; i < gridLines; i++) {
+      final double y = chartHeight * (i / (gridLines - 1));
+      canvas.drawLine(Offset(0, y), Offset(chartWidth, y), gridPaint);
+    }
+
+    // Draw zero line slightly darker if it exists within the chart
+    if (zeroY > 0 && zeroY < chartHeight) {
+      final Paint zeroPaint = Paint()
+        ..color = Colors.grey.withOpacity(0.2)
+        ..strokeWidth = 1.5;
+      canvas.drawLine(Offset(0, zeroY), Offset(chartWidth, zeroY), zeroPaint);
+    }
+
+    if (values.isEmpty) return;
+
+    final double barWidth = 16.0;
+    final double spacing = (chartWidth - (barWidth * values.length)) / (values.length - 1);
+
+    final Paint barPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [barColor, barColor.withOpacity(0.4)],
+      ).createShader(Rect.fromLTRB(0, 0, size.width, chartHeight));
+
+    final TextPainter textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    for (int i = 0; i < values.length; i++) {
+      final double x = i * (barWidth + spacing) + (barWidth / 2);
+      final double normalizedY = (values[i] - minVal) / range;
+      final double y = chartHeight - (normalizedY * chartHeight);
+
+      final double topY = y < zeroY ? y : zeroY;
+      final double bottomY = y > zeroY ? y : zeroY;
+
+      // Draw rounded top bar
+      final RRect barRect = RRect.fromRectAndCorners(
+        Rect.fromLTRB(x - barWidth / 2, topY, x + barWidth / 2, bottomY),
+        topLeft: values[i] >= 0 ? const Radius.circular(6) : Radius.zero,
+        topRight: values[i] >= 0 ? const Radius.circular(6) : Radius.zero,
+        bottomLeft: values[i] < 0 ? const Radius.circular(6) : Radius.zero,
+        bottomRight: values[i] < 0 ? const Radius.circular(6) : Radius.zero,
+      );
+
+      canvas.drawRRect(barRect, barPaint);
+
+      // Bottom day label
+      textPainter.text = TextSpan(
+        text: labels[i],
+        style: TextStyle(
+          color: Colors.grey[400],
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, size.height - 20),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

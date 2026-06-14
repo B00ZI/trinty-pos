@@ -23,4 +23,28 @@ class Product {
     this.isAvailable = false,
     this.displayOrder = 0,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'price': price,
+      'category': category,
+      'description': description,
+      'imageUrl': imageUrl,
+      'isAvailable': isAvailable,
+      'displayOrder': displayOrder,
+    };
+  }
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      name: json['name'] as String? ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      category: json['category'] as String?,
+      description: json['description'] as String?,
+      imageUrl: json['imageUrl'] as String?,
+      isAvailable: json['isAvailable'] as bool? ?? false,
+      displayOrder: json['displayOrder'] as int? ?? 0,
+    );
+  }
 }

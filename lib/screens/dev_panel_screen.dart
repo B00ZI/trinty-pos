@@ -9,6 +9,8 @@ import '../models/order_item.dart';
 import '../models/game_session.dart';
 import '../models/app_user.dart';
 import '../models/product.dart';
+import '../models/expence.dart';
+import '../models/daily_funds.dart';
 import '../models/store_config.dart';
 import 'package:objectbox/objectbox.dart';
 
@@ -55,7 +57,8 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     if (picked != null) {
       setState(() {
         _startDate = picked.start;
-        _endDate = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
+        _endDate = DateTime(
+            picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
         _isLoading = true;
       });
       _loadData();
@@ -77,17 +80,20 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     QueryBuilder<Ruci> orderQb = ruciBox.query(Ruci_.isDeleted.equals(false));
     if (_startDate != null && _endDate != null) {
       orderQb = ruciBox.query(Ruci_.isDeleted.equals(false).and(Ruci_.date
-          .between(_startDate!.millisecondsSinceEpoch, _endDate!.millisecondsSinceEpoch)));
+          .between(_startDate!.millisecondsSinceEpoch,
+              _endDate!.millisecondsSinceEpoch)));
     }
     final orderQuery = orderQb.build();
     final allOrders = orderQuery.find();
     orderQuery.close();
 
     // Query game sessions
-    QueryBuilder<GameSession> gameQb = gameSessionBox.query(GameSession_.status.equals(1));
+    QueryBuilder<GameSession> gameQb =
+        gameSessionBox.query(GameSession_.status.equals(1));
     if (_startDate != null && _endDate != null) {
-      gameQb = gameSessionBox.query(GameSession_.status.equals(1).and(GameSession_.startTime
-          .between(_startDate!.millisecondsSinceEpoch, _endDate!.millisecondsSinceEpoch)));
+      gameQb = gameSessionBox.query(GameSession_.status.equals(1).and(
+          GameSession_.startTime.between(_startDate!.millisecondsSinceEpoch,
+              _endDate!.millisecondsSinceEpoch)));
     }
     final gameQuery = gameQb.build();
     final allGames = gameQuery.find();
@@ -95,14 +101,16 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
 
     _totalOrders = allOrders.length;
     _totalGameSessions = allGames.length;
-    _totalOrderItems = allOrders.fold<int>(0, (sum, order) => sum + order.items.length);
+    _totalOrderItems =
+        allOrders.fold<int>(0, (sum, order) => sum + order.items.length);
 
     // Fetch config for calculateItemTotal
     final configs = store.box<StoreConfig>().getAll();
     final config = configs.isNotEmpty ? configs.first : StoreConfig();
 
     double calculateItemTotal(OrderItem item) {
-      double basePrice = (item.price ?? item.product.target?.price ?? 0.0).toDouble();
+      double basePrice =
+          (item.price ?? item.product.target?.price ?? 0.0).toDouble();
       if (item.price == null && config.isSurgePriceEnabled) {
         if (config.surgeProductIds.contains(item.product.target?.id)) {
           basePrice += config.surgePriceAmount;
@@ -133,7 +141,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     for (final order in allOrders) {
       final uid = order.user.targetId == 0 ? null : order.user.targetId;
       userOrderCounts[uid] = (userOrderCounts[uid] ?? 0) + 1;
-      
+
       double orderTotal = 0;
       for (final item in order.items) {
         orderTotal += calculateItemTotal(item);
@@ -152,9 +160,11 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
 
     for (final session in allGames) {
       if (session.relatedOrderId == null || session.relatedOrderId == 0) {
-        final uid = session.attributedUserId == 0 ? null : session.attributedUserId;
-        userRevenues[uid] = (userRevenues[uid] ?? 0.0) + session.currentCalculatedPrice;
-        
+        final uid =
+            session.attributedUserId == 0 ? null : session.attributedUserId;
+        userRevenues[uid] =
+            (userRevenues[uid] ?? 0.0) + session.currentCalculatedPrice;
+
         if (uid == null) {
           _unassignedDetails.add({
             'type': 'Game',
@@ -178,15 +188,17 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     // Missing Orders Check
     QueryBuilder<Ruci> allOrdersQb = ruciBox.query();
     if (_startDate != null && _endDate != null) {
-      allOrdersQb = ruciBox.query(Ruci_.date
-          .between(_startDate!.millisecondsSinceEpoch, _endDate!.millisecondsSinceEpoch));
+      allOrdersQb = ruciBox.query(Ruci_.date.between(
+          _startDate!.millisecondsSinceEpoch,
+          _endDate!.millisecondsSinceEpoch));
     }
     final allOrdersQ = allOrdersQb.build();
     final allOrdersIncludingDeleted = allOrdersQ.find();
     allOrdersQ.close();
-    
-    allOrdersIncludingDeleted.sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
-    
+
+    allOrdersIncludingDeleted
+        .sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+
     _missingOrderNumbers.clear();
     if (allOrdersIncludingDeleted.isNotEmpty) {
       int expected = allOrdersIncludingDeleted.first.orderNumber;
@@ -210,9 +222,10 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     try {
       final storePath = widget.objectbox.store.directoryPath;
       final externalDir = await getExternalStorageDirectory();
-      
+
       if (externalDir != null) {
-        final backupDir = Directory('${externalDir.path}/EasifyBackup_${DateTime.now().millisecondsSinceEpoch}');
+        final backupDir = Directory(
+            '${externalDir.path}/EasifyBackup_${DateTime.now().millisecondsSinceEpoch}');
         await backupDir.create(recursive: true);
 
         final dbDir = Directory(storePath);
@@ -222,10 +235,12 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
             await entity.copy('${backupDir.path}/$fileName');
           }
         }
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('DB exported to:\n${backupDir.path}', maxLines: 3)),
+            SnackBar(
+                content:
+                    Text('DB exported to:\n${backupDir.path}', maxLines: 3)),
           );
         }
       }
@@ -238,17 +253,140 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     }
   }
 
+  Future<void> _exportSql() async {
+    try {
+      final store = widget.objectbox.store;
+      final externalDir = await getExternalStorageDirectory();
+      if (externalDir == null) return;
+
+      final fileName = 'Easify_export_${DateTime.now().toIso8601String()}.sql';
+      final outFile = File('${externalDir.path}/$fileName');
+      final sb = StringBuffer();
+
+      String esc(Object? v) {
+        if (v == null) return 'NULL';
+        final s = v.toString();
+        return "'" + s.replaceAll("'", "''") + "'";
+      }
+
+      // Export Products
+      final productBox = store.box<Product>();
+      final products = productBox.getAll();
+      sb.writeln('-- Products');
+      for (final p in products) {
+        sb.writeln(
+            'INSERT INTO products (id, name, price, category, description, imageUrl, isAvailable, displayOrder) VALUES ('
+            '${p.id}, ${esc(p.name)}, ${p.price}, ${esc(p.category)}, ${esc(p.description)}, ${esc(p.imageUrl)}, ${p.isAvailable ? 1 : 0}, ${p.displayOrder});');
+      }
+      sb.writeln();
+
+      // Export Users
+      final userBox = store.box<AppUser>();
+      final users = userBox.getAll();
+      sb.writeln('-- Users');
+      for (final u in users) {
+        sb.writeln(
+            'INSERT INTO users (id, name, pin, isAdmin, createdAt) VALUES ('
+            '${u.id}, ${esc(u.name)}, ${esc(u.pin)}, ${u.isAdmin ? 1 : 0}, ${esc(u.createdAt.toIso8601String())});');
+      }
+      sb.writeln();
+
+      // Export StoreConfig
+      final cfgBox = store.box<StoreConfig>();
+      final cfgs = cfgBox.getAll();
+      sb.writeln('-- StoreConfig');
+      for (final c in cfgs) {
+        sb.writeln(
+            'INSERT INTO store_config (id, storeName, storePhone, storeLogoPath, wifiPassword, dayStartHour, dayStartMinute, dayEndHour, dayEndMinute, isSurgePriceEnabled, surgePriceAmount, surgeProductIds) VALUES ('
+            '${c.id}, ${esc(c.storeName)}, ${esc(c.storePhone)}, ${esc(c.storeLogoPath)}, ${esc(c.wifiPassword)}, ${c.dayStartHour}, ${c.dayStartMinute}, ${c.dayEndHour}, ${c.dayEndMinute}, ${c.isSurgePriceEnabled ? 1 : 0}, ${c.surgePriceAmount}, ${esc(c.surgeProductIds.join(","))});');
+      }
+      sb.writeln();
+
+      // Export Orders and OrderItems
+      final ruciBox = store.box<Ruci>();
+      final orders = ruciBox.getAll();
+      sb.writeln('-- Orders (Ruci)');
+      for (final o in orders) {
+        final userId =
+            o.user.targetId == 0 ? 'NULL' : o.user.targetId.toString();
+        sb.writeln(
+            'INSERT INTO orders (id, orderNumber, date, isDeleted, isEdited, relatedGameSessionId, userId) VALUES ('
+            '${o.id}, ${o.orderNumber}, ${esc(o.date.toIso8601String())}, ${o.isDeleted ? 1 : 0}, ${o.isEdited ? 1 : 0}, ${o.relatedGameSessionId ?? 'NULL'}, ${userId});');
+
+        // items
+        for (final item in o.items) {
+          final prodId = item.product.target?.id ?? 0;
+          final extrasJson = item.extraQuantitiesJson != null
+              ? item.extraQuantitiesJson!.replaceAll("'", "''")
+              : '';
+          sb.writeln(
+              'INSERT INTO order_items (id, orderId, productId, quantity, extraQuantitiesJson, price, productName) VALUES ('
+              '${item.id}, ${o.id}, ${prodId}, ${item.quantity}, ${esc(extrasJson)}, ${item.price ?? 'NULL'}, ${esc(item.productName)});');
+        }
+      }
+      sb.writeln();
+
+      // Export GameSessions
+      final gameBox = store.box<GameSession>();
+      final games = gameBox.getAll();
+      sb.writeln('-- GameSessions');
+      for (final g in games) {
+        sb.writeln(
+            'INSERT INTO game_sessions (id, postId, tierId, postLabel, partyNumber, tierLabel, startTime, endTime, status, ratePerHour, attributedUserId, relatedOrderId, isLimitedDuration, limitedDurationMinutes) VALUES ('
+            '${g.id}, ${g.postId}, ${g.tierId}, ${esc(g.postLabel)}, ${g.partyNumber}, ${esc(g.tierLabel)}, ${esc(g.startTime.toIso8601String())}, ${g.endTime != null ? esc(g.endTime!.toIso8601String()) : 'NULL'}, ${g.status}, ${g.ratePerHour}, ${g.attributedUserId ?? 'NULL'}, ${g.relatedOrderId ?? 'NULL'}, ${g.isLimitedDuration ? 1 : 0}, ${g.limitedDurationMinutes});');
+      }
+      sb.writeln();
+
+      // Export Expenses
+      final expBox = store.box<expence>();
+      final exps = expBox.getAll();
+      sb.writeln('-- Expenses');
+      for (final ex in exps) {
+        sb.writeln('INSERT INTO expenses (id, title, amount, date) VALUES ('
+            '${ex.id}, ${esc(ex.title)}, ${ex.amount}, ${esc(ex.date.toIso8601String())});');
+      }
+      sb.writeln();
+
+      // Export DailyFunds
+      final dfBox = store.box<DailyFunds>();
+      final dfs = dfBox.getAll();
+      sb.writeln('-- DailyFunds');
+      for (final d in dfs) {
+        sb.writeln('INSERT INTO daily_funds (id, date, amount) VALUES ('
+            '${d.id}, ${esc(d.date.toIso8601String())}, ${d.amount});');
+      }
+
+      await outFile.writeAsString(sb.toString());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('SQL exported to: ${outFile.path}')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Export SQL failed: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Developer Panel', style: TextStyle(color: Colors.red)),
+        title:
+            const Text('Developer Panel', style: TextStyle(color: Colors.red)),
         backgroundColor: Colors.black,
         actions: [
           IconButton(
             icon: const Icon(Icons.date_range, color: Colors.white),
             onPressed: _selectDateRange,
             tooltip: 'Filtrer par date',
+          ),
+          IconButton(
+            icon: const Icon(Icons.article, color: Colors.white),
+            onPressed: _exportSql,
+            tooltip: 'Export SQL',
           ),
           IconButton(
             icon: const Icon(Icons.save_alt, color: Colors.white),
@@ -273,7 +411,9 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Filtré du: ${DateFormat('dd/MM/yyyy').format(_startDate!)} au ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange),
                           ),
                           const Spacer(),
                           TextButton(
@@ -290,8 +430,9 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                         ],
                       ),
                     ),
-                  
-                  const Text('Database Stats', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('Database Stats',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -305,7 +446,9 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                     ],
                   ),
                   const Divider(height: 32),
-                  const Text('Revenue & Orders by User', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('Revenue & Orders by User',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   ListView.builder(
                     shrinkWrap: true,
@@ -315,18 +458,30 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                       final stat = _userStats[index];
                       final isUnassigned = stat['id'] == null;
                       return Card(
-                        color: isUnassigned && stat['revenue'] > 0 ? Colors.red.shade50 : null,
+                        color: isUnassigned && stat['revenue'] > 0
+                            ? Colors.red.shade50
+                            : null,
                         child: ListTile(
-                          title: Text(stat['name'], style: TextStyle(color: isUnassigned ? Colors.red : null, fontWeight: FontWeight.bold)),
+                          title: Text(stat['name'],
+                              style: TextStyle(
+                                  color: isUnassigned ? Colors.red : null,
+                                  fontWeight: FontWeight.bold)),
                           subtitle: Text('Orders: ${stat['orders']}'),
-                          trailing: Text('${stat['revenue'].toStringAsFixed(2)} DH', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          trailing: Text(
+                              '${stat['revenue'].toStringAsFixed(2)} DH',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
                         ),
                       );
                     },
                   ),
                   if (_unassignedDetails.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    const Text('Unassigned Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red)),
+                    const Text('Unassigned Details',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red)),
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -335,21 +490,31 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
                         final d = _unassignedDetails[index];
                         return ListTile(
                           dense: true,
-                          leading: Icon(d['type'] == 'Order' ? Icons.receipt : Icons.sports_esports, color: Colors.red, size: 20),
+                          leading: Icon(
+                              d['type'] == 'Order'
+                                  ? Icons.receipt
+                                  : Icons.sports_esports,
+                              color: Colors.red,
+                              size: 20),
                           title: Text('${d['type']} ID: ${d['id']}'),
                           subtitle: Text('Number: ${d['number']}'),
-                          trailing: Text('${d['revenue'].toStringAsFixed(2)} DH'),
+                          trailing:
+                              Text('${d['revenue'].toStringAsFixed(2)} DH'),
                         );
                       },
                     ),
                   ],
                   const Divider(height: 32),
-                  const Text('Missing Order Numbers (Gaps)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('Missing Order Numbers (Gaps)',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   if (_missingOrderNumbers.isEmpty)
-                    const Text('No missing order numbers found.', style: TextStyle(color: Colors.green)),
+                    const Text('No missing order numbers found.',
+                        style: TextStyle(color: Colors.green)),
                   if (_missingOrderNumbers.isNotEmpty)
-                    Text(_missingOrderNumbers.join(', '), style: const TextStyle(color: Colors.red)),
+                    Text(_missingOrderNumbers.join(', '),
+                        style: const TextStyle(color: Colors.red)),
                 ],
               ),
             ),
@@ -364,7 +529,9 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
         child: Column(
           children: [
             Text(title, style: const TextStyle(color: Colors.grey)),
-            Text(count.toString(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(count.toString(),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

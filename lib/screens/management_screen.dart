@@ -10,6 +10,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
+import 'package:file_picker/file_picker.dart' as fp;
+import 'package:share_plus/share_plus.dart';
+import 'package:Easify/service/data_backup_service.dart';
 
 class ManagementScreen extends StatefulWidget {
   final ObjectBox objectbox;
@@ -21,6 +24,60 @@ class ManagementScreen extends StatefulWidget {
 
 class _ManagementScreenState extends State<ManagementScreen> {
   int _currentIndex = 0; // 0 for Products, 1 for Categories
+  late final DataBackupService _backupService;
+
+  @override
+  void initState() {
+    super.initState();
+    _backupService = DataBackupService(widget.objectbox);
+  }
+
+  Future<void> _exportData() async {
+    try {
+      final jsonString = _backupService.exportData();
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/easify_backup_${DateTime.now().millisecondsSinceEpoch}.json');
+      await file.writeAsString(jsonString);
+
+      // Offer to share/save the file
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Sauvegarde Easify',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur export: $e')));
+      }
+    }
+  }
+
+  Future<void> _importData() async {
+    try {
+      final result = await fp.FilePicker.pickFiles(
+        type: fp.FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        final jsonString = await file.readAsString();
+        final importResult = _backupService.importData(jsonString);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Import réussi: ${importResult['products']} produits, ${importResult['categories']} catégories'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur import: $e'), backgroundColor: Colors.red));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +86,37 @@ class _ManagementScreenState extends State<ManagementScreen> {
         toolbarHeight: 0, // We use a custom header or rely on MainScreen's app bar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              _buildNavIcon(0, Icons.inventory_2, 'Produits'),
-              const SizedBox(width: 40),
-              _buildNavIcon(1, Icons.category, 'Catégories'),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildNavIcon(0, Icons.inventory_2, 'Produits'),
+                    const SizedBox(width: 40),
+                    _buildNavIcon(1, Icons.category, 'Catégories'),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 16,
+                top: 0,
+                bottom: 0,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.file_upload_outlined, color: Colors.blue),
+                      tooltip: 'Exporter',
+                      onPressed: _exportData,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.file_download_outlined, color: Colors.green),
+                      tooltip: 'Importer',
+                      onPressed: _importData,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

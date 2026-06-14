@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'models/order_counter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:Easify/providers/dashboard_provider.dart';
 import 'models/app_user.dart';
 import 'screens/dev_panel_screen.dart';
 import 'models/game_session.dart';
@@ -53,7 +55,14 @@ Future<void> main() async {
     ));
   }
 
-  runApp(Easify(objectbox: objectbox));
+  runApp(
+    ProviderScope(
+      overrides: [
+        objectBoxProvider.overrideWithValue(objectbox),
+      ],
+      child: Easify(objectbox: objectbox),
+    ),
+  );
 }
 
 class Easify extends StatelessWidget {
