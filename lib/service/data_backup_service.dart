@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:Easify/models/product.dart';
-import 'package:Easify/models/catigory.dart';
+import 'package:Easify/models/category.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/objectbox.g.dart';
-import 'package:objectbox/objectbox.dart';
+// import 'package:objectbox/objectbox.dart';
 
 class DataBackupService {
   final ObjectBox _objectBox;
@@ -11,7 +11,7 @@ class DataBackupService {
   DataBackupService(this._objectBox);
 
   String exportData() {
-    final categories = _objectBox.catigoryBox.getAll();
+    final categories = _objectBox.categoryBox.getAll();
     final products = _objectBox.productBox.getAll();
 
     final data = {
@@ -42,17 +42,17 @@ class DataBackupService {
           if (item is Map<String, dynamic>) {
             final categoryName = item['name'] as String?;
             if (categoryName != null && categoryName.isNotEmpty) {
-              final existingQuery = _objectBox.catigoryBox
-                  .query(Catigory_.name.equals(categoryName))
+              final existingQuery = _objectBox.categoryBox
+                  .query(Category_.name.equals(categoryName))
                   .build();
               final existing = existingQuery.findFirst();
               existingQuery.close();
 
-              final newCategory = Catigory.fromJson(item);
+              final newCategory = Category.fromJson(item);
               if (existing != null) {
                 newCategory.id = existing.id; // Update existing
               }
-              _objectBox.catigoryBox.put(newCategory);
+              _objectBox.categoryBox.put(newCategory);
               importedCategories++;
             }
           }

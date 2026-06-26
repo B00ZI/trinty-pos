@@ -4,7 +4,7 @@ import 'package:objectbox/objectbox.dart';
 import '../objectbox.g.dart';
 import '../models/order.dart' as order_model;
 import '../models/game_session.dart';
-import '../models/expence.dart';
+import '../models/expense.dart';
 
 class DailyData {
   final String day;
@@ -39,9 +39,9 @@ class WeeklyPerformanceChart extends StatefulWidget {
 }
 
 class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
-  late final Box<order_model.Ruci> _ruciBox;
+  late final Box<order_model.Order> _orderBox;
   late final Box<GameSession> _gameSessionBox;
-  late final Box<expence> _expenceBox; 
+  late final Box<Expense> _expenseBox;
   List<DailyData> weeklyData = [];
   StreamSubscription? _orderSubscription;
   StreamSubscription? _gameSubscription;
@@ -49,21 +49,21 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   @override
   void initState() {
     super.initState();
-    _ruciBox = widget.store.box<order_model.Ruci>();
+    _orderBox = widget.store.box<order_model.Order>();
     _gameSessionBox = widget.store.box<GameSession>();
-    _expenceBox = widget.store.box<expence>(); 
+    _expenseBox = widget.store.box<Expense>();
     _loadWeeklyData();
     _listenForUpdates();
   }
 
   void _listenForUpdates() {
-    _orderSubscription = _ruciBox.query().watch().listen((_) {
+    _orderSubscription = _orderBox.query().watch().listen((_) {
       _loadWeeklyData();
     });
     _gameSubscription = _gameSessionBox.query().watch().listen((_) {
       _loadWeeklyData();
     });
-    _expenseSubscription = _expenceBox.query().watch().listen((_) {
+    _expenseSubscription = _expenseBox.query().watch().listen((_) {
       _loadWeeklyData();
     });
   }
@@ -89,13 +89,13 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     final DateTime startOfDay = DateTime(date.year, date.month, date.day);
     final DateTime endOfDay = startOfDay.add(const Duration(days: 1));
 
-    final query = _ruciBox
-        .query(Ruci_.date
+    final query = _orderBox
+        .query(Order_.date
             .between(
               startOfDay.millisecondsSinceEpoch,
               endOfDay.millisecondsSinceEpoch,
             )
-            .and(Ruci_.isDeleted.equals(false)))
+            .and(Order_.isDeleted.equals(false)))
         .build();
 
     final dailyOrders = query.find();
@@ -108,7 +108,9 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
       for (final item in order.items) {
         final productPrice = item.price ?? item.product.target?.price;
         final quantity = item.quantity;
-        if (productPrice == null || productPrice.isNaN || productPrice.isInfinite) continue;
+        if (productPrice == null ||
+            productPrice.isNaN ||
+            productPrice.isInfinite) continue;
         dailyRevenue += quantity * productPrice;
       }
     }
@@ -139,8 +141,11 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     // Expenses
     double dailyExpense = 0;
     try {
-      final expBox = widget.store.box<expence>();
-      final expQuery = expBox.query(expence_.date.between(startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch)).build();
+      final expBox = widget.store.box<Expense>();
+      final expQuery = expBox
+          .query(Expense_.date.between(startOfDay.millisecondsSinceEpoch,
+              endOfDay.millisecondsSinceEpoch))
+          .build();
       final dailyExpenses = expQuery.find();
       expQuery.close();
       for (final exp in dailyExpenses) {
@@ -168,7 +173,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   void dispose() {
     _orderSubscription?.cancel();
     _gameSubscription?.cancel();
-    _expenseSubscription?.cancel(); 
+    _expenseSubscription?.cancel();
     super.dispose();
   }
 
@@ -179,9 +184,12 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     }
 
     // 1. Calculate Revenue Metrics
-    final totalRevenue = weeklyData.fold<double>(0, (sum, item) => sum + item.revenue);
-    final totalOrders = weeklyData.fold<int>(0, (sum, item) => sum + item.orders);
-    final totalProfit = weeklyData.fold<double>(0, (sum, item) => sum + item.profit);
+    final totalRevenue =
+        weeklyData.fold<double>(0, (sum, item) => sum + item.revenue);
+    final totalOrders =
+        weeklyData.fold<int>(0, (sum, item) => sum + item.orders);
+    final totalProfit =
+        weeklyData.fold<double>(0, (sum, item) => sum + item.profit);
 
     final labels = weeklyData.map((d) => d.day).toList();
     final revenues = weeklyData.map((d) => d.revenue).toList();
@@ -272,7 +280,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
                   borderRadius: BorderRadius.circular(8),
@@ -289,7 +298,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.keyboard_arrow_down,
+                        size: 14, color: Colors.grey[600]),
                   ],
                 ),
               ),
@@ -311,7 +321,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (isPositive ? Colors.green : Colors.red).withOpacity(0.1),
+                  color:
+                      (isPositive ? Colors.green : Colors.red).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -384,13 +395,13 @@ class _LineChartPainter extends CustomPainter {
 
     if (maxVal > 0) maxVal *= 1.15;
     if (minVal < 0) minVal *= 1.15;
-    
+
     if (maxVal == minVal) {
       maxVal += 1.0;
     }
 
     final double range = maxVal - minVal;
-    
+
     final int gridLines = 4;
     final double chartHeight = size.height - 30;
     final double chartWidth = size.width - 20;
@@ -407,7 +418,8 @@ class _LineChartPainter extends CustomPainter {
 
     if (values.isEmpty) return;
 
-    final double stepX = values.length > 1 ? chartWidth / (values.length - 1) : chartWidth;
+    final double stepX =
+        values.length > 1 ? chartWidth / (values.length - 1) : chartWidth;
     final List<Offset> points = [];
 
     for (int i = 0; i < values.length; i++) {
@@ -426,7 +438,8 @@ class _LineChartPainter extends CustomPainter {
       final Offset p2 = points[i + 1];
       final Offset controlPoint1 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p1.dy);
       final Offset controlPoint2 = Offset(p1.dx + (p2.dx - p1.dx) / 2, p2.dy);
-      path.cubicTo(controlPoint1.dx, controlPoint1.dy, controlPoint2.dx, controlPoint2.dy, p2.dx, p2.dy);
+      path.cubicTo(controlPoint1.dx, controlPoint1.dy, controlPoint2.dx,
+          controlPoint2.dy, p2.dx, p2.dy);
     }
 
     // Gradient fill path
@@ -529,7 +542,7 @@ class _BarChartPainter extends CustomPainter {
 
     if (maxVal > 0) maxVal *= 1.15;
     if (minVal < 0) minVal *= 1.15;
-    
+
     if (maxVal == minVal) {
       maxVal += 1.0;
     }
@@ -563,7 +576,8 @@ class _BarChartPainter extends CustomPainter {
     if (values.isEmpty) return;
 
     final double barWidth = 16.0;
-    final double spacing = (chartWidth - (barWidth * values.length)) / (values.length - 1);
+    final double spacing =
+        (chartWidth - (barWidth * values.length)) / (values.length - 1);
 
     final Paint barPaint = Paint()
       ..shader = LinearGradient(

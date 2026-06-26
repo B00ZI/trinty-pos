@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/order.dart' as order_model;
-import '../models/expence.dart' as expence_model;
+import '../models/expense.dart' as expense_model;
 import '../objectbox.dart';
 import '../models/product.dart' as product_model;
 
@@ -236,8 +236,8 @@ class DailySummary {
 Future<List<DailySummary>> _getAllDailyData(ObjectBox objectbox) async {
   final dailyData = <DailySummary>[];
 
-  final ordersBox = objectbox.store.box<order_model.Ruci>();
-  final expensesBox = objectbox.store.box<expence_model.expence>();
+  final ordersBox = objectbox.store.box<order_model.Order>();
+  final expensesBox = objectbox.store.box<expense_model.Expense>();
 
   final allDates = await _getAllUniqueDates(ordersBox, expensesBox);
 
@@ -262,8 +262,8 @@ Future<List<DailySummary>> _getAllDailyData(ObjectBox objectbox) async {
 }
 
 // Extract all unique days
-Future<List<DateTime>> _getAllUniqueDates(Box<order_model.Ruci> ordersBox,
-    Box<expence_model.expence> expensesBox) async {
+Future<List<DateTime>> _getAllUniqueDates(Box<order_model.Order> ordersBox,
+    Box<expense_model.Expense> expensesBox) async {
   final Set<DateTime> unique = {};
 
   for (final o in ordersBox.getAll()) {
@@ -282,7 +282,7 @@ Future<List<DateTime>> _getAllUniqueDates(Box<order_model.Ruci> ordersBox,
 
 // Revenue for specific day
 Future<double> _getDayRevenue(
-    Box<order_model.Ruci> ordersBox, DateTime day) async {
+    Box<order_model.Order> ordersBox, DateTime day) async {
   final all = ordersBox.getAll();
 
   final sameDayOrders = all.where((order) =>
@@ -311,7 +311,7 @@ Future<double> _getDayRevenue(
 
 // Expenses for specific day
 Future<double> _getDayExpenses(
-    Box<expence_model.expence> expensesBox, DateTime day) async {
+    Box<expense_model.Expense> expensesBox, DateTime day) async {
   final all = expensesBox.getAll();
 
   final sameDayExpenses = all.where((e) =>
@@ -327,8 +327,8 @@ Future<double> _getDayExpenses(
   return total;
 }
 
-Future<double> _calculateProfit(Box<order_model.Ruci> ordersBox,
-    Box<expence_model.expence> expensesBox, DateTime day) async {
+Future<double> _calculateProfit(Box<order_model.Order> ordersBox,
+    Box<expense_model.Expense> expensesBox, DateTime day) async {
   final revenue = await _getDayRevenue(ordersBox, day);
   final expenses = await _getDayExpenses(expensesBox, day);
   final profite = revenue - expenses;
@@ -336,7 +336,8 @@ Future<double> _calculateProfit(Box<order_model.Ruci> ordersBox,
 }
 
 // Number of orders for day
-Future<int> _getDayOrders(Box<order_model.Ruci> ordersBox, DateTime day) async {
+Future<int> _getDayOrders(
+    Box<order_model.Order> ordersBox, DateTime day) async {
   final all = ordersBox.getAll();
 
   return all

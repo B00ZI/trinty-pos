@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_user.dart';
 import '../objectbox.dart';
-import 'package:objectbox/objectbox.dart';
+// import 'package:objectbox/objectbox.dart';
 
 enum AuthMode { off, session, perOrder }
 

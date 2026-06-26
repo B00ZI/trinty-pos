@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../objectbox.dart';
 import '../objectbox.g.dart';
 import '../models/product.dart' as product_model;
 import '../models/app_user.dart';
-import '../models/expence.dart';
+import '../models/expense.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/insight_item.dart';
 import '../widgets/charts.dart';
 import '../widgets/daily_funds_dialog.dart';
-import '../widgets/expenceTracking.dart';
+import '../widgets/expense_tracking.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   final ObjectBox objectbox;
@@ -47,16 +48,16 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late final Box<AppUser> _userBox;
-  late final Box<expence> _expenceBox;
+  late final Box<Expense> _expenseBox;
   List<AppUser> _allUsers = [];
 
   @override
   void initState() {
     super.initState();
     _userBox = widget.objectbox.store.box<AppUser>();
-    _expenceBox = widget.objectbox.store.box<expence>();
+    _expenseBox = widget.objectbox.store.box<Expense>();
     _allUsers = _userBox.getAll();
-    
+
     // Listen to user changes to update dropdown
     _userBox.query().watch().listen((_) {
       if (mounted) {
@@ -80,8 +81,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
 
     if (picked != null) {
-      final newStart = DateTime(picked.start.year, picked.start.month, picked.start.day);
-      final newEnd = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
+      final newStart =
+          DateTime(picked.start.year, picked.start.month, picked.start.day);
+      final newEnd = DateTime(
+          picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
       ref.read(dashboardParamsProvider.notifier).state = currentParams.copyWith(
         startDate: newStart,
         endDate: newEnd,
@@ -117,7 +120,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 error: (err, stack) => Center(child: Text('Erreur: $err')),
                 data: (sortedItems) {
                   if (sortedItems.isEmpty) {
-                    return const Center(child: Text('Aucune vente sur cette période'));
+                    return const Center(
+                        child: Text('Aucune vente sur cette période'));
                   }
                   return ListView.builder(
                     itemCount: sortedItems.length,
@@ -153,13 +157,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final params = ref.watch(dashboardParamsProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Dashboard'),
+      ),
       backgroundColor: const Color(0xFFF8FAFC),
       floatingActionButton: metricsAsync.when(
         data: (metrics) => FloatingActionButton.extended(
-          onPressed: () => _showFundsDialog(metrics.todayFunds, metrics.fundsAlreadySet),
+          onPressed: () =>
+              _showFundsDialog(metrics.todayFunds, metrics.fundsAlreadySet),
           backgroundColor: const Color(0xFF0F172A),
           elevation: 6,
-          icon: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 18),
+          icon: const Icon(Icons.account_balance_wallet_outlined,
+              color: Colors.white, size: 18),
           label: Text(
             'Fond de caisse: ${metrics.todayFunds.toStringAsFixed(2)} DH',
             style: const TextStyle(
@@ -186,11 +199,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     onTap: _selectDateRange,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.withOpacity(0.08)),
+                        border:
+                            Border.all(color: Colors.grey.withOpacity(0.08)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.02),
@@ -201,7 +216,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[600]),
+                          Icon(Icons.calendar_today_outlined,
+                              size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -216,7 +232,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[600]),
+                          Icon(Icons.keyboard_arrow_down,
+                              size: 16, color: Colors.grey[600]),
                         ],
                       ),
                     ),
@@ -225,7 +242,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -244,17 +262,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         hint: Text(
                           'Tous les Utilisateurs',
                           style: TextStyle(
-                              fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600),
                         ),
                         isExpanded: true,
-                        icon: Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[600]),
+                        icon: Icon(Icons.keyboard_arrow_down,
+                            size: 16, color: Colors.grey[600]),
                         items: [
                           DropdownMenuItem<int?>(
                             value: null,
                             child: Text(
                               'Tous les Utilisateurs',
                               style: TextStyle(
-                                  fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w600),
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                           ..._allUsers.map((user) => DropdownMenuItem<int?>(
@@ -262,7 +285,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 child: Text(
                                   user.name,
                                   style: TextStyle(
-                                      fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w600),
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                      fontWeight: FontWeight.w600),
                                 ),
                               )),
                         ],
@@ -289,10 +314,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Expanded(
                         child: InfoCard(
                           title: "Revenue",
-                          value: '${metrics.todayRevenue.toStringAsFixed(2)} DH',
+                          value:
+                              '${metrics.todayRevenue.toStringAsFixed(2)} DH',
                           icon: Icons.attach_money,
                           color: Colors.teal,
-                          trendText: '${metrics.revenueTrend.toStringAsFixed(1)}%',
+                          trendText:
+                              '${metrics.revenueTrend.toStringAsFixed(1)}%',
                           isPositive: metrics.revenueTrendPositive,
                           comparisonLabel: metrics.comparisonLabel,
                         ),
@@ -306,7 +333,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             value: '${metrics.todayOrderCount.toInt()}',
                             icon: Icons.shopping_bag_outlined,
                             color: Colors.deepPurple,
-                            trendText: '${metrics.ordersTrend.toStringAsFixed(1)}%',
+                            trendText:
+                                '${metrics.ordersTrend.toStringAsFixed(1)}%',
                             isPositive: metrics.ordersTrendPositive,
                             comparisonLabel: metrics.comparisonLabel,
                           ),
@@ -323,7 +351,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           value: '${metrics.todayExpenses.toInt()} DH',
                           icon: Icons.credit_card_outlined,
                           color: Colors.blue,
-                          trendText: '${metrics.expensesTrend.toStringAsFixed(1)}%',
+                          trendText:
+                              '${metrics.expensesTrend.toStringAsFixed(1)}%',
                           isPositive: !metrics.expensesTrendPositive,
                           comparisonLabel: metrics.comparisonLabel,
                         ),
@@ -335,7 +364,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           value: '${metrics.todayProfit.toStringAsFixed(2)} DH',
                           icon: Icons.trending_up,
                           color: Colors.orange,
-                          trendText: '${metrics.profitTrend.toStringAsFixed(1)}%',
+                          trendText:
+                              '${metrics.profitTrend.toStringAsFixed(1)}%',
                           isPositive: metrics.profitTrendPositive,
                           comparisonLabel: metrics.comparisonLabel,
                         ),
@@ -377,7 +407,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     SizedBox(
                       height: 240,
                       child: AddableListWidget(
-                        expenceBox: _expenceBox,
+                        expenseBox: _expenseBox,
                         onListChanged: (newExpenses) {
                           ref.invalidate(dashboardMetricsProvider);
                         },

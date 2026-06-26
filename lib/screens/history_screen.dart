@@ -5,7 +5,7 @@ import '../models/order_item.dart';
 import '../objectbox.dart';
 import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
-import '../models/order.dart';
+import '../models/order.dart' as order_model;
 import '../models/printer_config.dart';
 import '../models/order_counter.dart';
 import '../widgets/dialog.dart' as custom_dialog;
@@ -20,14 +20,16 @@ import '../models/app_user.dart';
 
 class HistoryScreen extends StatefulWidget {
   final ObjectBox objectbox;
-  const HistoryScreen({super.key, required this.objectbox});
+  final AppUser? currentUser;
+
+  const HistoryScreen({super.key, required this.objectbox, this.currentUser});
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  late final Box<Ruci> _orderBox;
+  late final Box<order_model.Order> _orderBox;
   late final Box<PrinterConfig> _printerConfigBox;
   late final Box<OrderCounter> _orderCounterBox;
   late final Box<StoreConfig> _storeConfigBox;
@@ -38,7 +40,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _orderBox = widget.objectbox.store.box<Ruci>();
+    _orderBox = widget.objectbox.store.box<order_model.Order>();
     _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
     _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
     _storeConfigBox = widget.objectbox.store.box<StoreConfig>();
@@ -52,7 +54,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
         BusinessDayHelper.getBusinessDayDate(DateTime.now(), _config);
   }
 
-  Future<void> _deleteOrder(Ruci order) async {
+  Future<void> _deleteOrder(order_model.Order order) async {
+    // Check if the order belongs to someone else
+    final orderUserId = order.user.target?.id;
+    final currentUserId = widget.currentUser?.id;
+    final isOwnOrder = orderUserId == null || currentUserId == orderUserId;
+
+    // If deleting someone else's order, require admin PIN
+    if (!isOwnOrder) {
+      final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+      if (!isAdmin) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Seul un administrateur peut supprimer les commandes des autres')),
+          );
+        }
+        return;
+      }
+    }
+
     order.isDeleted = true;
     _orderBox.put(order);
   }
@@ -68,21 +90,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Stream<List<GameSession>> _getGameSessionsStream() {
-    final range = BusinessDayHelper.getBusinessDayRange(_selectedBusinessDay, _config);
+    final range =
+        BusinessDayHelper.getBusinessDayRange(_selectedBusinessDay, _config);
     return widget.objectbox.gameSessionBox
         .query(GameSession_.startTime.between(
-            range.$1.millisecondsSinceEpoch,
-            range.$2.millisecondsSinceEpoch))
+            range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
         .watch(triggerImmediately: true)
         .map((q) => q.find());
   }
 
-  Stream<List<Ruci>> _getOrdersStream() {
-    final range = BusinessDayHelper.getBusinessDayRange(_selectedBusinessDay, _config);
+  Stream<List<order_model.Order>> _getOrdersStream() {
+    final range =
+        BusinessDayHelper.getBusinessDayRange(_selectedBusinessDay, _config);
     return _orderBox
-        .query(Ruci_.date.between(
-            range.$1.millisecondsSinceEpoch,
-            range.$2.millisecondsSinceEpoch))
+        .query(Order_.date.between(
+            range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
         .watch(triggerImmediately: true)
         .map((q) => q.find());
   }
@@ -108,13 +130,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
             onPressed: () async {
               if (!_showDeletedOrders) {
                 // Toggling ON: require admin
-                final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+                final isAdmin =
+                    await AdminPinDialog.verify(context, widget.objectbox);
                 if (isAdmin) {
                   setState(() => _showDeletedOrders = true);
                 } else {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Accès refusé : Admin requis')),
+                      const SnackBar(
+                          content: Text('Accès refusé : Admin requis')),
                     );
                   }
                 }
@@ -146,7 +170,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildUnifiedFeed() {
-    return StreamBuilder<List<Ruci>>(
+    return StreamBuilder<List<order_model.Order>>(
       stream: _getOrdersStream(),
       builder: (context, orderSnapshot) {
         return StreamBuilder<List<GameSession>>(
@@ -161,37 +185,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             // Combine and sort
             final List<dynamic> combined = [];
-            
+
             // Filter and add orders
             final filteredOrders = _showDeletedOrders
                 ? orders
                 : orders.where((o) => !o.isDeleted).toList();
             combined.addAll(filteredOrders);
-            
+
             // Add sessions that aren't linked to an order yet
-            final unlinkedSessions = sessions.where((s) => s.relatedOrderId == null || s.relatedOrderId == 0).toList();
+            final unlinkedSessions = sessions
+                .where((s) => s.relatedOrderId == null || s.relatedOrderId == 0)
+                .toList();
             combined.addAll(unlinkedSessions);
 
             // Sort by time descending
             combined.sort((a, b) {
-              final DateTime timeA = (a is Ruci) 
+              final DateTime timeA = (a is order_model.Order)
                   ? a.date
                   : (a as GameSession).startTime;
-              final DateTime timeB = (b is Ruci)
+              final DateTime timeB = (b is order_model.Order)
                   ? b.date
                   : (b as GameSession).startTime;
               return timeB.compareTo(timeA);
             });
 
             if (combined.isEmpty) {
-              return const Center(child: Text('Aucune activité pour cette journée'));
+              return const Center(
+                  child: Text('Aucune activité pour cette journée'));
             }
 
             return ListView.builder(
               itemCount: combined.length,
               itemBuilder: (context, index) {
                 final item = combined[index];
-                if (item is Ruci) {
+                if (item is order_model.Order) {
                   return _buildOrderCard(item);
                 } else {
                   return _buildPartyCard(item as GameSession);
@@ -203,7 +230,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       },
     );
   }
-
 
   Widget _buildPartyCard(GameSession session) {
     final user = session.attributedUserId != null
@@ -263,7 +289,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildOrderCard(Ruci order) {
+  Widget _buildOrderCard(order_model.Order order) {
     return Card(
       margin: const EdgeInsets.all(8.0),
       color: order.isDeleted
@@ -383,17 +409,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  void _editOrder(Ruci order) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => custom_order_screen.OrderScreen(
-            objectbox: widget.objectbox, orderToEdit: order),
-      ),
-    ).then((_) => setState(() {}));
+  void _editOrder(order_model.Order order) async {
+    // Check if the order belongs to someone else
+    final orderUserId = order.user.target?.id;
+    final currentUserId = widget.currentUser?.id;
+    final isOwnOrder = orderUserId == null || currentUserId == orderUserId;
+
+    // If editing someone else's order, require admin PIN
+    if (!isOwnOrder) {
+      final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+      if (!isAdmin) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Seul un administrateur peut modifier les commandes des autres')),
+          );
+        }
+        return;
+      }
+    }
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => custom_order_screen.OrderScreen(
+              objectbox: widget.objectbox, orderToEdit: order),
+        ),
+      ).then((_) => setState(() {}));
+    }
   }
 
-  void _printOrder(Ruci order) {
+  void _printOrder(order_model.Order order) {
     final receiptData = ReceiptData.convertRuciToReceiptData(order);
     PrinterHelper.printReceipt(receiptData, widget.objectbox);
   }

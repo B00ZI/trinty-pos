@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:validators/validators.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +32,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Paramètres'),
+      ),
       body: Row(
         children: [
           // Sidebar Icons
@@ -343,9 +351,11 @@ class _UserManagementSectionState extends State<UserManagementSection> {
     );
 
     if (result == true) {
+      final (hash, salt) = AppUser.hashPin(pinController.text);
       _userBox.put(AppUser(
         name: nameController.text.trim(),
-        pin: AppUser.hashPin(pinController.text),
+        pin: hash,
+        pinSalt: salt,
         isAdmin: false,
       ));
       _loadUsers();
@@ -434,7 +444,9 @@ class _UserManagementSectionState extends State<UserManagementSection> {
     );
 
     if (result == true) {
-      user.pin = AppUser.hashPin(pinController.text);
+      final (hash, salt) = AppUser.hashPin(pinController.text);
+      user.pin = hash;
+      user.pinSalt = salt;
       _userBox.put(user);
       _loadUsers();
       if (mounted) {

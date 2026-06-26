@@ -1,7 +1,7 @@
 import 'package:objectbox/objectbox.dart';
 
-@Entity()
-class Catigory {
+@Entity(uid: 2621355858066362497)
+class Category {
   @Id()
   int id;
   String name;
@@ -9,7 +9,7 @@ class Catigory {
 
   int displayOrder = 0;
 
-  Catigory({
+  Category({
     this.id = 0,
     required this.name,
     this.imageUrl,
@@ -24,8 +24,8 @@ class Catigory {
     };
   }
 
-  factory Catigory.fromJson(Map<String, dynamic> json) {
-    return Catigory(
+  factory Category.fromJson(Map<String, dynamic> json) {
+    return Category(
       name: json['name'] as String? ?? '',
       imageUrl: json['imageUrl'] as String?,
       displayOrder: json['displayOrder'] as int? ?? 0,

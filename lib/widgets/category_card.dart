@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
-class CatigoryCard extends StatelessWidget {
+class CategoryCard extends StatelessWidget {
   final String title;
   final String imageUrl;
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
-  const CatigoryCard({
+  const CategoryCard({
     super.key,
     required this.title,
     required this.imageUrl,
@@ -34,7 +34,8 @@ class CatigoryCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
                     child: imageUrl.isNotEmpty
                         ? Image.file(
                             File(imageUrl),
@@ -42,7 +43,8 @@ class CatigoryCard extends StatelessWidget {
                           )
                         : Container(
                             color: Colors.grey[200],
-                            child: const Icon(Icons.category, size: 50, color: Colors.grey),
+                            child: const Icon(Icons.category,
+                                size: 50, color: Colors.grey),
                           ),
                   ),
                   if (onEdit != null || onDelete != null)
@@ -59,7 +61,8 @@ class CatigoryCard extends StatelessWidget {
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
+                                icon: const Icon(Icons.edit,
+                                    size: 18, color: Colors.blue),
                                 onPressed: onEdit,
                                 constraints: const BoxConstraints(),
                                 padding: const EdgeInsets.all(6),
@@ -72,7 +75,8 @@ class CatigoryCard extends StatelessWidget {
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                icon: const Icon(Icons.delete,
+                                    size: 18, color: Colors.red),
                                 onPressed: onDelete,
                                 constraints: const BoxConstraints(),
                                 padding: const EdgeInsets.all(6),

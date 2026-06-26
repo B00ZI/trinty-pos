@@ -16,7 +16,8 @@ class UserSelectionDialog extends StatefulWidget {
   State<UserSelectionDialog> createState() => _UserSelectionDialogState();
 }
 
-class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTickerProviderStateMixin {
+class _UserSelectionDialogState extends State<UserSelectionDialog>
+    with SingleTickerProviderStateMixin {
   AppUser? _selectedUser;
   String _enteredPin = "";
   bool _isError = false;
@@ -30,7 +31,9 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _shakeAnimation = Tween<double>(begin: 0, end: 10).chain(CurveTween(curve: Curves.elasticIn)).animate(_shakeController)
+    _shakeAnimation = Tween<double>(begin: 0, end: 10)
+        .chain(CurveTween(curve: Curves.elasticIn))
+        .animate(_shakeController)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           _shakeController.reverse();
@@ -67,6 +70,13 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
 
   void _verifyPin() {
     if (_selectedUser != null && _selectedUser!.verifyPin(_enteredPin)) {
+      // Transparently upgrade legacy (unsalted) PINs to salted hashes
+      if (_selectedUser!.needsPinUpgrade) {
+        final (hash, salt) = AppUser.hashPin(_enteredPin);
+        _selectedUser!.pin = hash;
+        _selectedUser!.pinSalt = salt;
+        widget.objectbox.userBox.put(_selectedUser!);
+      }
       Navigator.pop(context, _selectedUser);
     } else {
       _shakeController.forward();
@@ -96,7 +106,9 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
         child: Container(
           width: dialogWidth,
           padding: EdgeInsets.all(padding),
-          child: _selectedUser == null ? _buildUserSelection(isShort) : _buildPinEntry(isShort, isNarrow),
+          child: _selectedUser == null
+              ? _buildUserSelection(isShort)
+              : _buildPinEntry(isShort, isNarrow),
         ),
       ),
     );
@@ -109,8 +121,11 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
       children: [
         Text(
           'Sélectionner un utilisateur',
-          style: isShort 
-              ? Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)
+          style: isShort
+              ? Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)
               : Theme.of(context).textTheme.headlineSmall,
         ),
         SizedBox(height: isShort ? 12 : 24),
@@ -165,7 +180,9 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
               icon: const Icon(Icons.arrow_back),
               iconSize: isShort ? 20 : 24,
               padding: EdgeInsets.zero,
-              constraints: isShort ? const BoxConstraints(minWidth: 32, minHeight: 32) : null,
+              constraints: isShort
+                  ? const BoxConstraints(minWidth: 32, minHeight: 32)
+                  : null,
               onPressed: () => setState(() {
                 _selectedUser = null;
                 _enteredPin = "";
@@ -175,8 +192,11 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
             Expanded(
               child: Text(
                 'Bonjour, ${_selectedUser!.name}',
-                style: isShort 
-                    ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+                style: isShort
+                    ? Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)
                     : Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
@@ -209,7 +229,9 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isFilled
-                          ? (_isError ? Colors.red : Theme.of(context).colorScheme.primary)
+                          ? (_isError
+                              ? Colors.red
+                              : Theme.of(context).colorScheme.primary)
                           : Colors.grey.shade300,
                       border: _isError && isFilled
                           ? Border.all(color: Colors.red.shade900, width: 2)
@@ -230,27 +252,36 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
   Widget _buildNumericKeypad(double keySize, double keySpacing) {
     return Column(
       children: [
-        for (var row in [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']])
+        for (var row in [
+          ['1', '2', '3'],
+          ['4', '5', '6'],
+          ['7', '8', '9']
+        ])
           Padding(
             padding: EdgeInsets.only(bottom: keySpacing),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: row.map((digit) => _buildKeypadButton(digit, keySize)).toList(),
+              children: row
+                  .map((digit) => _buildKeypadButton(digit, keySize))
+                  .toList(),
             ),
           ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildKeypadButton('⌫', keySize, isAction: true, onTap: _onBackspace),
+            _buildKeypadButton('⌫', keySize,
+                isAction: true, onTap: _onBackspace),
             _buildKeypadButton('0', keySize),
-            _buildKeypadButton('✓', keySize, isAction: true, onTap: _verifyPin, color: Colors.green),
+            _buildKeypadButton('✓', keySize,
+                isAction: true, onTap: _verifyPin, color: Colors.green),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildKeypadButton(String label, double keySize, {bool isAction = false, VoidCallback? onTap, Color? color}) {
+  Widget _buildKeypadButton(String label, double keySize,
+      {bool isAction = false, VoidCallback? onTap, Color? color}) {
     return InkWell(
       onTap: onTap ?? () => _onDigitTap(label),
       borderRadius: BorderRadius.circular(keySize / 2),
@@ -259,8 +290,10 @@ class _UserSelectionDialogState extends State<UserSelectionDialog> with SingleTi
         height: keySize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color?.withValues(alpha: 0.1) ?? (isAction ? Colors.grey.shade100 : null),
-          border: Border.all(color: color?.withValues(alpha: 0.5) ?? Colors.grey.shade300),
+          color: color?.withValues(alpha: 0.1) ??
+              (isAction ? Colors.grey.shade100 : null),
+          border: Border.all(
+              color: color?.withValues(alpha: 0.5) ?? Colors.grey.shade300),
         ),
         child: Center(
           child: Text(

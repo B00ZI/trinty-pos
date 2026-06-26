@@ -1,8 +1,8 @@
-// models/expence.dart
+// models/expense.dart
 import 'package:objectbox/objectbox.dart';
 
-@Entity() // ← THIS IS CRITICAL
-class expence {
+@Entity(uid: 398202118687831166)
+class Expense {
   @Id()
   int id;
 
@@ -10,7 +10,7 @@ class expence {
   double amount;
   DateTime date;
 
-  expence({
+  Expense({
     this.id = 0,
     required this.title,
     required this.amount,

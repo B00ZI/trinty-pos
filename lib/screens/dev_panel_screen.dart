@@ -4,12 +4,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import '../objectbox.dart';
 import '../objectbox.g.dart';
-import '../models/order.dart';
+import '../models/order.dart' as order_model;
 import '../models/order_item.dart';
 import '../models/game_session.dart';
 import '../models/app_user.dart';
 import '../models/product.dart';
-import '../models/expence.dart';
+import '../models/expense.dart';
 import '../models/daily_funds.dart';
 import '../models/store_config.dart';
 import 'package:objectbox/objectbox.dart';
@@ -67,7 +67,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
 
   Future<void> _loadData() async {
     final store = widget.objectbox.store;
-    final ruciBox = store.box<Ruci>();
+    final ruciBox = store.box<order_model.Order>();
     final orderItemBox = store.box<OrderItem>();
     final gameSessionBox = store.box<GameSession>();
     final userBox = store.box<AppUser>();
@@ -77,9 +77,10 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     _totalProducts = productBox.count();
 
     // Query active orders (not deleted)
-    QueryBuilder<Ruci> orderQb = ruciBox.query(Ruci_.isDeleted.equals(false));
+    QueryBuilder<order_model.Order> orderQb =
+        ruciBox.query(Order_.isDeleted.equals(false));
     if (_startDate != null && _endDate != null) {
-      orderQb = ruciBox.query(Ruci_.isDeleted.equals(false).and(Ruci_.date
+      orderQb = ruciBox.query(Order_.isDeleted.equals(false).and(Order_.date
           .between(_startDate!.millisecondsSinceEpoch,
               _endDate!.millisecondsSinceEpoch)));
     }
@@ -186,9 +187,9 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
     }).toList();
 
     // Missing Orders Check
-    QueryBuilder<Ruci> allOrdersQb = ruciBox.query();
+    QueryBuilder<order_model.Order> allOrdersQb = ruciBox.query();
     if (_startDate != null && _endDate != null) {
-      allOrdersQb = ruciBox.query(Ruci_.date.between(
+      allOrdersQb = ruciBox.query(Order_.date.between(
           _startDate!.millisecondsSinceEpoch,
           _endDate!.millisecondsSinceEpoch));
     }
@@ -303,9 +304,9 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
       sb.writeln();
 
       // Export Orders and OrderItems
-      final ruciBox = store.box<Ruci>();
+      final ruciBox = store.box<order_model.Order>();
       final orders = ruciBox.getAll();
-      sb.writeln('-- Orders (Ruci)');
+      sb.writeln('-- Orders');
       for (final o in orders) {
         final userId =
             o.user.targetId == 0 ? 'NULL' : o.user.targetId.toString();
@@ -338,7 +339,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
       sb.writeln();
 
       // Export Expenses
-      final expBox = store.box<expence>();
+      final expBox = store.box<Expense>();
       final exps = expBox.getAll();
       sb.writeln('-- Expenses');
       for (final ex in exps) {

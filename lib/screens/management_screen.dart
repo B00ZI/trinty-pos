@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:Easify/models/product.dart';
-import 'package:Easify/models/catigory.dart';
+import 'package:Easify/models/category.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/widgets/product_item.dart';
-import 'package:Easify/widgets/catigory_card.dart';
+import 'package:Easify/widgets/category_card.dart';
 import 'package:objectbox/objectbox.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -36,7 +36,8 @@ class _ManagementScreenState extends State<ManagementScreen> {
     try {
       final jsonString = _backupService.exportData();
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/easify_backup_${DateTime.now().millisecondsSinceEpoch}.json');
+      final file = File(
+          '${tempDir.path}/easify_backup_${DateTime.now().millisecondsSinceEpoch}.json');
       await file.writeAsString(jsonString);
 
       // Offer to share/save the file
@@ -46,7 +47,8 @@ class _ManagementScreenState extends State<ManagementScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur export: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur export: $e')));
       }
     }
   }
@@ -62,11 +64,12 @@ class _ManagementScreenState extends State<ManagementScreen> {
         final file = File(result.files.single.path!);
         final jsonString = await file.readAsString();
         final importResult = _backupService.importData(jsonString);
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Import réussi: ${importResult['products']} produits, ${importResult['categories']} catégories'),
+              content: Text(
+                  'Import réussi: ${importResult['products']} produits, ${importResult['categories']} catégories'),
               backgroundColor: Colors.green,
             ),
           );
@@ -74,7 +77,8 @@ class _ManagementScreenState extends State<ManagementScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur import: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Erreur import: $e'), backgroundColor: Colors.red));
       }
     }
   }
@@ -83,7 +87,8 @@ class _ManagementScreenState extends State<ManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 0, // We use a custom header or rely on MainScreen's app bar
+        toolbarHeight:
+            0, // We use a custom header or rely on MainScreen's app bar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Stack(
@@ -105,12 +110,14 @@ class _ManagementScreenState extends State<ManagementScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.file_upload_outlined, color: Colors.blue),
+                      icon: const Icon(Icons.file_upload_outlined,
+                          color: Colors.blue),
                       tooltip: 'Exporter',
                       onPressed: _exportData,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.file_download_outlined, color: Colors.green),
+                      icon: const Icon(Icons.file_download_outlined,
+                          color: Colors.green),
                       tooltip: 'Importer',
                       onPressed: _importData,
                     ),
@@ -138,14 +145,24 @@ class _ManagementScreenState extends State<ManagementScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey),
-          Text(label, style: TextStyle(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
-          )),
+          Icon(icon,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey),
+          Text(label,
+              style: TextStyle(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 12,
+              )),
           if (isSelected)
-            Container(height: 2, width: 20, margin: const EdgeInsets.only(top: 4), color: Theme.of(context).colorScheme.primary),
+            Container(
+                height: 2,
+                width: 20,
+                margin: const EdgeInsets.only(top: 4),
+                color: Theme.of(context).colorScheme.primary),
         ],
       ),
     );
@@ -200,22 +217,39 @@ class _ProductsListSectionState extends State<ProductsListSection> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nom'), validator: (v) => v == null || v.isEmpty ? 'Nom requis' : null),
+                  TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Nom'),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Nom requis' : null),
                   const SizedBox(height: 16),
-                  TextFormField(controller: _priceController, decoration: const InputDecoration(labelText: 'Prix'), keyboardType: TextInputType.number, validator: (v) => v == null || double.tryParse(v) == null ? 'Prix valide requis' : null),
+                  TextFormField(
+                      controller: _priceController,
+                      decoration: const InputDecoration(labelText: 'Prix'),
+                      keyboardType: TextInputType.number,
+                      validator: (v) => v == null || double.tryParse(v) == null
+                          ? 'Prix valide requis'
+                          : null),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _categoryController.text.isNotEmpty ? _categoryController.text : null,
+                    value: _categoryController.text.isNotEmpty
+                        ? _categoryController.text
+                        : null,
                     decoration: const InputDecoration(labelText: 'Catégorie'),
                     items: [
-                      const DropdownMenuItem(value: 'Extra', child: Text('Supplément')),
+                      const DropdownMenuItem(
+                          value: 'Extra', child: Text('Supplément')),
                       ...(() {
-                        final cats = widget.objectbox.store.box<Catigory>().getAll();
-                        cats.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-                        return cats.map((cat) => DropdownMenuItem(value: cat.name, child: Text(cat.name)));
+                        final cats =
+                            widget.objectbox.store.box<Category>().getAll();
+                        cats.sort(
+                            (a, b) => a.displayOrder.compareTo(b.displayOrder));
+                        return cats.map((cat) => DropdownMenuItem(
+                            value: cat.name, child: Text(cat.name)));
                       })(),
                     ],
-                    onChanged: (v) => setDialogState(() => _categoryController.text = v ?? ''),
+                    onChanged: (v) => setDialogState(
+                        () => _categoryController.text = v ?? ''),
                   ),
                   const SizedBox(height: 16),
                   _buildImagePicker(setDialogState),
@@ -224,18 +258,24 @@ class _ProductsListSectionState extends State<ProductsListSection> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-            ElevatedButton(onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                final p = product ?? Product(name: '', price: 0);
-                p.name = _nameController.text;
-                p.price = double.parse(_priceController.text);
-                p.category = _categoryController.text.isNotEmpty ? _categoryController.text : null;
-                p.imageUrl = _selectedImagePath;
-                _productBox.put(p);
-                Navigator.pop(ctx);
-              }
-            }, child: Text(product == null ? 'Ajouter' : 'Mettre à jour')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Annuler')),
+            ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    final p = product ?? Product(name: '', price: 0);
+                    p.name = _nameController.text;
+                    p.price = double.parse(_priceController.text);
+                    p.category = _categoryController.text.isNotEmpty
+                        ? _categoryController.text
+                        : null;
+                    p.imageUrl = _selectedImagePath;
+                    _productBox.put(p);
+                    Navigator.pop(ctx);
+                  }
+                },
+                child: Text(product == null ? 'Ajouter' : 'Mettre à jour')),
           ],
         ),
       ),
@@ -245,18 +285,25 @@ class _ProductsListSectionState extends State<ProductsListSection> {
   Widget _buildImagePicker(StateSetter setDialogState) {
     return GestureDetector(
       onTap: () async {
-        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+        final XFile? image =
+            await _picker.pickImage(source: ImageSource.gallery);
         if (image != null) {
           final appDir = await getApplicationDocumentsDirectory();
           final fileName = path.basename(image.path);
-          final localFile = await File(image.path).copy('${appDir.path}/$fileName');
+          final localFile =
+              await File(image.path).copy('${appDir.path}/$fileName');
           setDialogState(() => _selectedImagePath = localFile.path);
         }
       },
       child: Container(
-        height: 100, width: double.infinity,
-        decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
-        child: _selectedImagePath != null ? Image.file(File(_selectedImagePath!), fit: BoxFit.cover) : const Icon(Icons.add_a_photo),
+        height: 100,
+        width: double.infinity,
+        decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(8)),
+        child: _selectedImagePath != null
+            ? Image.file(File(_selectedImagePath!), fit: BoxFit.cover)
+            : const Icon(Icons.add_a_photo),
       ),
     );
   }
@@ -295,10 +342,16 @@ class _ProductsListSectionState extends State<ProductsListSection> {
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Supprimer Produit'),
-                        content: Text('Voulez-vous vraiment supprimer ${_selectedProduct!.name} ?'),
+                        content: Text(
+                            'Voulez-vous vraiment supprimer ${_selectedProduct!.name} ?'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer', style: TextStyle(color: Colors.red))),
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Annuler')),
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Supprimer',
+                                  style: TextStyle(color: Colors.red))),
                         ],
                       ),
                     );
@@ -316,7 +369,8 @@ class _ProductsListSectionState extends State<ProductsListSection> {
             .watch(triggerImmediately: true)
             .map((q) => q.find()),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final products = snapshot.data!;
           return ListView.builder(
             padding: const EdgeInsets.only(bottom: 80),
@@ -360,7 +414,7 @@ class CategoriesListSection extends StatefulWidget {
 }
 
 class _CategoriesListSectionState extends State<CategoriesListSection> {
-  late final Box<Catigory> _catigoryBox;
+  late final Box<Category> _categoryBox;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   String? _selectedImagePath;
@@ -368,37 +422,48 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
   @override
   void initState() {
     super.initState();
-    _catigoryBox = widget.objectbox.store.box<Catigory>();
+    _categoryBox = widget.objectbox.store.box<Category>();
   }
 
-  void _showCategoryDialog([Catigory? cat]) {
+  void _showCategoryDialog([Category? cat]) {
     _nameController.text = cat?.name ?? '';
     _selectedImagePath = cat?.imageUrl;
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(cat == null ? 'Nouvelle Catégorie' : 'Modifier Catégorie'),
+          title:
+              Text(cat == null ? 'Nouvelle Catégorie' : 'Modifier Catégorie'),
           content: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nom'), validator: (v) => v == null || v.isEmpty ? 'Requis' : null),
+                TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'Nom'),
+                    validator: (v) => v == null || v.isEmpty ? 'Requis' : null),
                 const SizedBox(height: 16),
                 _buildImagePicker(setDialogState),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-            ElevatedButton(onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                final newCat = Catigory(id: cat?.id ?? 0, name: _nameController.text, imageUrl: _selectedImagePath);
-                _catigoryBox.put(newCat);
-                Navigator.pop(ctx);
-              }
-            }, child: const Text('Enregistrer')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Annuler')),
+            ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    final newCat = Category(
+                        id: cat?.id ?? 0,
+                        name: _nameController.text,
+                        imageUrl: _selectedImagePath);
+                    _categoryBox.put(newCat);
+                    Navigator.pop(ctx);
+                  }
+                },
+                child: const Text('Enregistrer')),
           ],
         ),
       ),
@@ -408,18 +473,25 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
   Widget _buildImagePicker(StateSetter setDialogState) {
     return GestureDetector(
       onTap: () async {
-        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+        final XFile? image =
+            await _picker.pickImage(source: ImageSource.gallery);
         if (image != null) {
           final appDir = await getApplicationDocumentsDirectory();
           final fileName = path.basename(image.path);
-          final localFile = await File(image.path).copy('${appDir.path}/$fileName');
+          final localFile =
+              await File(image.path).copy('${appDir.path}/$fileName');
           setDialogState(() => _selectedImagePath = localFile.path);
         }
       },
       child: Container(
-        height: 100, width: double.infinity,
-        decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
-        child: _selectedImagePath != null ? Image.file(File(_selectedImagePath!), fit: BoxFit.cover) : const Icon(Icons.add_a_photo),
+        height: 100,
+        width: double.infinity,
+        decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(8)),
+        child: _selectedImagePath != null
+            ? Image.file(File(_selectedImagePath!), fit: BoxFit.cover)
+            : const Icon(Icons.add_a_photo),
       ),
     );
   }
@@ -427,18 +499,23 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: StreamBuilder<List<Catigory>>(
-        stream: _catigoryBox
+      body: StreamBuilder<List<Category>>(
+        stream: _categoryBox
             .query()
             .watch(triggerImmediately: true)
             .map((q) => q.find()),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final categories = snapshot.data!;
           categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
           return ReorderableGridView.builder(
             padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6, childAspectRatio: 0.7, crossAxisSpacing: 8, mainAxisSpacing: 8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 6,
+                childAspectRatio: 0.7,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8),
             itemCount: categories.length,
             onReorder: (oldIndex, newIndex) {
               setState(() {
@@ -447,18 +524,18 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
                 for (int i = 0; i < categories.length; i++) {
                   categories[i].displayOrder = i;
                 }
-                _catigoryBox.putMany(categories);
+                _categoryBox.putMany(categories);
               });
             },
             itemBuilder: (ctx, i) {
               final c = categories[i];
-              return CatigoryCard(
+              return CategoryCard(
                 key: ValueKey(c.id),
                 title: c.name,
                 imageUrl: c.imageUrl ?? '',
                 onTap: () {},
                 onEdit: () => _showCategoryDialog(c),
-                onDelete: () => _catigoryBox.remove(c.id),
+                onDelete: () => _categoryBox.remove(c.id),
               );
             },
           );

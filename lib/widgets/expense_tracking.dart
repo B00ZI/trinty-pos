@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/expence.dart';
+import '../models/expense.dart';
 import '../objectbox.g.dart';
 
 class ListItem {
@@ -18,17 +18,17 @@ class ListItem {
 }
 
 class AddableListWidget extends StatefulWidget {
-  final Box<expence> expenceBox;
+  final Box<Expense> expenseBox;
   final String buttonText;
   final String dialogTitle;
   final String emptyListMessage;
   final Color? buttonColor;
   final TextStyle? buttonTextStyle;
-  final ValueChanged<List<expence>>? onListChanged;
+  final ValueChanged<List<Expense>>? onListChanged;
 
   const AddableListWidget({
     super.key,
-    required this.expenceBox,
+    required this.expenseBox,
     this.buttonText = 'Add expense',
     this.dialogTitle = 'Add New expense',
     this.emptyListMessage = 'No expenses added yet',
@@ -42,8 +42,8 @@ class AddableListWidget extends StatefulWidget {
 }
 
 class _AddableListWidgetState extends State<AddableListWidget> {
-  final List<expence> _todayExpenses =
-      []; // Store expence objects from database
+  final List<Expense> _todayExpenses =
+      []; // Store Expense objects from database
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
 
@@ -60,8 +60,8 @@ class _AddableListWidgetState extends State<AddableListWidget> {
     final DateTime todayEnd = todayStart.add(const Duration(days: 1));
 
     // Query expenses for today
-    final query = widget.expenceBox
-        .query(expence_.date.between(
+    final query = widget.expenseBox
+        .query(Expense_.date.between(
           todayStart.millisecondsSinceEpoch,
           todayEnd.millisecondsSinceEpoch,
         ))
@@ -143,13 +143,13 @@ class _AddableListWidgetState extends State<AddableListWidget> {
     }
 
     // Create and save new expense
-    final newexpence = expence(
+    final newExpense = Expense(
       title: title,
       amount: amount,
       date: DateTime.now(),
     );
 
-    widget.expenceBox.put(newexpence);
+    widget.expenseBox.put(newExpense);
 
     // Reload today's expenses
     _loadTodayExpenses();
@@ -161,7 +161,7 @@ class _AddableListWidgetState extends State<AddableListWidget> {
 
   void _removeItem(int index) {
     final expenseToRemove = _todayExpenses[index];
-    widget.expenceBox.remove(expenseToRemove.id); // Remove from database
+    widget.expenseBox.remove(expenseToRemove.id); // Remove from database
     _loadTodayExpenses(); // Reload the list
   }
 
@@ -204,7 +204,10 @@ class _AddableListWidgetState extends State<AddableListWidget> {
                   child: Text(
                     widget.emptyListMessage,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.5),
                       fontSize: 16,
                     ),
                   ),
@@ -263,7 +266,8 @@ class _ListItemCard extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+              icon: Icon(Icons.delete,
+                  color: Theme.of(context).colorScheme.error),
               onPressed: onDelete,
             ),
           ],

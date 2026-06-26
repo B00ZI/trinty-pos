@@ -2,8 +2,8 @@ import 'package:objectbox/objectbox.dart';
 import 'order_item.dart';
 import 'app_user.dart';
 
-@Entity()
-class Ruci {
+@Entity(uid: 459141988423342695)
+class Order {
   int id = 0;
 
   int orderNumber;
@@ -13,13 +13,13 @@ class Ruci {
   bool isDeleted = false;
 
   bool isEdited = false;
-  
+
   int? relatedGameSessionId;
 
   final items = ToMany<OrderItem>();
   final user = ToOne<AppUser>();
 
-  Ruci({
+  Order({
     required this.orderNumber,
     required this.date,
     this.id = 0,

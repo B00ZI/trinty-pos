@@ -12,7 +12,7 @@ class AdminPinDialog extends StatefulWidget {
   static Future<bool> verify(BuildContext context, ObjectBox objectbox) async {
     final userBox = objectbox.userBox;
     final adminUsers = userBox.getAll().where((u) => u.isAdmin).toList();
-    
+
     if (adminUsers.isEmpty) {
       // If no admin exists, we can't verify (should not happen with seeding)
       return false;
@@ -25,14 +25,27 @@ class AdminPinDialog extends StatefulWidget {
 
     if (enteredPin == null) return false;
 
-    return adminUsers.any((admin) => admin.verifyPin(enteredPin));
+    for (final admin in adminUsers) {
+      if (admin.verifyPin(enteredPin)) {
+        // Transparently upgrade legacy (unsalted) PINs to salted hashes
+        if (admin.needsPinUpgrade) {
+          final (hash, salt) = AppUser.hashPin(enteredPin);
+          admin.pin = hash;
+          admin.pinSalt = salt;
+          objectbox.userBox.put(admin);
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
   State<AdminPinDialog> createState() => _AdminPinDialogState();
 }
 
-class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProviderStateMixin {
+class _AdminPinDialogState extends State<AdminPinDialog>
+    with SingleTickerProviderStateMixin {
   String _enteredPin = '';
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
@@ -87,14 +100,14 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
 
     final bool isShort = screenHeight < 600;
     final bool isNarrow = screenWidth < 360;
-    
+
     final double padding = isShort ? 12.0 : 24.0;
     final double keySize = isShort ? 44.0 : 64.0;
     final double keySpacing = isShort ? 6.0 : 12.0;
     final double headerIconSize = isShort ? 30.0 : 40.0;
     final double titleFontSize = isShort ? 16.0 : 20.0;
     final double subTitleFontSize = isShort ? 11.0 : 13.0;
-    
+
     final double dialogWidth = isNarrow ? (screenWidth * 0.85) : 320.0;
 
     return Dialog(
@@ -120,7 +133,10 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
             Container(
               padding: EdgeInsets.all(isShort ? 10 : 16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -166,7 +182,10 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
                           boxShadow: isFilled
                               ? [
                                   BoxShadow(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.4),
                                     blurRadius: 8,
                                     spreadRadius: 1,
                                   )
@@ -186,9 +205,12 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
               onPressed: () => Navigator.pop(context, null),
               style: TextButton.styleFrom(
                 foregroundColor: Colors.grey.shade600,
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: isShort ? 8 : 12),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 32, vertical: isShort ? 8 : 12),
               ),
-              child: const Text('ANNULER', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+              child: const Text('ANNULER',
+                  style:
+                      TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
             ),
           ],
         ),
@@ -199,7 +221,11 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
   Widget _buildKeypad(double keySize, double keySpacing) {
     return Column(
       children: [
-        for (var row in [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']])
+        for (var row in [
+          ['1', '2', '3'],
+          ['4', '5', '6'],
+          ['7', '8', '9']
+        ])
           Padding(
             padding: EdgeInsets.only(bottom: keySpacing),
             child: Row(
@@ -219,7 +245,8 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
     );
   }
 
-  Widget _buildKey(String label, double keySize, {bool isIcon = false, VoidCallback? onTap}) {
+  Widget _buildKey(String label, double keySize,
+      {bool isIcon = false, VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap ?? () => _onDigitTap(label),
       borderRadius: BorderRadius.circular(keySize / 2),
@@ -232,7 +259,8 @@ class _AdminPinDialogState extends State<AdminPinDialog> with SingleTickerProvid
         ),
         child: Center(
           child: isIcon
-              ? Icon(Icons.backspace_outlined, size: keySize * 0.35, color: Colors.grey.shade800)
+              ? Icon(Icons.backspace_outlined,
+                  size: keySize * 0.35, color: Colors.grey.shade800)
               : Text(
                   label,
                   style: TextStyle(

@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import '../models/printer_config.dart';
 import 'package:Easify/objectbox.dart';
-import '../models/order.dart' show Ruci;
+import '../models/order.dart' show Order;
 import '../models/game_session.dart';
 import 'image_generatore.dart';
 import 'package:intl/intl.dart';
@@ -66,7 +66,7 @@ class ReceiptData {
     );
   }
 
-  static ReceiptData convertRuciToReceiptData(Ruci order) {
+  static ReceiptData convertRuciToReceiptData(Order order) {
     return ReceiptData(
       id: order.id.toString(),
       dailyNumber: order.orderNumber.toString(),
@@ -372,9 +372,8 @@ class PrinterHelper {
     printer.hr();
   }
 
-  static void _printTotals(
-      NetworkPrinter printer, ReceiptData receipt, bool isTakeAway, StoreConfig? config) {
-
+  static void _printTotals(NetworkPrinter printer, ReceiptData receipt,
+      bool isTakeAway, StoreConfig? config) {
     final subtotal = receipt.items.fold(0.0, (sum, item) => sum + item.total);
     final total = double.tryParse(receipt.total) ?? subtotal;
 
@@ -409,7 +408,6 @@ class PrinterHelper {
         styles: const PosStyles(align: PosAlign.left, bold: true),
       );
     }
-
   }
 
   static void _printFooter(
@@ -560,17 +558,21 @@ class PrinterHelper {
           styles: const PosStyles(bold: true));
       printer.text('Partie #:    ${session.partyNumber}');
       printer.text('Palier:      ${session.tierLabel}');
-      printer.text('Tarif:       ${session.ratePerHour.toStringAsFixed(2)} DH/H');
+      printer
+          .text('Tarif:       ${session.ratePerHour.toStringAsFixed(2)} DH/H');
       printer.feed(1);
 
       printer.text('Debut:       ${_formatTime(session.startTime)}');
       final end = session.endTime ?? DateTime.now();
       final duration = end.difference(session.startTime);
       final minutes = duration.inMinutes;
-      
+
       printer.text('Fin:         ${_formatTime(end)}');
-      printer.text('Temps:       ${minutes} min', styles: const PosStyles(bold: true));
-      printer.text('Total:       ${session.currentCalculatedPrice.toStringAsFixed(2)} DH', styles: const PosStyles(bold: true));
+      printer.text('Temps:       ${minutes} min',
+          styles: const PosStyles(bold: true));
+      printer.text(
+          'Total:       ${session.currentCalculatedPrice.toStringAsFixed(2)} DH',
+          styles: const PosStyles(bold: true));
 
       printer.feed(1);
       printer.text('Merci de votre visite !',
@@ -583,7 +585,8 @@ class PrinterHelper {
     }
   }
 
-  static Future<void> printSessionStartTicket(GameSession session, ObjectBox objectbox) async {
+  static Future<void> printSessionStartTicket(
+      GameSession session, ObjectBox objectbox) async {
     final configBox = objectbox.store.box<PrinterConfig>();
     if (configBox.isEmpty()) return;
     final config = configBox.getAll().first;
@@ -608,15 +611,20 @@ class PrinterHelper {
       printer.text('Poste:       ${session.postLabel}',
           styles: const PosStyles(bold: true));
       printer.text('Partie #:    ${session.partyNumber}');
-      printer.text('Tarif:       ${session.ratePerHour.toStringAsFixed(2)} DH/H');
+      printer
+          .text('Tarif:       ${session.ratePerHour.toStringAsFixed(2)} DH/H');
       printer.feed(1);
 
       printer.text('Debut:       ${_formatTime(session.startTime)}');
-      
+
       if (session.isLimitedDuration) {
-        printer.text('Duree:       ${session.limitedDurationMinutes} min', styles: const PosStyles(bold: true));
-        printer.text('Fin prevue:  ${_formatTime(session.startTime.add(Duration(minutes: session.limitedDurationMinutes)))}');
-        printer.text('Total Paye:  ${session.currentCalculatedPrice.toStringAsFixed(2)} DH', styles: const PosStyles(bold: true));
+        printer.text('Duree:       ${session.limitedDurationMinutes} min',
+            styles: const PosStyles(bold: true));
+        printer.text(
+            'Fin prevue:  ${_formatTime(session.startTime.add(Duration(minutes: session.limitedDurationMinutes)))}');
+        printer.text(
+            'Total Paye:  ${session.currentCalculatedPrice.toStringAsFixed(2)} DH',
+            styles: const PosStyles(bold: true));
       }
 
       printer.feed(1);

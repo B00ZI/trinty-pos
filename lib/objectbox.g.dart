@@ -15,9 +15,9 @@ import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'models/app_user.dart';
-import 'models/catigory.dart';
+import 'models/category.dart';
 import 'models/daily_funds.dart';
-import 'models/expence.dart';
+import 'models/expense.dart';
 import 'models/game_post.dart';
 import 'models/game_session.dart';
 import 'models/order.dart';
@@ -186,7 +186,7 @@ final _entities = <obx_int.ModelEntity>[
   ),
   obx_int.ModelEntity(
     id: const obx_int.IdUid(5, 459141988423342695),
-    name: 'Ruci',
+    name: 'Order',
     lastPropertyId: const obx_int.IdUid(7, 7631738704814424813),
     flags: 0,
     properties: <obx_int.ModelProperty>[
@@ -268,7 +268,7 @@ final _entities = <obx_int.ModelEntity>[
   ),
   obx_int.ModelEntity(
     id: const obx_int.IdUid(7, 398202118687831166),
-    name: 'expence',
+    name: 'Expense',
     lastPropertyId: const obx_int.IdUid(4, 934848137971524454),
     flags: 0,
     properties: <obx_int.ModelProperty>[
@@ -384,7 +384,7 @@ final _entities = <obx_int.ModelEntity>[
   ),
   obx_int.ModelEntity(
     id: const obx_int.IdUid(9, 2621355858066362497),
-    name: 'Catigory',
+    name: 'Category',
     lastPropertyId: const obx_int.IdUid(4, 6107928378652126699),
     flags: 0,
     properties: <obx_int.ModelProperty>[
@@ -447,7 +447,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(11, 5447409109248621204),
     name: 'AppUser',
-    lastPropertyId: const obx_int.IdUid(5, 6077942907396794054),
+    lastPropertyId: const obx_int.IdUid(6, 3055737393101130009),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -478,6 +478,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(5, 6077942907396794054),
         name: 'isAdmin',
         type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 3055737393101130009),
+        name: 'pinSalt',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -529,7 +535,7 @@ final _entities = <obx_int.ModelEntity>[
         name: 'postId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(27, 4740814047389283495),
+        indexId: const obx_int.IdUid(31, 2896774869655939012),
         relationTarget: 'GamePost',
       ),
       obx_int.ModelProperty(
@@ -537,7 +543,7 @@ final _entities = <obx_int.ModelEntity>[
         name: 'tierId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(28, 5360175655222454778),
+        indexId: const obx_int.IdUid(32, 6705516254011556803),
         relationTarget: 'PartyTier',
       ),
       obx_int.ModelProperty(
@@ -701,7 +707,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
     lastEntityId: const obx_int.IdUid(15, 669046788345874073),
-    lastIndexId: const obx_int.IdUid(28, 5360175655222454778),
+    lastIndexId: const obx_int.IdUid(32, 6705516254011556803),
     lastRelationId: const obx_int.IdUid(3, 14140742415403822),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [8743093086059233857],
@@ -730,6 +736,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
       1462311232118323923,
       8046807335310555673,
       9193408218415038704,
+      4740814047389283495,
+      5360175655222454778,
+      5733868162120475654,
+      8937767329437406784,
     ],
     retiredPropertyUids: const [
       7625330162759834078,
@@ -971,18 +981,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
-    Ruci: obx_int.EntityDefinition<Ruci>(
+    Order: obx_int.EntityDefinition<Order>(
       model: _entities[3],
-      toOneRelations: (Ruci object) => [object.user],
+      toOneRelations: (Order object) => [object.user],
       toManyRelations:
-          (Ruci object) => {
-            obx_int.RelInfo<Ruci>.toMany(2, object.id): object.items,
+          (Order object) => {
+            obx_int.RelInfo<Order>.toMany(2, object.id): object.items,
           },
-      getId: (Ruci object) => object.id,
-      setId: (Ruci object, int id) {
+      getId: (Order object) => object.id,
+      setId: (Order object, int id) {
         object.id = id;
       },
-      objectToFB: (Ruci object, fb.Builder fbb) {
+      objectToFB: (Order object, fb.Builder fbb) {
         fbb.startTable(8);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.date.millisecondsSinceEpoch);
@@ -1026,7 +1036,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         );
         final relatedGameSessionIdParam = const fb.Int64Reader()
             .vTableGetNullable(buffer, rootOffset, 16);
-        final object = Ruci(
+        final object = Order(
           orderNumber: orderNumberParam,
           date: dateParam,
           id: idParam,
@@ -1041,10 +1051,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
           0,
         );
         object.user.attach(store);
-        obx_int.InternalToManyAccess.setRelInfo<Ruci>(
+        obx_int.InternalToManyAccess.setRelInfo<Order>(
           object.items,
           store,
-          obx_int.RelInfo<Ruci>.toMany(2, object.id),
+          obx_int.RelInfo<Order>.toMany(2, object.id),
         );
         return object;
       },
@@ -1084,15 +1094,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
-    expence: obx_int.EntityDefinition<expence>(
+    Expense: obx_int.EntityDefinition<Expense>(
       model: _entities[5],
-      toOneRelations: (expence object) => [],
-      toManyRelations: (expence object) => {},
-      getId: (expence object) => object.id,
-      setId: (expence object, int id) {
+      toOneRelations: (Expense object) => [],
+      toManyRelations: (Expense object) => {},
+      getId: (Expense object) => object.id,
+      setId: (Expense object, int id) {
         object.id = id;
       },
-      objectToFB: (expence object, fb.Builder fbb) {
+      objectToFB: (Expense object, fb.Builder fbb) {
         final titleOffset = fbb.writeString(object.title);
         fbb.startTable(5);
         fbb.addInt64(0, object.id);
@@ -1123,7 +1133,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final dateParam = DateTime.fromMillisecondsSinceEpoch(
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
         );
-        final object = expence(
+        final object = Expense(
           id: idParam,
           title: titleParam,
           amount: amountParam,
@@ -1256,15 +1266,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
-    Catigory: obx_int.EntityDefinition<Catigory>(
+    Category: obx_int.EntityDefinition<Category>(
       model: _entities[7],
-      toOneRelations: (Catigory object) => [],
-      toManyRelations: (Catigory object) => {},
-      getId: (Catigory object) => object.id,
-      setId: (Catigory object, int id) {
+      toOneRelations: (Category object) => [],
+      toManyRelations: (Category object) => {},
+      getId: (Category object) => object.id,
+      setId: (Category object, int id) {
         object.id = id;
       },
-      objectToFB: (Catigory object, fb.Builder fbb) {
+      objectToFB: (Category object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
         final imageUrlOffset =
             object.imageUrl == null ? null : fbb.writeString(object.imageUrl!);
@@ -1297,7 +1307,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           10,
           0,
         );
-        final object = Catigory(
+        final object = Category(
           id: idParam,
           name: nameParam,
           imageUrl: imageUrlParam,
@@ -1353,12 +1363,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameOffset = fbb.writeString(object.name);
         final pinOffset =
             object.pin == null ? null : fbb.writeString(object.pin!);
-        fbb.startTable(6);
+        final pinSaltOffset =
+            object.pinSalt == null ? null : fbb.writeString(object.pinSalt!);
+        fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addOffset(2, pinOffset);
         fbb.addInt64(3, object.createdAt.millisecondsSinceEpoch);
         fbb.addBool(4, object.isAdmin);
+        fbb.addOffset(5, pinSaltOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1377,6 +1390,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final pinParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 8);
+        final pinSaltParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 14);
         final isAdminParam = const fb.BoolReader().vTableGet(
           buffer,
           rootOffset,
@@ -1390,6 +1406,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           id: idParam,
           name: nameParam,
           pin: pinParam,
+          pinSalt: pinSaltParam,
           isAdmin: isAdminParam,
           createdAt: createdAtParam,
         );
@@ -1761,41 +1778,41 @@ class PrinterConfig_ {
   );
 }
 
-/// [Ruci] entity fields to define ObjectBox queries.
-class Ruci_ {
-  /// See [Ruci.id].
-  static final id = obx.QueryIntegerProperty<Ruci>(_entities[3].properties[0]);
+/// [Order] entity fields to define ObjectBox queries.
+class Order_ {
+  /// See [Order.id].
+  static final id = obx.QueryIntegerProperty<Order>(_entities[3].properties[0]);
 
-  /// See [Ruci.date].
-  static final date = obx.QueryDateProperty<Ruci>(_entities[3].properties[1]);
+  /// See [Order.date].
+  static final date = obx.QueryDateProperty<Order>(_entities[3].properties[1]);
 
-  /// See [Ruci.orderNumber].
-  static final orderNumber = obx.QueryIntegerProperty<Ruci>(
+  /// See [Order.orderNumber].
+  static final orderNumber = obx.QueryIntegerProperty<Order>(
     _entities[3].properties[2],
   );
 
-  /// See [Ruci.isDeleted].
-  static final isDeleted = obx.QueryBooleanProperty<Ruci>(
+  /// See [Order.isDeleted].
+  static final isDeleted = obx.QueryBooleanProperty<Order>(
     _entities[3].properties[3],
   );
 
-  /// See [Ruci.isEdited].
-  static final isEdited = obx.QueryBooleanProperty<Ruci>(
+  /// See [Order.isEdited].
+  static final isEdited = obx.QueryBooleanProperty<Order>(
     _entities[3].properties[4],
   );
 
-  /// See [Ruci.user].
-  static final user = obx.QueryRelationToOne<Ruci, AppUser>(
+  /// See [Order.user].
+  static final user = obx.QueryRelationToOne<Order, AppUser>(
     _entities[3].properties[5],
   );
 
-  /// See [Ruci.relatedGameSessionId].
-  static final relatedGameSessionId = obx.QueryIntegerProperty<Ruci>(
+  /// See [Order.relatedGameSessionId].
+  static final relatedGameSessionId = obx.QueryIntegerProperty<Order>(
     _entities[3].properties[6],
   );
 
-  /// see [Ruci.items]
-  static final items = obx.QueryRelationToMany<Ruci, OrderItem>(
+  /// see [Order.items]
+  static final items = obx.QueryRelationToMany<Order, OrderItem>(
     _entities[3].relations[0],
   );
 }
@@ -1813,25 +1830,25 @@ class OrderCounter_ {
   );
 }
 
-/// [expence] entity fields to define ObjectBox queries.
-class expence_ {
-  /// See [expence.id].
-  static final id = obx.QueryIntegerProperty<expence>(
+/// [Expense] entity fields to define ObjectBox queries.
+class Expense_ {
+  /// See [Expense.id].
+  static final id = obx.QueryIntegerProperty<Expense>(
     _entities[5].properties[0],
   );
 
-  /// See [expence.title].
-  static final title = obx.QueryStringProperty<expence>(
+  /// See [Expense.title].
+  static final title = obx.QueryStringProperty<Expense>(
     _entities[5].properties[1],
   );
 
-  /// See [expence.amount].
-  static final amount = obx.QueryDoubleProperty<expence>(
+  /// See [Expense.amount].
+  static final amount = obx.QueryDoubleProperty<Expense>(
     _entities[5].properties[2],
   );
 
-  /// See [expence.date].
-  static final date = obx.QueryDateProperty<expence>(
+  /// See [Expense.date].
+  static final date = obx.QueryDateProperty<Expense>(
     _entities[5].properties[3],
   );
 }
@@ -1899,25 +1916,25 @@ class StoreConfig_ {
   );
 }
 
-/// [Catigory] entity fields to define ObjectBox queries.
-class Catigory_ {
-  /// See [Catigory.id].
-  static final id = obx.QueryIntegerProperty<Catigory>(
+/// [Category] entity fields to define ObjectBox queries.
+class Category_ {
+  /// See [Category.id].
+  static final id = obx.QueryIntegerProperty<Category>(
     _entities[7].properties[0],
   );
 
-  /// See [Catigory.name].
-  static final name = obx.QueryStringProperty<Catigory>(
+  /// See [Category.name].
+  static final name = obx.QueryStringProperty<Category>(
     _entities[7].properties[1],
   );
 
-  /// See [Catigory.imageUrl].
-  static final imageUrl = obx.QueryStringProperty<Catigory>(
+  /// See [Category.imageUrl].
+  static final imageUrl = obx.QueryStringProperty<Category>(
     _entities[7].properties[2],
   );
 
-  /// See [Catigory.displayOrder].
-  static final displayOrder = obx.QueryIntegerProperty<Catigory>(
+  /// See [Category.displayOrder].
+  static final displayOrder = obx.QueryIntegerProperty<Category>(
     _entities[7].properties[3],
   );
 }
@@ -1965,6 +1982,11 @@ class AppUser_ {
   /// See [AppUser.isAdmin].
   static final isAdmin = obx.QueryBooleanProperty<AppUser>(
     _entities[9].properties[4],
+  );
+
+  /// See [AppUser.pinSalt].
+  static final pinSalt = obx.QueryStringProperty<AppUser>(
+    _entities[9].properties[5],
   );
 }
 

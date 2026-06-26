@@ -12,7 +12,7 @@ import '../service/printer_helper.dart';
 import '../service/notification_service.dart';
 import '../widgets/user_selection_dialog.dart';
 import '../widgets/payment_dialog.dart';
-import '../models/order.dart';
+import '../models/order.dart' as order_model;
 import '../models/order_item.dart';
 import '../models/order_counter.dart';
 
@@ -43,10 +43,11 @@ class _GamesScreenState extends State<GamesScreen> {
         .query(GameSession_.status.equals(0))
         .build()
         .find();
-    
+
     for (final session in activeSessions) {
       if (session.isLimitedDuration) {
-        final endAt = session.startTime.add(Duration(minutes: session.limitedDurationMinutes));
+        final endAt = session.startTime
+            .add(Duration(minutes: session.limitedDurationMinutes));
         if (DateTime.now().isAfter(endAt)) {
           GameSessionService.endSession(session, widget.objectbox);
         }
@@ -98,7 +99,9 @@ class _GamesScreenState extends State<GamesScreen> {
   void _startFixedDurationSession(GamePost post, int minutes) async {
     final tiers = widget.objectbox.partyTierBox.getAll();
     if (tiers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez d\'abord configurer des paliers dans les paramètres')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Veuillez d\'abord configurer des paliers dans les paramètres')));
       return;
     }
     final tier = tiers.first;
@@ -117,13 +120,15 @@ class _GamesScreenState extends State<GamesScreen> {
     }
 
     final price = (minutes / 60.0) * tier.ratePerHour;
-    
+
     // Create Order directly
     final orderCounterBox = widget.objectbox.store.box<OrderCounter>();
-    final orderBox = widget.objectbox.store.box<Ruci>();
-    
-    final orderCounter = orderCounterBox.isEmpty() ? OrderCounter(id: 1, value: 1) : orderCounterBox.getAll().first;
-    final order = Ruci(
+    final orderBox = widget.objectbox.store.box<order_model.Order>();
+
+    final orderCounter = orderCounterBox.isEmpty()
+        ? OrderCounter(id: 1, value: 1)
+        : orderCounterBox.getAll().first;
+    final order = order_model.Order(
       date: DateTime.now(),
       orderNumber: orderCounter.value,
     );
@@ -131,12 +136,12 @@ class _GamesScreenState extends State<GamesScreen> {
       final user = widget.objectbox.userBox.get(userId);
       if (user != null) order.user.target = user;
     }
-    
+
     final item = OrderItem(quantity: 1);
     item.price = price;
     item.productName = 'Jeu (${minutes}min): ${post.label}';
     order.items.add(item);
-    
+
     orderBox.put(order);
     orderCounter.value += 1;
     orderCounterBox.put(orderCounter);
@@ -159,7 +164,9 @@ class _GamesScreenState extends State<GamesScreen> {
   void _startSession(GamePost post, {bool isQueue = false}) async {
     final tiers = widget.objectbox.partyTierBox.getAll();
     if (tiers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez d\'abord configurer des paliers dans les paramètres')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Veuillez d\'abord configurer des paliers dans les paramètres')));
       return;
     }
 
@@ -171,7 +178,8 @@ class _GamesScreenState extends State<GamesScreen> {
       if (authMode == AuthMode.perOrder) {
         final user = await showDialog<AppUser>(
           context: context,
-          builder: (context) => UserSelectionDialog(objectbox: widget.objectbox),
+          builder: (context) =>
+              UserSelectionDialog(objectbox: widget.objectbox),
         );
         if (user == null) return;
         userId = user.id;
@@ -186,7 +194,8 @@ class _GamesScreenState extends State<GamesScreen> {
           userId: userId,
           objectbox: widget.objectbox,
         );
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Partie mise en attente pour ${post.label}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Partie mise en attente pour ${post.label}')));
       } else {
         final session = await GameSessionService.startSession(
           post: post,
@@ -209,14 +218,17 @@ class _GamesScreenState extends State<GamesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Partie #${session.partyNumber} - ${session.postLabel}', style: Theme.of(context).textTheme.titleLarge),
+            Text('Partie #${session.partyNumber} - ${session.postLabel}',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text('Palier : ${session.tierLabel}'),
-            if (session.isLimitedDuration || session.relatedOrderId != null) ...[
+            if (session.isLimitedDuration ||
+                session.relatedOrderId != null) ...[
               const SizedBox(height: 4),
               Text(
                 'Durée Prédéfinie : ${session.limitedDurationMinutes > 0 ? "${session.limitedDurationMinutes} min" : "Payée d\'avance"}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.blue),
               ),
             ],
             const SizedBox(height: 16),
@@ -233,53 +245,62 @@ class _GamesScreenState extends State<GamesScreen> {
               title: const Text('Terminer la partie'),
               onTap: () async {
                 Navigator.pop(context);
-                
+
                 // If it's a prepaid session (either by flag or because an order is already linked)
-                if (session.isLimitedDuration || session.relatedOrderId != null) {
+                if (session.isLimitedDuration ||
+                    session.relatedOrderId != null) {
                   GameSessionService.endSession(session, widget.objectbox);
                   setState(() {});
                   return;
                 }
-                
+
                 final price = session.currentCalculatedPrice;
                 final duration = DateTime.now().difference(session.startTime);
-                final sessionDetails = 'Temps écoulé: ${_formatDuration(duration)}\nTarif: ${session.ratePerHour} DH/H';
+                final sessionDetails =
+                    'Temps écoulé: ${_formatDuration(duration)}\nTarif: ${session.ratePerHour} DH/H';
                 final paymentConfirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => PaymentDialog(
-                    totalAmount: price,
-                    sessionDetails: sessionDetails,
-                    isGameSession: true,
-                  ),
-                ) ?? false;
-                
+                      context: context,
+                      builder: (context) => PaymentDialog(
+                        totalAmount: price,
+                        sessionDetails: sessionDetails,
+                        isGameSession: true,
+                      ),
+                    ) ??
+                    false;
+
                 if (paymentConfirmed) {
-                  final orderCounterBox = widget.objectbox.store.box<OrderCounter>();
-                  final orderBox = widget.objectbox.store.box<Ruci>();
-                  
-                  final orderCounter = orderCounterBox.isEmpty() ? OrderCounter(id: 1, value: 1) : orderCounterBox.getAll().first;
-                  final order = Ruci(
+                  final orderCounterBox =
+                      widget.objectbox.store.box<OrderCounter>();
+                  final orderBox =
+                      widget.objectbox.store.box<order_model.Order>();
+
+                  final orderCounter = orderCounterBox.isEmpty()
+                      ? OrderCounter(id: 1, value: 1)
+                      : orderCounterBox.getAll().first;
+                  final order = order_model.Order(
                     date: DateTime.now(),
                     orderNumber: orderCounter.value,
                   );
                   if (session.attributedUserId != null) {
-                    final user = widget.objectbox.userBox.get(session.attributedUserId!);
+                    final user =
+                        widget.objectbox.userBox.get(session.attributedUserId!);
                     if (user != null) {
                       order.user.target = user;
                     }
                   }
-                  
+
                   final item = OrderItem(quantity: 1);
                   item.price = price;
                   item.productName = 'Jeu: ${session.postLabel}';
                   order.items.add(item);
-                  
+
                   orderBox.put(order);
-                  
+
                   orderCounter.value += 1;
                   orderCounterBox.put(orderCounter);
 
-                  GameSessionService.endSession(session, widget.objectbox, relatedOrderId: order.id);
+                  GameSessionService.endSession(session, widget.objectbox,
+                      relatedOrderId: order.id);
                   // NotificationService.playNotificationSound(); removed
                   PrinterHelper.printGameTicket(session, widget.objectbox);
                   setState(() {});
@@ -310,9 +331,13 @@ class _GamesScreenState extends State<GamesScreen> {
             .watch(triggerImmediately: true)
             .map((q) => q.find()),
         builder: (context, postSnapshot) {
-          if (!postSnapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!postSnapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final posts = postSnapshot.data!;
-          if (posts.isEmpty) return const Center(child: Text('Aucun poste configuré. Allez dans Paramètres > Jeux.'));
+          if (posts.isEmpty)
+            return const Center(
+                child: Text(
+                    'Aucun poste configuré. Allez dans Paramètres > Jeux.'));
 
           return StreamBuilder<List<GameSession>>(
             stream: widget.objectbox.gameSessionBox
@@ -321,7 +346,9 @@ class _GamesScreenState extends State<GamesScreen> {
                 .map((q) => q.find()),
             builder: (context, sessionSnapshot) {
               final activeSessions = sessionSnapshot.data ?? [];
-              final sessionMap = {for (var s in activeSessions) s.post.targetId: s};
+              final sessionMap = {
+                for (var s in activeSessions) s.post.targetId: s
+              };
 
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
@@ -337,14 +364,20 @@ class _GamesScreenState extends State<GamesScreen> {
                   final session = sessionMap[post.id];
 
                   final isBusy = post.isActive && session != null;
-                  final isPrepaid = isBusy && (session!.isLimitedDuration || session.relatedOrderId != null);
-                  
-                  final Color color = isPrepaid 
-                      ? Colors.blue.shade100 
-                      : (isBusy ? Colors.orange.shade100 : Colors.green.shade100);
-                  final Color textColor = isPrepaid 
-                      ? Colors.blue.shade900 
-                      : (isBusy ? Colors.orange.shade900 : Colors.green.shade900);
+                  final isPrepaid = isBusy &&
+                      (session!.isLimitedDuration ||
+                          session.relatedOrderId != null);
+
+                  final Color color = isPrepaid
+                      ? Colors.blue.shade100
+                      : (isBusy
+                          ? Colors.orange.shade100
+                          : Colors.green.shade100);
+                  final Color textColor = isPrepaid
+                      ? Colors.blue.shade900
+                      : (isBusy
+                          ? Colors.orange.shade900
+                          : Colors.green.shade900);
 
                   Duration remaining = Duration.zero;
                   if (isBusy) {
@@ -353,15 +386,20 @@ class _GamesScreenState extends State<GamesScreen> {
 
                   return StreamBuilder<List<GameSession>>(
                     stream: widget.objectbox.gameSessionBox
-                        .query(GameSession_.post.equals(post.id).and(GameSession_.status.equals(3)))
+                        .query(GameSession_.post
+                            .equals(post.id)
+                            .and(GameSession_.status.equals(3)))
                         .watch(triggerImmediately: true)
                         .map((q) => q.find()),
                     builder: (context, queueSnapshot) {
                       final queuedSessions = queueSnapshot.data ?? [];
-                      
+
                       return InkWell(
-                        onTap: isBusy ? () => _manageSession(session!) : () => _startSession(post),
-                        onLongPress: isBusy ? null : () => _showDurationSelection(post),
+                        onTap: isBusy
+                            ? () => _manageSession(session!)
+                            : () => _startSession(post),
+                        onLongPress:
+                            isBusy ? null : () => _showDurationSelection(post),
                         child: Card(
                           color: color,
                           elevation: isBusy ? 4 : 1,
@@ -372,18 +410,28 @@ class _GamesScreenState extends State<GamesScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(post.label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+                                    Text(post.label,
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor)),
                                     const SizedBox(height: 4),
                                     if (isBusy) ...[
-                                      Text('Partie #${session!.partyNumber}', style: TextStyle(color: textColor, fontSize: 12)),
+                                      Text('Partie #${session!.partyNumber}',
+                                          style: TextStyle(
+                                              color: textColor, fontSize: 12)),
                                       const SizedBox(height: 4),
                                       Text(
                                         session.isLimitedDuration
                                             ? _formatDuration(() {
                                                 final diff = session.startTime
-                                                    .add(Duration(minutes: session.limitedDurationMinutes))
+                                                    .add(Duration(
+                                                        minutes: session
+                                                            .limitedDurationMinutes))
                                                     .difference(DateTime.now());
-                                                return diff.isNegative ? Duration.zero : diff;
+                                                return diff.isNegative
+                                                    ? Duration.zero
+                                                    : diff;
                                               }())
                                             : _formatDuration(remaining),
                                         style: TextStyle(
@@ -392,17 +440,28 @@ class _GamesScreenState extends State<GamesScreen> {
                                           color: textColor,
                                         ),
                                       ),
-                                      Text('${session.currentCalculatedPrice.toStringAsFixed(2)} DH', style: TextStyle(color: textColor, fontSize: 14)),
+                                      Text(
+                                          '${session.currentCalculatedPrice.toStringAsFixed(2)} DH',
+                                          style: TextStyle(
+                                              color: textColor, fontSize: 14)),
                                       if (queuedSessions.isNotEmpty)
                                         Padding(
-                                          padding: const EdgeInsets.only(top: 4.0),
+                                          padding:
+                                              const EdgeInsets.only(top: 4.0),
                                           child: Text(
                                             'Suivant: #${queuedSessions.first.partyNumber}',
-                                            style: TextStyle(fontSize: 10, color: textColor.withOpacity(0.7)),
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color:
+                                                    textColor.withOpacity(0.7)),
                                           ),
                                         ),
                                     ] else
-                                      Text('DISPONIBLE', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
+                                      Text('DISPONIBLE',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: textColor,
+                                              fontSize: 14)),
                                   ],
                                 ),
                               ),
@@ -411,8 +470,10 @@ class _GamesScreenState extends State<GamesScreen> {
                                   top: 4,
                                   right: 4,
                                   child: IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, size: 20),
-                                    onPressed: () => _startSession(post, isQueue: true),
+                                    icon: const Icon(Icons.add_circle_outline,
+                                        size: 20),
+                                    onPressed: () =>
+                                        _startSession(post, isQueue: true),
                                     tooltip: 'Ajouter le prochain tour',
                                     color: textColor,
                                   ),
