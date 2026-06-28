@@ -1,31 +1,29 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_post.dart';
 import '../models/game_session.dart';
-import '../models/party_tier.dart';
 import '../models/app_user.dart';
-import '../objectbox.dart';
 import '../objectbox.g.dart';
 import '../service/game_session_service.dart';
 import '../service/auth_service.dart';
 import '../service/printer_helper.dart';
-import '../service/notification_service.dart';
 import '../widgets/user_selection_dialog.dart';
 import '../widgets/payment_dialog.dart';
 import '../models/order.dart' as order_model;
 import '../models/order_item.dart';
 import '../models/order_counter.dart';
+import '../providers/dashboard_provider.dart';
 
-class GamesScreen extends StatefulWidget {
-  final ObjectBox objectbox;
+class GamesScreen extends ConsumerStatefulWidget {
   final AppUser? assignedUser;
-  const GamesScreen({super.key, required this.objectbox, this.assignedUser});
+  const GamesScreen({super.key, this.assignedUser});
 
   @override
-  State<GamesScreen> createState() => _GamesScreenState();
+  ConsumerState<GamesScreen> createState() => _GamesScreenState();
 }
 
-class _GamesScreenState extends State<GamesScreen> {
+class _GamesScreenState extends ConsumerState<GamesScreen> {
   Timer? _timer;
   @override
   void initState() {
@@ -39,7 +37,7 @@ class _GamesScreenState extends State<GamesScreen> {
   }
 
   void _checkLimitedSessions() {
-    final activeSessions = widget.objectbox.gameSessionBox
+    final activeSessions = ref.read(objectBoxProvider).gameSessionBox
         .query(GameSession_.status.equals(0))
         .build()
         .find();
@@ -49,7 +47,7 @@ class _GamesScreenState extends State<GamesScreen> {
         final endAt = session.startTime
             .add(Duration(minutes: session.limitedDurationMinutes));
         if (DateTime.now().isAfter(endAt)) {
-          GameSessionService.endSession(session, widget.objectbox);
+          GameSessionService.endSession(session, ref.read(objectBoxProvider));
         }
       }
     }
@@ -97,7 +95,7 @@ class _GamesScreenState extends State<GamesScreen> {
   }
 
   void _startFixedDurationSession(GamePost post, int minutes) async {
-    final tiers = widget.objectbox.partyTierBox.getAll();
+    final tiers = ref.read(objectBoxProvider).partyTierBox.getAll();
     if (tiers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text(
@@ -111,7 +109,7 @@ class _GamesScreenState extends State<GamesScreen> {
     if (authMode == AuthMode.perOrder) {
       final user = await showDialog<AppUser>(
         context: context,
-        builder: (context) => UserSelectionDialog(objectbox: widget.objectbox),
+        builder: (context) => UserSelectionDialog(objectbox: ref.read(objectBoxProvider)),
       );
       if (user == null) return;
       userId = user.id;
@@ -122,8 +120,8 @@ class _GamesScreenState extends State<GamesScreen> {
     final price = (minutes / 60.0) * tier.ratePerHour;
 
     // Create Order directly
-    final orderCounterBox = widget.objectbox.store.box<OrderCounter>();
-    final orderBox = widget.objectbox.store.box<order_model.Order>();
+    final orderCounterBox = ref.read(objectBoxProvider).store.box<OrderCounter>();
+    final orderBox = ref.read(objectBoxProvider).store.box<order_model.Order>();
 
     final orderCounter = orderCounterBox.isEmpty()
         ? OrderCounter(id: 1, value: 1)
@@ -133,7 +131,7 @@ class _GamesScreenState extends State<GamesScreen> {
       orderNumber: orderCounter.value,
     );
     if (userId != null) {
-      final user = widget.objectbox.userBox.get(userId);
+      final user = ref.read(objectBoxProvider).userBox.get(userId);
       if (user != null) order.user.target = user;
     }
 
@@ -151,18 +149,18 @@ class _GamesScreenState extends State<GamesScreen> {
       post: post,
       tier: tier,
       userId: userId,
-      objectbox: widget.objectbox,
+      objectbox: ref.read(objectBoxProvider),
       durationMinutes: minutes,
     );
     session.relatedOrderId = order.id;
-    widget.objectbox.gameSessionBox.put(session);
+    ref.read(objectBoxProvider).gameSessionBox.put(session);
 
-    PrinterHelper.printSessionStartTicket(session, widget.objectbox);
+    PrinterHelper.printSessionStartTicket(session, ref.read(objectBoxProvider));
     setState(() {});
   }
 
   void _startSession(GamePost post, {bool isQueue = false}) async {
-    final tiers = widget.objectbox.partyTierBox.getAll();
+    final tiers = ref.read(objectBoxProvider).partyTierBox.getAll();
     if (tiers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text(
@@ -171,15 +169,13 @@ class _GamesScreenState extends State<GamesScreen> {
     }
 
     final tier = tiers.first;
-
-    if (tier != null) {
-      int? userId;
+    int? userId;
       final authMode = await AuthService.getAuthMode();
       if (authMode == AuthMode.perOrder) {
         final user = await showDialog<AppUser>(
           context: context,
           builder: (context) =>
-              UserSelectionDialog(objectbox: widget.objectbox),
+              UserSelectionDialog(objectbox: ref.read(objectBoxProvider)),
         );
         if (user == null) return;
         userId = user.id;
@@ -192,7 +188,7 @@ class _GamesScreenState extends State<GamesScreen> {
           post: post,
           tier: tier,
           userId: userId,
-          objectbox: widget.objectbox,
+          objectbox: ref.read(objectBoxProvider),
         );
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Partie mise en attente pour ${post.label}')));
@@ -201,13 +197,12 @@ class _GamesScreenState extends State<GamesScreen> {
           post: post,
           tier: tier,
           userId: userId,
-          objectbox: widget.objectbox,
+          objectbox: ref.read(objectBoxProvider),
         );
-        PrinterHelper.printSessionStartTicket(session, widget.objectbox);
+        PrinterHelper.printSessionStartTicket(session, ref.read(objectBoxProvider));
         // NotificationService.scheduleSessionEnd(session); removed
       }
       setState(() {});
-    }
   }
 
   void _manageSession(GameSession session) async {
@@ -237,7 +232,7 @@ class _GamesScreenState extends State<GamesScreen> {
               title: const Text('Réimprimer Ticket'),
               onTap: () {
                 Navigator.pop(context);
-                PrinterHelper.printGameTicket(session, widget.objectbox);
+                PrinterHelper.printGameTicket(session, ref.read(objectBoxProvider));
               },
             ),
             ListTile(
@@ -249,7 +244,7 @@ class _GamesScreenState extends State<GamesScreen> {
                 // If it's a prepaid session (either by flag or because an order is already linked)
                 if (session.isLimitedDuration ||
                     session.relatedOrderId != null) {
-                  GameSessionService.endSession(session, widget.objectbox);
+                  GameSessionService.endSession(session, ref.read(objectBoxProvider));
                   setState(() {});
                   return;
                 }
@@ -270,9 +265,9 @@ class _GamesScreenState extends State<GamesScreen> {
 
                 if (paymentConfirmed) {
                   final orderCounterBox =
-                      widget.objectbox.store.box<OrderCounter>();
+                      ref.read(objectBoxProvider).store.box<OrderCounter>();
                   final orderBox =
-                      widget.objectbox.store.box<order_model.Order>();
+                      ref.read(objectBoxProvider).store.box<order_model.Order>();
 
                   final orderCounter = orderCounterBox.isEmpty()
                       ? OrderCounter(id: 1, value: 1)
@@ -283,7 +278,7 @@ class _GamesScreenState extends State<GamesScreen> {
                   );
                   if (session.attributedUserId != null) {
                     final user =
-                        widget.objectbox.userBox.get(session.attributedUserId!);
+                        ref.read(objectBoxProvider).userBox.get(session.attributedUserId!);
                     if (user != null) {
                       order.user.target = user;
                     }
@@ -299,10 +294,10 @@ class _GamesScreenState extends State<GamesScreen> {
                   orderCounter.value += 1;
                   orderCounterBox.put(orderCounter);
 
-                  GameSessionService.endSession(session, widget.objectbox,
+                  GameSessionService.endSession(session, ref.read(objectBoxProvider),
                       relatedOrderId: order.id);
                   // NotificationService.playNotificationSound(); removed
-                  PrinterHelper.printGameTicket(session, widget.objectbox);
+                  PrinterHelper.printGameTicket(session, ref.read(objectBoxProvider));
                   setState(() {});
                 }
               },
@@ -326,7 +321,7 @@ class _GamesScreenState extends State<GamesScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Jeux & Postes')),
       body: StreamBuilder<List<GamePost>>(
-        stream: widget.objectbox.gamePostBox
+        stream: ref.read(objectBoxProvider).gamePostBox
             .query()
             .watch(triggerImmediately: true)
             .map((q) => q.find()),
@@ -340,7 +335,7 @@ class _GamesScreenState extends State<GamesScreen> {
                     'Aucun poste configuré. Allez dans Paramètres > Jeux.'));
 
           return StreamBuilder<List<GameSession>>(
-            stream: widget.objectbox.gameSessionBox
+            stream: ref.read(objectBoxProvider).gameSessionBox
                 .query(GameSession_.status.equals(0))
                 .watch(triggerImmediately: true)
                 .map((q) => q.find()),
@@ -365,7 +360,7 @@ class _GamesScreenState extends State<GamesScreen> {
 
                   final isBusy = post.isActive && session != null;
                   final isPrepaid = isBusy &&
-                      (session!.isLimitedDuration ||
+                      (session.isLimitedDuration ||
                           session.relatedOrderId != null);
 
                   final Color color = isPrepaid
@@ -381,11 +376,11 @@ class _GamesScreenState extends State<GamesScreen> {
 
                   Duration remaining = Duration.zero;
                   if (isBusy) {
-                    remaining = DateTime.now().difference(session!.startTime);
+                    remaining = DateTime.now().difference(session.startTime);
                   }
 
                   return StreamBuilder<List<GameSession>>(
-                    stream: widget.objectbox.gameSessionBox
+                    stream: ref.read(objectBoxProvider).gameSessionBox
                         .query(GameSession_.post
                             .equals(post.id)
                             .and(GameSession_.status.equals(3)))
@@ -396,7 +391,7 @@ class _GamesScreenState extends State<GamesScreen> {
 
                       return InkWell(
                         onTap: isBusy
-                            ? () => _manageSession(session!)
+                            ? () => _manageSession(session)
                             : () => _startSession(post),
                         onLongPress:
                             isBusy ? null : () => _showDurationSelection(post),
@@ -417,7 +412,7 @@ class _GamesScreenState extends State<GamesScreen> {
                                             color: textColor)),
                                     const SizedBox(height: 4),
                                     if (isBusy) ...[
-                                      Text('Partie #${session!.partyNumber}',
+                                      Text('Partie #${session.partyNumber}',
                                           style: TextStyle(
                                               color: textColor, fontSize: 12)),
                                       const SizedBox(height: 4),

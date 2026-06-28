@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
-import '../objectbox.dart';
 import '../objectbox.g.dart';
 import '../models/order.dart' as order_model;
 import '../models/order_item.dart';
@@ -13,17 +13,16 @@ import '../models/expense.dart';
 import '../models/daily_funds.dart';
 import '../models/store_config.dart';
 import 'package:objectbox/objectbox.dart';
+import '../providers/dashboard_provider.dart';
 
-class DevPanelScreen extends StatefulWidget {
-  final ObjectBox objectbox;
-
-  const DevPanelScreen({super.key, required this.objectbox});
+class DevPanelScreen extends ConsumerStatefulWidget {
+  const DevPanelScreen({super.key});
 
   @override
-  State<DevPanelScreen> createState() => _DevPanelScreenState();
+  ConsumerState<DevPanelScreen> createState() => _DevPanelScreenState();
 }
 
-class _DevPanelScreenState extends State<DevPanelScreen> {
+class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -34,8 +33,8 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
   int _totalProducts = 0;
 
   List<Map<String, dynamic>> _userStats = [];
-  List<Map<String, dynamic>> _unassignedDetails = [];
-  List<int> _missingOrderNumbers = [];
+  final List<Map<String, dynamic>> _unassignedDetails = [];
+  final List<int> _missingOrderNumbers = [];
 
   bool _isLoading = true;
 
@@ -66,9 +65,8 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
   }
 
   Future<void> _loadData() async {
-    final store = widget.objectbox.store;
+    final store = ref.read(objectBoxProvider).store;
     final ruciBox = store.box<order_model.Order>();
-    final orderItemBox = store.box<OrderItem>();
     final gameSessionBox = store.box<GameSession>();
     final userBox = store.box<AppUser>();
     final productBox = store.box<Product>();
@@ -221,7 +219,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
 
   Future<void> _exportDb() async {
     try {
-      final storePath = widget.objectbox.store.directoryPath;
+      final storePath = ref.read(objectBoxProvider).store.directoryPath;
       final externalDir = await getExternalStorageDirectory();
 
       if (externalDir != null) {
@@ -256,7 +254,7 @@ class _DevPanelScreenState extends State<DevPanelScreen> {
 
   Future<void> _exportSql() async {
     try {
-      final store = widget.objectbox.store;
+      final store = ref.read(objectBoxProvider).store;
       final externalDir = await getExternalStorageDirectory();
       if (externalDir == null) return;
 

@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/admin_pin_dialog.dart';
 import '../models/order_item.dart';
-import '../objectbox.dart';
 import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/order.dart' as order_model;
-import '../models/printer_config.dart';
-import '../models/order_counter.dart';
-import '../widgets/dialog.dart' as custom_dialog;
 import '../service/printer_helper.dart';
 import 'order_screen.dart' as custom_order_screen;
 import '../service/business_day_helper.dart';
@@ -17,39 +14,29 @@ import '../widgets/business_day_filter.dart';
 import '../models/store_config.dart';
 import '../models/game_session.dart';
 import '../models/app_user.dart';
+import '../providers/dashboard_provider.dart';
 
-class HistoryScreen extends StatefulWidget {
-  final ObjectBox objectbox;
+class HistoryScreen extends ConsumerStatefulWidget {
   final AppUser? currentUser;
 
-  const HistoryScreen({super.key, required this.objectbox, this.currentUser});
+  const HistoryScreen({super.key, this.currentUser});
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   late final Box<order_model.Order> _orderBox;
-  late final Box<PrinterConfig> _printerConfigBox;
-  late final Box<OrderCounter> _orderCounterBox;
-  late final Box<StoreConfig> _storeConfigBox;
   bool _showDeletedOrders = false;
   DateTime _selectedBusinessDay = DateTime.now();
-  late StoreConfig _config;
+  StoreConfig _config = StoreConfig();
 
   @override
   void initState() {
     super.initState();
-    _orderBox = widget.objectbox.store.box<order_model.Order>();
-    _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
-    _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
-    _storeConfigBox = widget.objectbox.store.box<StoreConfig>();
-    _loadStoreConfig();
-  }
-
-  void _loadStoreConfig() {
-    final configs = _storeConfigBox.getAll();
-    _config = configs.isNotEmpty ? configs.first : StoreConfig();
+    final ob = ref.read(objectBoxProvider);
+    _orderBox = ob.store.box<order_model.Order>();
+    _config = ref.read(configRepositoryProvider).getStoreConfig();
     _selectedBusinessDay =
         BusinessDayHelper.getBusinessDayDate(DateTime.now(), _config);
   }
@@ -62,7 +49,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     // If deleting someone else's order, require admin PIN
     if (!isOwnOrder) {
-      final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+      final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
       if (!isAdmin) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -79,20 +66,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _orderBox.put(order);
   }
 
-  void _resetOrderCounter() {
-    OrderCounter? orderCounter = _orderCounterBox.get(1);
-    if (orderCounter == null) {
-      orderCounter = OrderCounter(id: 1, value: 1);
-    } else {
-      orderCounter.value = 1;
-    }
-    _orderCounterBox.put(orderCounter);
-  }
-
   Stream<List<GameSession>> _getGameSessionsStream() {
     final range =
         BusinessDayHelper.getBusinessDayRange(_selectedBusinessDay, _config);
-    return widget.objectbox.gameSessionBox
+    final ob = ref.read(objectBoxProvider);
+    return ob.gameSessionBox
         .query(GameSession_.startTime.between(
             range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
         .watch(triggerImmediately: true)
@@ -131,7 +109,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               if (!_showDeletedOrders) {
                 // Toggling ON: require admin
                 final isAdmin =
-                    await AdminPinDialog.verify(context, widget.objectbox);
+                    await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
                 if (isAdmin) {
                   setState(() => _showDeletedOrders = true);
                 } else {
@@ -232,8 +210,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildPartyCard(GameSession session) {
+    final ob = ref.read(objectBoxProvider);
     final user = session.attributedUserId != null
-        ? widget.objectbox.userBox.get(session.attributedUserId!)?.name ??
+        ? ob.userBox.get(session.attributedUserId!)?.name ??
             'Inconnu'
         : 'Système';
 
@@ -274,7 +253,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    PrinterHelper.printGameTicket(session, widget.objectbox);
+                    PrinterHelper.printGameTicket(session, ref.read(objectBoxProvider));
                   },
                   child: const Text('Réimprimer Ticket'),
                 ),
@@ -417,7 +396,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     // If editing someone else's order, require admin PIN
     if (!isOwnOrder) {
-      final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+      final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
       if (!isAdmin) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -435,7 +414,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => custom_order_screen.OrderScreen(
-              objectbox: widget.objectbox, orderToEdit: order),
+              orderToEdit: order),
         ),
       ).then((_) => setState(() {}));
     }
@@ -443,6 +422,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _printOrder(order_model.Order order) {
     final receiptData = ReceiptData.convertRuciToReceiptData(order);
-    PrinterHelper.printReceipt(receiptData, widget.objectbox);
+    PrinterHelper.printReceipt(receiptData, ref.read(objectBoxProvider));
   }
 }

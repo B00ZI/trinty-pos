@@ -18,7 +18,7 @@ class CategoryRepository {
   }
 
   Stream<List<Category>> watchAll() {
-    return _categoryBox.query().watch().map((q) => q.find());
+    return _categoryBox.query().watch(triggerImmediately: true).map((q) => q.find());
   }
 
   void put(Category category) {

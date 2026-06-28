@@ -84,7 +84,6 @@ GoRouter createRouter(WidgetRef ref) {
           final extras = state.extra as OrderRouteExtras?;
           return CustomTransitionPage(
             child: OrderScreen(
-              objectbox: objectbox,
               assignedUser: extras?.assignedUser,
               initialCategory: extras?.initialCategory,
             ),
@@ -101,7 +100,6 @@ GoRouter createRouter(WidgetRef ref) {
           final extras = state.extra as OrderRouteExtras?;
           return CustomTransitionPage(
             child: HistoryScreen(
-              objectbox: objectbox,
               currentUser: extras?.assignedUser,
             ),
             transitionsBuilder:
@@ -117,7 +115,6 @@ GoRouter createRouter(WidgetRef ref) {
           final extras = state.extra as OrderRouteExtras?;
           return CustomTransitionPage(
             child: GamesScreen(
-              objectbox: objectbox,
               assignedUser: extras?.assignedUser,
             ),
             transitionsBuilder:
@@ -131,7 +128,7 @@ GoRouter createRouter(WidgetRef ref) {
         path: AppRoutes.dashboard,
         pageBuilder: (context, state) {
           return CustomTransitionPage(
-            child: DashboardScreen(objectbox: objectbox),
+            child: const DashboardScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
@@ -143,7 +140,7 @@ GoRouter createRouter(WidgetRef ref) {
         path: AppRoutes.management,
         pageBuilder: (context, state) {
           return CustomTransitionPage(
-            child: ManagementScreen(objectbox: objectbox),
+            child: const ManagementScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
@@ -156,7 +153,6 @@ GoRouter createRouter(WidgetRef ref) {
         pageBuilder: (context, state) {
           return CustomTransitionPage(
             child: SettingsScreen(
-              objectbox: objectbox,
               onSettingsChanged: () {
                 ref.invalidate(showGamesProvider);
               },
@@ -181,14 +177,13 @@ GoRouter createRouter(WidgetRef ref) {
             );
           }
           return OrderScreen(
-            objectbox: objectbox,
             orderToEdit: order,
           );
         },
       ),
       GoRoute(
         path: AppRoutes.devPanel,
-        builder: (context, state) => DevPanelScreen(objectbox: objectbox),
+        builder: (context, state) => const DevPanelScreen(),
       ),
     ],
   );

@@ -26,7 +26,7 @@ class GameSessionRepository {
   }
 
   Stream<List<GameSession>> watchSessions() {
-    return _sessionBox.query().watch().map((q) => q.find());
+    return _sessionBox.query().watch(triggerImmediately: true).map((q) => q.find());
   }
 
   List<GameSession> getActiveSessions() {
@@ -82,7 +82,7 @@ class GameSessionRepository {
   }
 
   Stream<List<GamePost>> watchPosts() {
-    return _postBox.query().watch().map((q) => q.find());
+    return _postBox.query().watch(triggerImmediately: true).map((q) => q.find());
   }
 
   // Party Tiers
@@ -99,7 +99,7 @@ class GameSessionRepository {
   }
 
   Stream<List<PartyTier>> watchTiers() {
-    return _tierBox.query().watch().map((q) => q.find());
+    return _tierBox.query().watch(triggerImmediately: true).map((q) => q.find());
   }
 
   // Party Counter

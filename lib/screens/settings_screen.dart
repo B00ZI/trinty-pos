@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:validators/validators.dart';
 import 'package:flutter/services.dart';
@@ -12,21 +13,19 @@ import '../widgets/store_config.dart';
 import '../widgets/business_day_settings.dart';
 import '../widgets/games_settings_section.dart';
 import '../widgets/admin_pin_dialog.dart';
-import '../models/product.dart';
 import '../objectbox.g.dart';
-import '../objectbox.dart';
 import 'package:objectbox/objectbox.dart';
+import '../providers/dashboard_provider.dart';
 
-class SettingsScreen extends StatefulWidget {
-  final ObjectBox objectbox;
+class SettingsScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSettingsChanged;
-  const SettingsScreen({super.key, required this.objectbox, this.onSettingsChanged});
+  const SettingsScreen({super.key, this.onSettingsChanged});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _currentIndex = 0;
 
   @override
@@ -52,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       selectedIndex: _currentIndex,
                       onDestinationSelected: (int index) async {
                         if (index == 4) {
-                          final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+                          final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
                           if (!isAdmin) return;
                         }
                         setState(() {
@@ -104,13 +103,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: IndexedStack(
               index: _currentIndex,
               children: [
-                PrinterSettingsSection(objectbox: widget.objectbox),
-                UserManagementSection(objectbox: widget.objectbox),
-                StoreSettingsSection(objectbox: widget.objectbox),
-                BusinessDaySettingsWidget(objectbox: widget.objectbox),
-                AuthModeSection(objectbox: widget.objectbox),
+                const PrinterSettingsSection(),
+                const UserManagementSection(),
+                const StoreSettingsSection(),
+                BusinessDaySettingsWidget(objectbox: ref.read(objectBoxProvider)),
+                const AuthModeSection(),
                 GamesSettingsSection(
-                  objectbox: widget.objectbox,
+                  objectbox: ref.read(objectBoxProvider),
                   onSettingsChanged: widget.onSettingsChanged,
                 ),
               ],
@@ -122,15 +121,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class PrinterSettingsSection extends StatefulWidget {
-  final ObjectBox objectbox;
-  const PrinterSettingsSection({super.key, required this.objectbox});
+class PrinterSettingsSection extends ConsumerStatefulWidget {
+  const PrinterSettingsSection({super.key});
 
   @override
-  State<PrinterSettingsSection> createState() => _PrinterSettingsSectionState();
+  ConsumerState<PrinterSettingsSection> createState() => _PrinterSettingsSectionState();
 }
 
-class _PrinterSettingsSectionState extends State<PrinterSettingsSection> {
+class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection> {
   final _formKey = GlobalKey<FormState>();
   final _ipAddressController = TextEditingController();
   final _portController = TextEditingController();
@@ -141,7 +139,7 @@ class _PrinterSettingsSectionState extends State<PrinterSettingsSection> {
   @override
   void initState() {
     super.initState();
-    _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
+    _printerConfigBox = ref.read(objectBoxProvider).store.box<PrinterConfig>();
     _loadConfig();
   }
 
@@ -248,22 +246,21 @@ class _PrinterSettingsSectionState extends State<PrinterSettingsSection> {
   }
 }
 
-class UserManagementSection extends StatefulWidget {
-  final ObjectBox objectbox;
-  const UserManagementSection({super.key, required this.objectbox});
+class UserManagementSection extends ConsumerStatefulWidget {
+  const UserManagementSection({super.key});
 
   @override
-  State<UserManagementSection> createState() => _UserManagementSectionState();
+  ConsumerState<UserManagementSection> createState() => _UserManagementSectionState();
 }
 
-class _UserManagementSectionState extends State<UserManagementSection> {
+class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
   late final Box<AppUser> _userBox;
   List<AppUser> _users = [];
 
   @override
   void initState() {
     super.initState();
-    _userBox = widget.objectbox.store.box<AppUser>();
+    _userBox = ref.read(objectBoxProvider).store.box<AppUser>();
     _loadUsers();
   }
 
@@ -273,7 +270,7 @@ class _UserManagementSectionState extends State<UserManagementSection> {
 
   Future<void> _addUser() async {
     // Verify admin PIN before adding a user
-    final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+    final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
     if (!isAdmin) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -369,7 +366,7 @@ class _UserManagementSectionState extends State<UserManagementSection> {
 
   Future<void> _editUserPin(AppUser user) async {
     // First verify admin PIN
-    final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+    final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
     if (!isAdmin) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -469,7 +466,7 @@ class _UserManagementSectionState extends State<UserManagementSection> {
     }
 
     // Verify admin PIN before deleting
-    final isAdmin = await AdminPinDialog.verify(context, widget.objectbox);
+    final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
     if (!isAdmin) return;
 
     if (!mounted) return;
@@ -638,12 +635,12 @@ class _UserManagementSectionState extends State<UserManagementSection> {
 
 
 
-class StoreSettingsSection extends StatelessWidget {
-  final ObjectBox objectbox;
-  const StoreSettingsSection({super.key, required this.objectbox});
+class StoreSettingsSection extends ConsumerWidget {
+  const StoreSettingsSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ob = ref.read(objectBoxProvider);
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -656,9 +653,9 @@ class StoreSettingsSection extends StatelessWidget {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  StoreConfigWidget(objectbox: objectbox),
+                  StoreConfigWidget(objectbox: ob),
                   const SizedBox(height: 24),
-                  SurgePriceSettingsSection(objectbox: objectbox),
+                  const SurgePriceSettingsSection(),
                 ],
               ),
             ),
@@ -669,16 +666,15 @@ class StoreSettingsSection extends StatelessWidget {
   }
 }
 
-class SurgePriceSettingsSection extends StatefulWidget {
-  final ObjectBox objectbox;
-  const SurgePriceSettingsSection({super.key, required this.objectbox});
+class SurgePriceSettingsSection extends ConsumerStatefulWidget {
+  const SurgePriceSettingsSection({super.key});
 
   @override
-  State<SurgePriceSettingsSection> createState() =>
+  ConsumerState<SurgePriceSettingsSection> createState() =>
       _SurgePriceSettingsSectionState();
 }
 
-class _SurgePriceSettingsSectionState extends State<SurgePriceSettingsSection> {
+class _SurgePriceSettingsSectionState extends ConsumerState<SurgePriceSettingsSection> {
   final _amountController = TextEditingController();
   bool _isSurgeEnabled = false;
   List<int> _selectedProductIds = [];
@@ -691,7 +687,7 @@ class _SurgePriceSettingsSectionState extends State<SurgePriceSettingsSection> {
   }
 
   void _loadConfig() {
-    final configs = widget.objectbox.storeConfigBox.getAll();
+    final configs = ref.read(objectBoxProvider).storeConfigBox.getAll();
     if (configs.isNotEmpty) {
       _currentConfig = configs.first;
       _isSurgeEnabled = _currentConfig?.isSurgePriceEnabled ?? false;
@@ -706,7 +702,7 @@ class _SurgePriceSettingsSectionState extends State<SurgePriceSettingsSection> {
     config.surgePriceAmount = double.tryParse(_amountController.text) ?? 0.0;
     config.surgeProductIds = List<int>.from(_selectedProductIds);
 
-    widget.objectbox.storeConfigBox.put(config);
+    ref.read(objectBoxProvider).storeConfigBox.put(config);
     _currentConfig = config;
 
     if (mounted) {
@@ -717,10 +713,10 @@ class _SurgePriceSettingsSectionState extends State<SurgePriceSettingsSection> {
   }
 
   void _showProductSelection() async {
-    final allProducts = widget.objectbox.productBox.getAll();
+    final allProducts = ref.read(objectBoxProvider).productBox.getAll();
     allProducts.sort((a, b) => a.name.compareTo(b.name));
 
-    final result = await showDialog<List<int>>(
+    await showDialog<List<int>>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -845,22 +841,21 @@ class _SurgePriceSettingsSectionState extends State<SurgePriceSettingsSection> {
   }
 }
 
-class AuthModeSection extends StatefulWidget {
-  final ObjectBox objectbox;
-  const AuthModeSection({super.key, required this.objectbox});
+class AuthModeSection extends ConsumerStatefulWidget {
+  const AuthModeSection({super.key});
 
   @override
-  State<AuthModeSection> createState() => _AuthModeSectionState();
+  ConsumerState<AuthModeSection> createState() => _AuthModeSectionState();
 }
 
-class _AuthModeSectionState extends State<AuthModeSection> {
+class _AuthModeSectionState extends ConsumerState<AuthModeSection> {
   String _authMode = 'off';
   late final Box<AppUser> _userBox;
 
   @override
   void initState() {
     super.initState();
-    _userBox = widget.objectbox.store.box<AppUser>();
+    _userBox = ref.read(objectBoxProvider).store.box<AppUser>();
     _loadAuthMode();
   }
 

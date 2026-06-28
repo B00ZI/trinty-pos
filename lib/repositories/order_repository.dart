@@ -2,7 +2,6 @@ import 'package:Easify/models/order.dart' as order_model;
 import 'package:Easify/models/order_item.dart';
 import 'package:Easify/models/order_counter.dart';
 import 'package:Easify/models/game_session.dart';
-import 'package:Easify/models/app_user.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';

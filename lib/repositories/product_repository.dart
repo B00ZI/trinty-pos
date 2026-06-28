@@ -20,13 +20,13 @@ class ProductRepository {
   }
 
   Stream<List<Product>> watchAll() {
-    return _productBox.query().watch().map((q) => q.find());
+    return _productBox.query().watch(triggerImmediately: true).map((q) => q.find());
   }
 
   Stream<List<Product>> watchAvailable() {
     return _productBox
         .query(Product_.isAvailable.equals(true))
-        .watch()
+        .watch(triggerImmediately: true)
         .map((q) => q.find());
   }
 

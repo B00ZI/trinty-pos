@@ -3,16 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:objectbox/objectbox.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
-import 'package:Easify/objectbox.dart';
 import '../models/order.dart' as order_model;
-import '../models/order_item.dart';
 import '../models/product.dart';
-import '../models/order_counter.dart';
 import '../models/app_user.dart';
-import '../models/printer_config.dart';
-import '../models/category.dart';
 import '../models/store_config.dart';
 import '../service/printer_helper.dart';
 import '../service/auth_service.dart';
@@ -21,17 +15,37 @@ import '../widgets/category_card.dart';
 import '../widgets/payment_dialog.dart';
 import '../widgets/user_selection_dialog.dart';
 import '../providers/order_provider.dart';
+import '../providers/product_provider.dart';
+import '../providers/dashboard_provider.dart';
 import '../providers/settings_provider.dart';
 
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+
+class _AppColors {
+  static const surface = Color(0xFFF8FAFC);
+  static const card = Color(0xFFFFFFFF);
+  static const ink = Color(0xFF0F172A);
+  static const inkMuted = Color(0xFF64748B);
+  static const inkLight = Color(0xFFCBD5E1);
+  static const accent = Color(0xFF6366F1); // indigo
+  static const accentSoft = Color(0xFFEEF2FF);
+  static const danger = Color(0xFFEF4444);
+  static const dangerSoft = Color(0xFFFEF2F2);
+  static const success = Color(0xFF10B981);
+  static const border = Color(0xFFE2E8F0);
+  static const cartBg = Color(0xFF1E1B4B); // deep indigo sidebar
+  static const cartSurface = Color(0xFF2D2A5E);
+  static const cartText = Color(0xFFF1F5F9);
+  static const cartMuted = Color(0xFF94A3B8);
+}
+
 class OrderScreen extends ConsumerStatefulWidget {
-  final ObjectBox objectbox;
   final order_model.Order? orderToEdit;
   final String? initialCategory;
   final AppUser? assignedUser;
 
   const OrderScreen({
     super.key,
-    required this.objectbox,
     this.orderToEdit,
     this.initialCategory,
     this.assignedUser,
@@ -43,15 +57,6 @@ class OrderScreen extends ConsumerStatefulWidget {
 
 class _OrderScreenState extends ConsumerState<OrderScreen>
     with SingleTickerProviderStateMixin {
-  late final Box<Product> _productBox;
-  late final Box<PrinterConfig> _printerConfigBox;
-  late final Box<OrderCounter> _orderCounterBox;
-  late final Box<OrderItem> _orderItemBox;
-  late final Box<Category> _categoryBox;
-
-  bool _singleTicketMode = false;
-  bool _enableChangeWindow = true;
-  StreamSubscription<Query<PrinterConfig>>? _configSubscription;
   AppUser? _currentAuthUser;
 
   late AnimationController _shakeController;
@@ -60,11 +65,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
   @override
   void initState() {
     super.initState();
-    _productBox = widget.objectbox.store.box<Product>();
-    _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
-    _orderCounterBox = widget.objectbox.store.box<OrderCounter>();
-    _orderItemBox = widget.objectbox.store.box<OrderItem>();
-    _categoryBox = widget.objectbox.store.box<Category>();
 
     _shakeController = AnimationController(
       vsync: this,
@@ -76,10 +76,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         }
       });
 
-    _loadToggleSettings();
-    _subscribeToToggleSettings();
-
-    // Defer provider modifications to after the widget tree is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.initialCategory != null) {
         ref
@@ -95,111 +91,167 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     });
   }
 
-  void _loadToggleSettings() {
-    try {
-      final configs = _printerConfigBox.getAll();
-      if (configs.isNotEmpty) {
-        _singleTicketMode = configs.first.singleTicketMode;
-        _enableChangeWindow = configs.first.enableChangeWindow;
-      }
-    } catch (e) {
-      _singleTicketMode = false;
-      _enableChangeWindow = true;
-    }
-  }
-
-  void _subscribeToToggleSettings() {
-    _configSubscription =
-        _printerConfigBox.query().watch(triggerImmediately: true).listen((_) {
-      if (mounted) setState(() => _loadToggleSettings());
-    });
-  }
-
   @override
   void dispose() {
     _shakeController.dispose();
-    _configSubscription?.cancel();
     super.dispose();
   }
-
-  // ─── Cart operations (delegated to CartNotifier) ─────────────────────────
 
   void _addToCart(Product product) {
     ref.read(cartProvider.notifier).addToCart(product);
   }
 
-  // ─── Build ───────────────────────────────────────────────────────────────
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
+    final isEditing = widget.orderToEdit != null;
 
     return Scaffold(
-      appBar: widget.orderToEdit != null
-          ? AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.pop(),
-              ),
-              title: Text(
-                'Modifier Commande N°${widget.orderToEdit!.orderNumber}',
-              ),
-            )
-          : AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.pop(),
-              ),
-              title: const Text('Nouvelle Commande'),
-            ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Left: Product / Category Grid ──
-            Expanded(
-              flex: 3,
-              child: _buildProductArea(cartState),
-            ),
-            const SizedBox(width: 8),
-            // ── Right: Cart Sidebar ──
-            Expanded(
-              flex: 1,
-              child: _buildCartSidebar(cartState),
-            ),
-          ],
+      backgroundColor: _AppColors.surface,
+      appBar: _buildAppBar(isEditing, cartState),
+      body: SafeArea(
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            final isLandscape = orientation == Orientation.landscape;
+            final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+
+            if (isLandscape || isTablet) {
+              return _buildLandscapeLayout(cartState);
+            }
+            return _buildPortraitLayout(cartState);
+          },
         ),
       ),
     );
   }
 
-  // ─── Product Area (categories or products) ─────────────────────────────────
+  PreferredSizeWidget _buildAppBar(bool isEditing, CartState cartState) {
+    final itemCount = cartState.lines.fold<int>(0, (s, l) => s + l.quantity);
+    return AppBar(
+      backgroundColor: _AppColors.card,
+      elevation: 0,
+      scrolledUnderElevation: 1,
+      shadowColor: _AppColors.border,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+        color: _AppColors.ink,
+        onPressed: () => context.pop(),
+      ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isEditing
+                ? 'Modifier N°${widget.orderToEdit!.orderNumber}'
+                : 'Nouvelle Commande',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _AppColors.ink,
+              letterSpacing: -0.3,
+            ),
+          ),
+          if (isEditing)
+            Text(
+              'Modifiez les articles puis confirmez',
+              style: TextStyle(
+                fontSize: 11,
+                color: _AppColors.inkMuted,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        if (itemCount > 0)
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.shopping_bag_outlined,
+                    size: 14, color: _AppColors.accent),
+                const SizedBox(width: 4),
+                Text(
+                  '$itemCount',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _AppColors.accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ─── Layouts ──────────────────────────────────────────────────────────────
+
+  Widget _buildLandscapeLayout(CartState cartState) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Cart panel — fixed left in landscape
+        SizedBox(
+          width: 300,
+          child: _buildCartPanel(cartState),
+        ),
+        // Product area — takes remaining space
+        Expanded(
+          child: _buildProductArea(cartState),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPortraitLayout(CartState cartState) {
+    final lines = cartState.lines;
+    return Column(
+      children: [
+        // Product area — scrollable top
+        Expanded(
+          child: _buildProductArea(cartState),
+        ),
+        // Cart sheet — bottom panel
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          height: lines.isEmpty ? 72 : 300,
+          child: _buildCartPanel(cartState),
+        ),
+      ],
+    );
+  }
+
+  // ─── Product Area ─────────────────────────────────────────────────────────
 
   Widget _buildProductArea(CartState cartState) {
-    // If in extras mode, show extra products
     if (cartState.activeParentForExtras != null) {
       return Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Text(
-                  'Suppléments pour : ${cartState.activeParentForExtras?.product?.name ?? "Article"}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () =>
-                      ref.read(cartProvider.notifier).exitExtrasMode(),
-                  icon: const Icon(Icons.close),
-                  label: const Text('Terminer Suppléments'),
-                ),
-              ],
+          _buildBreadcrumbBar(
+            icon: Icons.add_circle_outline_rounded,
+            iconColor: _AppColors.accent,
+            label:
+                'Suppléments pour ${cartState.activeParentForExtras?.product?.name ?? "Article"}',
+            action: TextButton.icon(
+              onPressed: () =>
+                  ref.read(cartProvider.notifier).exitExtrasMode(),
+              icon: const Icon(Icons.check_rounded, size: 16),
+              label: const Text('Terminer'),
+              style: TextButton.styleFrom(
+                foregroundColor: _AppColors.success,
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           Expanded(child: _buildProductGrid(categoryFilter: 'Extra')),
@@ -207,73 +259,95 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
       );
     }
 
-    // If a category is selected, show products in that category with back button
     if (cartState.categoryFilter != null) {
       return Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () =>
-                      ref.read(cartProvider.notifier).setCategoryFilter(null),
-                ),
-                Text(
-                  'Catégorie : ${cartState.categoryFilter}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
+          _buildBreadcrumbBar(
+            icon: Icons.grid_view_rounded,
+            iconColor: _AppColors.inkMuted,
+            label: cartState.categoryFilter!,
+            action: TextButton.icon(
+              onPressed: () =>
+                  ref.read(cartProvider.notifier).setCategoryFilter(null),
+              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+              label: const Text('Catégories'),
+              style: TextButton.styleFrom(
+                foregroundColor: _AppColors.inkMuted,
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           Expanded(
-            child: _buildProductGrid(
-              categoryFilter: cartState.categoryFilter,
-            ),
-          ),
+              child:
+                  _buildProductGrid(categoryFilter: cartState.categoryFilter)),
         ],
       );
     }
 
-    // Default: show category grid
     return _buildCategoryGrid();
   }
 
+  Widget _buildBreadcrumbBar({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required Widget action,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: _AppColors.card,
+        border: Border(bottom: BorderSide(color: _AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: iconColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: _AppColors.ink,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          action,
+        ],
+      ),
+    );
+  }
+
   Widget _buildProductGrid({String? categoryFilter}) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = (constraints.maxWidth / 140).floor();
-        if (crossAxisCount < 1) crossAxisCount = 1;
+    final productsAsync = ref.watch(productsStreamProvider);
 
-        return StreamBuilder<List<Product>>(
-          stream: _productBox
-              .query()
-              .watch(triggerImmediately: true)
-              .map((q) => q.find()),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(child: Text('Erreur : ${snapshot.error}'));
-            }
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    return productsAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: _AppColors.accent),
+      ),
+      error: (err, _) => _buildErrorState('$err'),
+      data: (allProducts) {
+        final products = allProducts
+            .where((p) => p.category == categoryFilter)
+            .toList()
+          ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
-            final products = snapshot.data!
-                .where((p) => p.category == categoryFilter)
-                .toList()
-              ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+        if (products.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.inventory_2_outlined,
+            message: 'Aucun produit dans cette catégorie',
+          );
+        }
 
-            if (products.isEmpty) {
-              return const Center(
-                child: Text('Aucun produit dans cette catégorie'),
-              );
-            }
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            int crossAxisCount = (constraints.maxWidth / 140).floor();
+            if (crossAxisCount < 1) crossAxisCount = 1;
 
             return ReorderableGridView.builder(
+              padding: const EdgeInsets.all(12),
               itemCount: products.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
@@ -282,14 +356,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                 mainAxisSpacing: 12,
               ),
               onReorder: (oldIndex, newIndex) {
-                setState(() {
-                  final p = products.removeAt(oldIndex);
-                  products.insert(newIndex, p);
-                  for (int i = 0; i < products.length; i++) {
-                    products[i].displayOrder = i;
-                  }
-                  _productBox.putMany(products);
-                });
+                final p = products.removeAt(oldIndex);
+                products.insert(newIndex, p);
+                for (int i = 0; i < products.length; i++) {
+                  products[i].displayOrder = i;
+                }
+                ref.read(productRepositoryProvider).putMany(products);
               },
               itemBuilder: (context, index) {
                 final product = products[index];
@@ -309,25 +381,22 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
   }
 
   Widget _buildCategoryGrid() {
-    return StreamBuilder<List<Category>>(
-      stream: _categoryBox
-          .query()
-          .watch(triggerImmediately: true)
-          .map((q) => q.find()),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Erreur : ${snapshot.error}'));
-        }
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
 
-        final categories = snapshot.data!
+    return categoriesAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: _AppColors.accent),
+      ),
+      error: (err, _) => _buildErrorState('$err'),
+      data: (allCategories) {
+        final categories = allCategories.toList()
           ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
         if (categories.isEmpty) {
-          return const Center(
-            child: Text('Aucune catégorie trouvée. Ajoutez-en dans Produits.'),
+          return _buildEmptyState(
+            icon: Icons.category_outlined,
+            message:
+                'Aucune catégorie trouvée.\nAjoutez-en dans les Produits.',
           );
         }
 
@@ -345,14 +414,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                 mainAxisSpacing: 12,
               ),
               onReorder: (oldIndex, newIndex) {
-                setState(() {
-                  final cat = categories.removeAt(oldIndex);
-                  categories.insert(newIndex, cat);
-                  for (int i = 0; i < categories.length; i++) {
-                    categories[i].displayOrder = i;
-                  }
-                  _categoryBox.putMany(categories);
-                });
+                final cat = categories.removeAt(oldIndex);
+                categories.insert(newIndex, cat);
+                for (int i = 0; i < categories.length; i++) {
+                  categories[i].displayOrder = i;
+                }
+                ref.read(categoryRepositoryProvider).putMany(categories);
               },
               itemCount: categories.length,
               itemBuilder: (context, index) {
@@ -373,112 +440,132 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     );
   }
 
-  // ─── Cart Sidebar ──────────────────────────────────────────────────────────
+  // ─── Cart Panel ───────────────────────────────────────────────────────────
 
-  Widget _buildCartSidebar(CartState cartState) {
+  Widget _buildCartPanel(CartState cartState) {
     final config = ref.watch(storeConfigProvider);
+    final printerConfigs =
+        ref.watch(printerConfigStreamProvider).valueOrNull ?? [];
+    final singleTicketMode =
+        printerConfigs.isNotEmpty ? printerConfigs.first.singleTicketMode : false;
     final lines = cartState.lines;
     final grandTotal = cartState.grandTotal(config);
 
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+      decoration: const BoxDecoration(
+        color: _AppColors.cartBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
-          // Header
+          // Handle bar (portrait only hint)
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 4),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _AppColors.cartMuted.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Cart Header
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.shopping_cart, size: 20),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: _AppColors.cartSurface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.receipt_long_rounded,
+                      size: 16, color: _AppColors.accent),
+                ),
+                const SizedBox(width: 10),
                 Text(
-                  'Panier (${lines.length})',
+                  lines.isEmpty
+                      ? 'Panier vide'
+                      : '${lines.length} article${lines.length > 1 ? 's' : ''}',
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    color: _AppColors.cartText,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${grandTotal.toStringAsFixed(2)} DH',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.primary,
+                if (lines.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${grandTotal.toStringAsFixed(2)} DH',
+                        style: const TextStyle(
+                          color: _AppColors.cartText,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          color: _AppColors.cartMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
               ],
             ),
           ),
-          const Divider(height: 1),
 
-          // Cart items
-          Expanded(
-            child: lines.isEmpty
-                ? const Center(child: Text('Votre panier est vide'))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    itemCount: lines.length,
-                    itemBuilder: (context, index) {
-                      final line = lines[index];
-                      return _buildCartItemCard(line, index, config);
-                    },
-                  ),
-          ),
+          if (lines.isNotEmpty) ...[
+            Divider(
+              height: 1,
+              color: _AppColors.cartMuted.withOpacity(0.15),
+            ),
 
-          // Action buttons
-          if (lines.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => _handleCartAction('save-print'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 52),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+            // Items list
+            Expanded(
+              child: ListView.builder(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                itemCount: lines.length,
+                itemBuilder: (context, index) {
+                  return _buildCartItem(lines[index], index, config);
+                },
+              ),
+            ),
+
+            // Action buttons
+            _buildCartActions(singleTicketMode),
+          ] else
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.shopping_cart_outlined,
+                      size: 32,
+                      color: _AppColors.cartMuted.withOpacity(0.4),
                     ),
-                    child: Text(
-                      widget.orderToEdit != null
-                          ? 'Mettre à jour Commande'
-                          : 'Créer Commande',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (!_singleTicketMode) ...[
                     const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () => _handleCartAction('single-print'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
-                        backgroundColor:
-                            Theme.of(context).colorScheme.secondaryContainer,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Ticket Simple',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Text(
+                      'Ajoutez des articles',
+                      style: TextStyle(
+                        color: _AppColors.cartMuted,
+                        fontSize: 13,
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
         ],
@@ -486,22 +573,33 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     );
   }
 
-  Widget _buildCartItemCard(CartLine line, int index, StoreConfig? config) {
+  Widget _buildCartItem(CartLine line, int index, StoreConfig? config) {
     return Dismissible(
       key: Key('cart_${line.product?.id}_$index'),
       direction: DismissDirection.horizontal,
-      onDismissed: (_) => ref.read(cartProvider.notifier).removeLineAt(index),
+      onDismissed: (_) =>
+          ref.read(cartProvider.notifier).removeLineAt(index),
       background: Container(
-        color: Colors.red,
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        decoration: BoxDecoration(
+          color: _AppColors.danger.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
+        padding: const EdgeInsets.only(left: 16),
+        child: const Icon(Icons.delete_outline_rounded,
+            color: _AppColors.danger, size: 18),
       ),
       secondaryBackground: Container(
-        color: Colors.red,
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        decoration: BoxDecoration(
+          color: _AppColors.danger.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
+        padding: const EdgeInsets.only(right: 16),
+        child: const Icon(Icons.delete_outline_rounded,
+            color: _AppColors.danger, size: 18),
       ),
       child: AnimatedBuilder(
         animation: _shakeController,
@@ -512,91 +610,120 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
           }
           return Transform.translate(
             offset: Offset(offset, 0),
-            child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              shape: RoundedRectangleBorder(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 3),
+              decoration: BoxDecoration(
+                color: _AppColors.cartSurface,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  ListTile(
-                    leading: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    child: Row(
                       children: [
-                        _buildQtyButton(
-                          icon: Icons.remove,
-                          onPressed: () =>
-                              ref.read(cartProvider.notifier).removeItem(index),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text(
-                            line.quantity.toString(),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        _buildQtyButton(
-                          icon: Icons.add,
-                          onPressed: () => ref
-                              .read(cartProvider.notifier)
-                              .incrementItem(index),
-                        ),
-                      ],
-                    ),
-                    title: Text(
-                      line.product?.name ?? 'Produit Inconnu',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      '\$${line.total(config).toStringAsFixed(2)}',
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.add_circle_outline,
-                          color: Colors.blue, size: 20),
-                      onPressed: () =>
-                          ref.read(cartProvider.notifier).enterExtrasMode(line),
-                    ),
-                  ),
-                  if (line.orderItem.extras.isNotEmpty)
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(left: 56, bottom: 8, right: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: line.orderItem.extras.map((extra) {
-                          final qty = line.orderItem.getExtraQuantity(extra);
-                          return Row(
+                        // Qty controls
+                        _buildQtyControl(index, line),
+                        const SizedBox(width: 10),
+                        // Product info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.subdirectory_arrow_right,
-                                  size: 16, color: Colors.grey),
-                              const SizedBox(width: 4),
                               Text(
-                                '${extra.name} ${qty > 1 ? "x$qty" : ""}'
-                                    .trim(),
+                                line.product?.name ?? 'Produit Inconnu',
                                 style: const TextStyle(
-                                    fontSize: 12, color: Colors.grey),
+                                  color: _AppColors.cartText,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const Spacer(),
+                              const SizedBox(height: 2),
                               Text(
-                                '${(extra.price * qty).toStringAsFixed(2)} DH',
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.grey),
-                              ),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () => ref
-                                    .read(cartProvider.notifier)
-                                    .decrementExtra(extra),
-                                child: const Icon(
-                                  Icons.remove_circle_outline,
-                                  size: 14,
-                                  color: Colors.red,
+                                '${line.total(config).toStringAsFixed(2)} DH',
+                                style: TextStyle(
+                                  color: _AppColors.accent.withOpacity(0.9),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                        // Extras button
+                        GestureDetector(
+                          onTap: () => ref
+                              .read(cartProvider.notifier)
+                              .enterExtrasMode(line),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: _AppColors.accent.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.add_rounded,
+                              size: 16,
+                              color: _AppColors.accent,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Extras
+                  if (line.orderItem.extras.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.only(
+                          left: 52, right: 12, bottom: 10),
+                      child: Column(
+                        children: line.orderItem.extras.map((extra) {
+                          final qty = line.orderItem.getExtraQuantity(extra);
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 3,
+                                  height: 3,
+                                  margin: const EdgeInsets.only(right: 6),
+                                  decoration: BoxDecoration(
+                                    color: _AppColors.cartMuted,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Text(
+                                  '${extra.name}${qty > 1 ? " ×$qty" : ""}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: _AppColors.cartMuted,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  '${(extra.price * qty).toStringAsFixed(2)} DH',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: _AppColors.cartMuted,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () => ref
+                                      .read(cartProvider.notifier)
+                                      .decrementExtra(extra),
+                                  child: const Icon(
+                                    Icons.remove_circle_outline_rounded,
+                                    size: 14,
+                                    color: _AppColors.danger,
+                                  ),
+                                ),
+                              ],
+                            ),
                           );
                         }).toList(),
                       ),
@@ -610,33 +737,189 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     );
   }
 
+  Widget _buildQtyControl(int index, CartLine line) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _AppColors.cartBg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildQtyButton(
+            icon: Icons.remove_rounded,
+            onPressed: () =>
+                ref.read(cartProvider.notifier).removeItem(index),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              line.quantity.toString(),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: _AppColors.cartText,
+              ),
+            ),
+          ),
+          _buildQtyButton(
+            icon: Icons.add_rounded,
+            onPressed: () =>
+                ref.read(cartProvider.notifier).incrementItem(index),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartActions(bool singleTicketMode) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Primary CTA
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => _handleCartAction('save-print'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _AppColors.accent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.orderToEdit != null
+                        ? 'Mettre à jour'
+                        : 'Confirmer la Commande',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Secondary CTA
+          if (!singleTicketMode) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: OutlinedButton(
+                onPressed: () => _handleCartAction('single-print'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _AppColors.cartMuted,
+                  side: BorderSide(
+                      color: _AppColors.cartMuted.withOpacity(0.3)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.print_outlined, size: 15),
+                    SizedBox(width: 8),
+                    Text(
+                      'Ticket Simple',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
   Widget _buildQtyButton(
       {required IconData icon, required VoidCallback onPressed}) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: const EdgeInsets.all(2),
+        padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.15),
-          shape: BoxShape.circle,
+          color: _AppColors.cartSurface,
+          borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, size: 12, color: Colors.black87),
+        child: Icon(icon, size: 13, color: _AppColors.cartText),
       ),
     );
   }
 
-  // ─── Cart Actions (save / print) ──────────────────────────────────────────
+  Widget _buildEmptyState(
+      {required IconData icon, required String message}) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: _AppColors.inkLight),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: const TextStyle(
+              color: _AppColors.inkMuted,
+              fontSize: 14,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline_rounded,
+              size: 40, color: _AppColors.danger),
+          const SizedBox(height: 10),
+          Text(
+            'Erreur : $message',
+            style: const TextStyle(
+              color: _AppColors.danger,
+              fontSize: 13,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Cart Actions (logic untouched) ───────────────────────────────────────
 
   Future<void> _handleCartAction(String actionType) async {
     final cartState = ref.read(cartProvider);
     final config = ref.read(storeConfigProvider);
 
-    // Auth Flow
     final authMode = await AuthService.getAuthMode();
     if (authMode == AuthMode.perOrder) {
       final selected = await showDialog<AppUser>(
         context: context,
-        builder: (context) => UserSelectionDialog(objectbox: widget.objectbox),
+        builder: (context) =>
+            UserSelectionDialog(objectbox: ref.read(objectBoxProvider)),
       );
       if (selected == null) return;
       _currentAuthUser = selected;
@@ -644,7 +927,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
     final total = cartState.grandTotal(config);
 
-    if (_enableChangeWindow) {
+    final printerConfigs =
+        ref.read(printerConfigStreamProvider).valueOrNull ?? [];
+    final enableChangeWindow = printerConfigs.isNotEmpty
+        ? printerConfigs.first.enableChangeWindow
+        : true;
+
+    if (enableChangeWindow) {
       final paymentConfirmed = await showDialog<bool>(
             context: context,
             barrierDismissible: false,
@@ -662,7 +951,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
       }
     }
 
-    // Persist prices before saving
     ref.read(cartProvider.notifier).persistPrices(config);
 
     if (actionType == 'save-print') {
@@ -675,33 +963,36 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
   Future<void> _saveOrder() async {
     try {
       final cartState = ref.read(cartProvider);
-      final orderBox = widget.objectbox.store.box<order_model.Order>();
+      final orderRepo = ref.read(orderRepositoryProvider);
       order_model.Order order;
 
       if (widget.orderToEdit != null) {
         order = widget.orderToEdit!;
         final itemsToRemove = order.items.toList();
         order.items.clear();
-        orderBox.put(order);
-        _orderItemBox.removeMany(itemsToRemove.map((i) => i.id).toList());
+        orderRepo.putOrder(order);
+        for (final id in itemsToRemove.map((i) => i.id)) {
+          orderRepo.removeOrderItem(id);
+        }
 
         for (final line in cartState.lines) {
           order.items.add(line.orderItem);
         }
         order.isEdited = true;
-        orderBox.put(order);
+        orderRepo.putOrder(order);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Commande mise à jour avec succès !')),
+            const SnackBar(
+                content: Text('Commande mise à jour avec succès !')),
           );
           Navigator.of(context).pop();
         }
       } else {
-        final counter = _orderCounterBox.getAll().first;
+        final orderNumber = orderRepo.incrementOrderNumber();
         order = order_model.Order(
           date: DateTime.now(),
-          orderNumber: counter.value,
+          orderNumber: orderNumber,
         );
         if (widget.assignedUser != null) {
           order.user.target = widget.assignedUser;
@@ -711,9 +1002,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         for (final line in cartState.lines) {
           order.items.add(line.orderItem);
         }
-        orderBox.put(order);
-        counter.value += 1;
-        _orderCounterBox.put(counter);
+        orderRepo.putOrder(order);
         ref.read(cartProvider.notifier).clearCart();
       }
 
@@ -729,37 +1018,37 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
   Future<void> _printSingleTicket() async {
     final cartState = ref.read(cartProvider);
-    final orderBox = widget.objectbox.store.box<order_model.Order>();
+    final orderRepo = ref.read(orderRepositoryProvider);
     order_model.Order order;
 
     if (widget.orderToEdit != null) {
       order = widget.orderToEdit!;
       final itemsToRemove = order.items.toList();
       order.items.clear();
-      orderBox.put(order);
-      _orderItemBox.removeMany(itemsToRemove.map((i) => i.id).toList());
+      orderRepo.putOrder(order);
+      for (final id in itemsToRemove.map((i) => i.id)) {
+        orderRepo.removeOrderItem(id);
+      }
 
       for (final line in cartState.lines) {
         order.items.add(line.orderItem);
       }
-      orderBox.put(order);
+      orderRepo.putOrder(order);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Commande mise à jour avec succès !')),
       );
       if (mounted) Navigator.of(context).pop();
     } else {
-      final counter = _orderCounterBox.getAll().first;
+      final orderNumber = orderRepo.incrementOrderNumber();
       order = order_model.Order(
         date: DateTime.now(),
-        orderNumber: counter.value,
+        orderNumber: orderNumber,
       );
       for (final line in cartState.lines) {
         order.items.add(line.orderItem);
       }
-      orderBox.put(order);
-      counter.value += 1;
-      _orderCounterBox.put(counter);
+      orderRepo.putOrder(order);
       ref.read(cartProvider.notifier).clearCart();
     }
 
@@ -806,14 +1095,15 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     };
 
     final receiptData = ReceiptData.fromJson(orderPayload);
+    final ob = ref.read(objectBoxProvider);
 
     if (!singleTicket) {
-      PrinterHelper.printReceipt(receiptData, widget.objectbox);
+      PrinterHelper.printReceipt(receiptData, ob);
     }
     Future.delayed(const Duration(milliseconds: 1000), () {
       PrinterHelper.printReceipt(
         receiptData,
-        widget.objectbox,
+        ob,
         comment: cartState.comment.isNotEmpty ? cartState.comment : '',
         isTakeAway: cartState.isTakeAway,
       );

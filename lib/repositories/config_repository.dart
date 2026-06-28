@@ -29,12 +29,12 @@ class ConfigRepository {
   }
 
   Stream<List<StoreConfig>> watchStoreConfigList() {
-    return _storeConfigBox.query().watch().map((q) => q.find());
+    return _storeConfigBox.query().watch(triggerImmediately: true).map((q) => q.find());
   }
 
   // Printer Config
   Stream<Query<PrinterConfig>> watchPrinterConfig() {
-    return _printerConfigBox.query().watch();
+    return _printerConfigBox.query().watch(triggerImmediately: true);
   }
 
   PrinterConfig? getPrinterConfig() {

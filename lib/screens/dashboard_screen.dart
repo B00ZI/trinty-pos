@@ -3,70 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../objectbox.dart';
-import '../objectbox.g.dart';
-import '../models/product.dart' as product_model;
-import '../models/app_user.dart';
 import '../models/expense.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/insight_item.dart';
 import '../widgets/charts.dart';
 import '../widgets/daily_funds_dialog.dart';
 import '../widgets/expense_tracking.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
-  final ObjectBox objectbox;
-  final List<product_model.Product> myProducts;
-
-  DashboardScreen({super.key, required this.objectbox})
-      : myProducts = [
-          product_model.Product(
-            name: 'Wireless Headphones',
-            price: 79.99,
-            isAvailable: true,
-          ),
-          product_model.Product(
-            name: 'Smart Watch Series 5',
-            price: 199.99,
-            isAvailable: true,
-          ),
-          product_model.Product(
-            name: 'Bluetooth Speaker',
-            price: 49.99,
-            isAvailable: true,
-          ),
-          product_model.Product(
-            name: 'Phone Case',
-            price: 24.99,
-            isAvailable: true,
-          ),
-        ];
+  const DashboardScreen({super.key});
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  late final Box<AppUser> _userBox;
-  late final Box<Expense> _expenseBox;
-  List<AppUser> _allUsers = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _userBox = widget.objectbox.store.box<AppUser>();
-    _expenseBox = widget.objectbox.store.box<Expense>();
-    _allUsers = _userBox.getAll();
-
-    // Listen to user changes to update dropdown
-    _userBox.query().watch().listen((_) {
-      if (mounted) {
-        setState(() {
-          _allUsers = _userBox.getAll();
-        });
-      }
-    });
-  }
 
   Future<void> _selectDateRange() async {
     final currentParams = ref.read(dashboardParamsProvider);
@@ -280,7 +232,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   fontWeight: FontWeight.w600),
                             ),
                           ),
-                          ..._allUsers.map((user) => DropdownMenuItem<int?>(
+                          ...ref.watch(allUsersProvider).map((user) => DropdownMenuItem<int?>(
                                 value: user.id,
                                 child: Text(
                                   user.name,
@@ -379,7 +331,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 24),
 
             WeeklyPerformanceChart(
-              store: widget.objectbox.store,
+              store: ref.read(objectBoxProvider).store,
               title: 'Weekly Performance',
               maxYValue: 2000.0,
             ),
@@ -407,7 +359,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     SizedBox(
                       height: 240,
                       child: AddableListWidget(
-                        expenseBox: _expenseBox,
+                        expenseBox: ref.read(objectBoxProvider).store.box<Expense>(),
                         onListChanged: (newExpenses) {
                           ref.invalidate(dashboardMetricsProvider);
                         },

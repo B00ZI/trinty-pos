@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Easify/models/product.dart';
 import 'package:Easify/models/category.dart';
-import 'package:Easify/objectbox.dart';
 import 'package:Easify/widgets/product_item.dart';
-import 'package:Easify/widgets/category_card.dart';
 import 'package:objectbox/objectbox.dart';
+import 'package:Easify/widgets/category_card.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -13,23 +13,23 @@ import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:share_plus/share_plus.dart';
 import 'package:Easify/service/data_backup_service.dart';
+import 'package:Easify/providers/dashboard_provider.dart';
 
-class ManagementScreen extends StatefulWidget {
-  final ObjectBox objectbox;
-  const ManagementScreen({super.key, required this.objectbox});
+class ManagementScreen extends ConsumerStatefulWidget {
+  const ManagementScreen({super.key});
 
   @override
-  State<ManagementScreen> createState() => _ManagementScreenState();
+  ConsumerState<ManagementScreen> createState() => _ManagementScreenState();
 }
 
-class _ManagementScreenState extends State<ManagementScreen> {
+class _ManagementScreenState extends ConsumerState<ManagementScreen> {
   int _currentIndex = 0; // 0 for Products, 1 for Categories
   late final DataBackupService _backupService;
 
   @override
   void initState() {
     super.initState();
-    _backupService = DataBackupService(widget.objectbox);
+    _backupService = DataBackupService(ref.read(objectBoxProvider));
   }
 
   Future<void> _exportData() async {
@@ -131,8 +131,8 @@ class _ManagementScreenState extends State<ManagementScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          ProductsListSection(objectbox: widget.objectbox),
-          CategoriesListSection(objectbox: widget.objectbox),
+          const ProductsListSection(),
+          const CategoriesListSection(),
         ],
       ),
     );
@@ -169,15 +169,14 @@ class _ManagementScreenState extends State<ManagementScreen> {
   }
 }
 
-class ProductsListSection extends StatefulWidget {
-  final ObjectBox objectbox;
-  const ProductsListSection({super.key, required this.objectbox});
+class ProductsListSection extends ConsumerStatefulWidget {
+  const ProductsListSection({super.key});
 
   @override
-  State<ProductsListSection> createState() => _ProductsListSectionState();
+  ConsumerState<ProductsListSection> createState() => _ProductsListSectionState();
 }
 
-class _ProductsListSectionState extends State<ProductsListSection> {
+class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
   late final Box<Product> _productBox;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -190,7 +189,7 @@ class _ProductsListSectionState extends State<ProductsListSection> {
   @override
   void initState() {
     super.initState();
-    _productBox = widget.objectbox.store.box<Product>();
+    _productBox = ref.read(objectBoxProvider).store.box<Product>();
   }
 
   void _showProductDialog([Product? product]) {
@@ -241,7 +240,7 @@ class _ProductsListSectionState extends State<ProductsListSection> {
                           value: 'Extra', child: Text('Supplément')),
                       ...(() {
                         final cats =
-                            widget.objectbox.store.box<Category>().getAll();
+                            ref.read(objectBoxProvider).store.box<Category>().getAll();
                         cats.sort(
                             (a, b) => a.displayOrder.compareTo(b.displayOrder));
                         return cats.map((cat) => DropdownMenuItem(
@@ -405,15 +404,14 @@ class _ProductsListSectionState extends State<ProductsListSection> {
   }
 }
 
-class CategoriesListSection extends StatefulWidget {
-  final ObjectBox objectbox;
-  const CategoriesListSection({super.key, required this.objectbox});
+class CategoriesListSection extends ConsumerStatefulWidget {
+  const CategoriesListSection({super.key});
 
   @override
-  State<CategoriesListSection> createState() => _CategoriesListSectionState();
+  ConsumerState<CategoriesListSection> createState() => _CategoriesListSectionState();
 }
 
-class _CategoriesListSectionState extends State<CategoriesListSection> {
+class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
   late final Box<Category> _categoryBox;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -422,7 +420,7 @@ class _CategoriesListSectionState extends State<CategoriesListSection> {
   @override
   void initState() {
     super.initState();
-    _categoryBox = widget.objectbox.store.box<Category>();
+    _categoryBox = ref.read(objectBoxProvider).store.box<Category>();
   }
 
   void _showCategoryDialog([Category? cat]) {
