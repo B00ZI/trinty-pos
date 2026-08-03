@@ -82,28 +82,58 @@ class _AddableListWidgetState extends State<AddableListWidget> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(widget.dialogTitle),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.add_card_outlined,
+                    color: Theme.of(context).colorScheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.dialogTitle,
+                  style: const TextStyle(fontSize: 17),
+                ),
+              ),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                autofocus: true,
+                decoration: InputDecoration(
                   labelText: 'Title',
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.label_outline),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _amountController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Amount',
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.attach_money),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 keyboardType: TextInputType.number,
               ),
             ],
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             TextButton(
               onPressed: () {
@@ -113,9 +143,15 @@ class _AddableListWidgetState extends State<AddableListWidget> {
               },
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
+            FilledButton.icon(
               onPressed: _addItem,
-              child: const Text('Add'),
+              icon: const Icon(Icons.check, size: 18),
+              label: const Text('Add'),
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
           ],
         );
@@ -129,7 +165,17 @@ class _AddableListWidgetState extends State<AddableListWidget> {
 
     if (title.isEmpty || amountText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in both fields')),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red.shade600,
+          content: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please fill in both fields'),
+            ],
+          ),
+        ),
       );
       return;
     }
@@ -137,7 +183,17 @@ class _AddableListWidgetState extends State<AddableListWidget> {
     final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red.shade600,
+          content: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Please enter a valid amount'),
+            ],
+          ),
+        ),
       );
       return;
     }
@@ -178,20 +234,24 @@ class _AddableListWidgetState extends State<AddableListWidget> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Add Button
-        ElevatedButton(
+        FilledButton.icon(
           onPressed: _showAddDialog,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context)
-                .colorScheme
-                .primary, // Use provided button color or default
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          ),
-          child: Text(
+          icon: const Icon(Icons.add, size: 20),
+          label: Text(
             widget.buttonText,
             style: widget.buttonTextStyle ??
                 const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
+          ),
+          style: FilledButton.styleFrom(
+            backgroundColor: widget.buttonColor ??
+                Theme.of(context).colorScheme.primary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
 
@@ -201,15 +261,29 @@ class _AddableListWidgetState extends State<AddableListWidget> {
         Expanded(
           child: _todayExpenses.isEmpty
               ? Center(
-                  child: Text(
-                    widget.emptyListMessage,
-                    style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.5),
-                      fontSize: 16,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 48,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.25),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        widget.emptyListMessage,
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.5),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : ListView.builder(
@@ -243,32 +317,65 @@ class _ListItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
+
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
-      child: ListTile(
-        title: Text(
-          item.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          'Added: ${_formatDate(item.createdAt)}',
-          style: const TextStyle(fontSize: 12),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.blueGrey.shade100),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
           children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: errorColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.receipt_outlined, color: errorColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time,
+                          size: 12, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Added: ${_formatDate(item.createdAt)}',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             Text(
               '\$${item.amount.toStringAsFixed(2)}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.error,
+                color: errorColor,
                 fontSize: 16,
               ),
             ),
             IconButton(
-              icon: Icon(Icons.delete,
-                  color: Theme.of(context).colorScheme.error),
+              icon: Icon(Icons.delete_outline, color: errorColor),
               onPressed: onDelete,
+              tooltip: 'Delete',
             ),
           ],
         ),
