@@ -885,7 +885,7 @@ class _OrderScreenState extends State<OrderScreen>
 
       // Now delete the old items from OrderItem box
       _orderItemBox.removeMany(itemsToRemove.map((i) => i.id).toList());
-
+    
       // 2. Add new items from cart
       for (final item in _cart) {
         // Set persisted price and name from product target
@@ -916,6 +916,11 @@ class _OrderScreenState extends State<OrderScreen>
         date: DateTime.now(),
         orderNumber: orderCounter.value,
       );
+      if (widget.assignedUser != null) {
+        order.user.target = widget.assignedUser;
+      } else if (_currentAuthUser != null) {
+        order.user.target = _currentAuthUser;
+      }
       for (final item in _cart) {
         item.price = item.product.target?.price;
         item.productName = item.product.target?.name;

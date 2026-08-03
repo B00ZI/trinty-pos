@@ -54,9 +54,14 @@ class DashboardParams {
 
   DashboardParams({this.selectedUserId, this.startDate, this.endDate});
   
-  DashboardParams copyWith({int? selectedUserId, DateTime? startDate, DateTime? endDate}) {
+  DashboardParams copyWith({
+    bool clearUserId = false,
+    int? selectedUserId, 
+    DateTime? startDate, 
+    DateTime? endDate
+  }) {
     return DashboardParams(
-      selectedUserId: selectedUserId ?? this.selectedUserId,
+      selectedUserId: clearUserId ? null : (selectedUserId ?? this.selectedUserId),
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
     );

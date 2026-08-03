@@ -268,7 +268,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ],
                         onChanged: (userId) {
                           ref.read(dashboardParamsProvider.notifier).state =
-                              params.copyWith(selectedUserId: userId);
+                              params.copyWith(
+                                selectedUserId: userId,
+                                clearUserId: userId == null,
+                              );
                         },
                       ),
                     ),
