@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 /// A widget that catches errors in its subtree and displays a friendly
 /// error screen instead of crashing the app.
@@ -110,7 +111,7 @@ class _ErrorScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              Icon(Icons.error_outline, size: 64, color: AppColors.danger),
               const SizedBox(height: 16),
               Text(
                 'Une erreur est survenue',
@@ -121,7 +122,7 @@ class _ErrorScreen extends StatelessWidget {
               Text(
                 error.toString(),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                      color: AppColors.ink3,
                     ),
                 textAlign: TextAlign.center,
               ),

@@ -5,6 +5,7 @@ import 'package:Easify/models/app_user.dart';
 import 'package:Easify/models/order.dart' as order_model;
 import 'providers/dashboard_provider.dart';
 import 'providers/navigation_provider.dart';
+import 'theme/app_colors.dart';
 import 'screens/order_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/games_screen.dart';
@@ -52,13 +53,13 @@ GoRouter createRouter(WidgetRef ref) {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              Icon(Icons.error_outline, size: 64, color: AppColors.danger),
               const SizedBox(height: 16),
               const Text('Page introuvable',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(state.uri.toString(),
-                  style: TextStyle(color: Colors.grey[600])),
+                  style: TextStyle(color: AppColors.ink3)),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () => context.go(AppRoutes.home),
@@ -71,13 +72,13 @@ GoRouter createRouter(WidgetRef ref) {
       ),
     ),
     routes: [
-      // Navigation Hub – the home screen
+      // Navigation Hub – the default home screen
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const NavigationHubScreen(),
       ),
 
-      // Section routes (pushed on top of the hub)
+      // Section routes
       GoRoute(
         path: AppRoutes.order,
         pageBuilder: (context, state) {
@@ -154,7 +155,8 @@ GoRouter createRouter(WidgetRef ref) {
           return CustomTransitionPage(
             child: SettingsScreen(
               onSettingsChanged: () {
-                ref.invalidate(showGamesProvider);
+                //this line is bugging the hubscreen
+                // ref.invalidate(showGamesProvider);
               },
             ),
             transitionsBuilder:

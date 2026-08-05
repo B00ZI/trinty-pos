@@ -16,6 +16,9 @@ import '../widgets/admin_pin_dialog.dart';
 import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../providers/dashboard_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSettingsChanged;
@@ -30,92 +33,191 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Paramètres'),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    final sections = [
+      const PrinterSettingsSection(),
+      const UserManagementSection(),
+      const StoreSettingsSection(),
+      BusinessDaySettingsWidget(objectbox: ref.read(objectBoxProvider)),
+      const AuthModeSection(),
+      GamesSettingsSection(
+        objectbox: ref.read(objectBoxProvider),
+        onSettingsChanged: widget.onSettingsChanged,
       ),
-      body: Row(
-        children: [
-          // Sidebar Icons
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: NavigationRail(
-                      selectedIndex: _currentIndex,
-                      onDestinationSelected: (int index) async {
-                        if (index == 4) {
-                          final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
-                          if (!isAdmin) return;
-                        }
-                        setState(() {
-                          _currentIndex = index;
-                        });
-                      },
-                      labelType: NavigationRailLabelType.all,
-                      destinations: const <NavigationRailDestination>[
-                        NavigationRailDestination(
-                          icon: Icon(Icons.print_outlined),
-                          selectedIcon: Icon(Icons.print),
-                          label: Text('Imprimante'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.people_outline),
-                          selectedIcon: Icon(Icons.people),
-                          label: Text('Utilisateurs'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.store_outlined),
-                          selectedIcon: Icon(Icons.store),
-                          label: Text('Boutique'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.schedule_outlined),
-                          selectedIcon: Icon(Icons.schedule),
-                          label: Text('Horaires'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.security_outlined),
-                          selectedIcon: Icon(Icons.security),
-                          label: Text('Sécurité'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.sports_esports_outlined),
-                          selectedIcon: Icon(Icons.sports_esports),
-                          label: Text('Jeux'),
-                        ),
-                      ],
+    ];
+
+    if (isMobile) {
+      return Scaffold(
+        backgroundColor: AppColors.surface1,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                      color: AppColors.ink0,
+                      onPressed: () => context.pop(),
                     ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _buildMobileTab(0, Icons.print_outlined, 'Imprimante'),
+                          _buildMobileTab(1, Icons.people_outline, 'Utilisateurs'),
+                          _buildMobileTab(2, Icons.store_outlined, 'Boutique'),
+                          _buildMobileTab(3, Icons.schedule_outlined, 'Horaires'),
+                          _buildMobileTab(4, Icons.security_outlined, 'Sécurité'),
+                          _buildMobileTab(5, Icons.sports_esports_outlined, 'Jeux'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: sections[_currentIndex],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.surface1,
+      body: SafeArea(
+        child: Row(
+          children: [
+            Column(
+              children: [
+                Container(
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                    color: AppColors.ink0,
+                    onPressed: () => context.pop(),
                   ),
                 ),
-              );
-            },
-          ),
-          const VerticalDivider(thickness: 1, width: 1),
-          // Main Content
-          Expanded(
-            child: IndexedStack(
-              index: _currentIndex,
-              children: [
-                const PrinterSettingsSection(),
-                const UserManagementSection(),
-                const StoreSettingsSection(),
-                BusinessDaySettingsWidget(objectbox: ref.read(objectBoxProvider)),
-                const AuthModeSection(),
-                GamesSettingsSection(
-                  objectbox: ref.read(objectBoxProvider),
-                  onSettingsChanged: widget.onSettingsChanged,
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: IntrinsicHeight(
+                            child: NavigationRail(
+                              selectedIndex: _currentIndex,
+                              backgroundColor: AppColors.surface1,
+                              indicatorColor: AppColors.accentYellow.withOpacity(0.12),
+                              selectedIconTheme: IconThemeData(color: AppColors.accentYellow),
+                              unselectedIconTheme: IconThemeData(color: AppColors.ink4),
+                              selectedLabelTextStyle: const TextStyle(color: AppColors.accentYellow, fontWeight: FontWeight.w600),
+                              unselectedLabelTextStyle: const TextStyle(color: AppColors.ink4),
+                              onDestinationSelected: (int index) async {
+                                if (index == 4) {
+                                  final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
+                                  if (!isAdmin) return;
+                                }
+                                setState(() {
+                                  _currentIndex = index;
+                                });
+                              },
+                              labelType: NavigationRailLabelType.all,
+                              destinations: const <NavigationRailDestination>[
+                                NavigationRailDestination(
+                                  icon: Icon(Icons.print_outlined),
+                                  selectedIcon: Icon(Icons.print),
+                                  label: Text('Imprimante'),
+                                ),
+                                NavigationRailDestination(
+                                  icon: Icon(Icons.people_outline),
+                                  selectedIcon: Icon(Icons.people),
+                                  label: Text('Utilisateurs'),
+                                ),
+                                NavigationRailDestination(
+                                  icon: Icon(Icons.store_outlined),
+                                  selectedIcon: Icon(Icons.store),
+                                  label: Text('Boutique'),
+                                ),
+                                NavigationRailDestination(
+                                  icon: Icon(Icons.schedule_outlined),
+                                  selectedIcon: Icon(Icons.schedule),
+                                  label: Text('Horaires'),
+                                ),
+                                NavigationRailDestination(
+                                  icon: Icon(Icons.security_outlined),
+                                  selectedIcon: Icon(Icons.security),
+                                  label: Text('Sécurité'),
+                                ),
+                                NavigationRailDestination(
+                                  icon: Icon(Icons.sports_esports_outlined),
+                                  selectedIcon: Icon(Icons.sports_esports),
+                                  label: Text('Jeux'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
+            VerticalDivider(thickness: 1, width: 1, color: AppColors.surface3),
+            Expanded(
+              child: sections[_currentIndex],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileTab(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () async {
+        if (index == 4) {
+          final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
+          if (!isAdmin) return;
+        }
+        setState(() => _currentIndex = index);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accentYellow.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.accentYellow : AppColors.surface3,
+            width: 1,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: isSelected ? AppColors.accentYellow : AppColors.ink4),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? AppColors.accentYellow : AppColors.ink4,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -196,23 +298,39 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(AppSpacing.space6),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Paramètres de l\'Imprimante', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 24),
+            SizedBox(height: AppSpacing.space6),
             TextFormField(
               controller: _ipAddressController,
-              decoration: const InputDecoration(labelText: 'Adresse IP', prefixIcon: Icon(Icons.router)),
+              decoration: InputDecoration(
+                labelText: 'Adresse IP',
+                prefixIcon: const Icon(Icons.router),
+                filled: true,
+                fillColor: AppColors.surface0,
+                border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+              ),
               validator: (v) => v == null || !isIP(v) ? 'IP invalide' : null,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: AppSpacing.space4),
             TextFormField(
               controller: _portController,
-              decoration: const InputDecoration(labelText: 'Port', prefixIcon: Icon(Icons.settings_input_component)),
+              decoration: InputDecoration(
+                labelText: 'Port',
+                prefixIcon: const Icon(Icons.settings_input_component),
+                filled: true,
+                fillColor: AppColors.surface0,
+                border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+              ),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (v) {
@@ -220,7 +338,7 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
                 return p == null || p < 1 || p > 65535 ? 'Port invalide' : null;
               },
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: AppSpacing.space6),
             SwitchListTile(
               title: const Text('Mode Ticket Simple'),
               value: _singleTicketMode,
@@ -231,12 +349,30 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
               value: _enableChangeWindow,
               onChanged: (v) => setState(() => _enableChangeWindow = v),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: AppSpacing.space8),
             Row(
               children: [
-                Expanded(child: ElevatedButton(onPressed: _testPrinter, child: const Text('Tester'))),
-                const SizedBox(width: 16),
-                Expanded(child: ElevatedButton(onPressed: _saveConfig, child: const Text('Enregistrer'))),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _testPrinter,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surface2,
+                      foregroundColor: AppColors.ink0,
+                    ),
+                    child: const Text('Tester'),
+                  ),
+                ),
+                SizedBox(width: AppSpacing.space4),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _saveConfig,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentYellow,
+                      foregroundColor: AppColors.payNowText,
+                    ),
+                    child: const Text('Enregistrer'),
+                  ),
+                ),
               ],
             ),
           ],
@@ -269,7 +405,6 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
   }
 
   Future<void> _addUser() async {
-    // Verify admin PIN before adding a user
     final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
     if (!isAdmin) {
       if (mounted) {
@@ -290,47 +425,66 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
         title: const Text('Ajouter un Utilisateur'),
         content: Form(
           key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nom de l\'utilisateur',
-                  prefixIcon: Icon(Icons.person_outline),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nom de l\'utilisateur',
+                    prefixIcon: const Icon(Icons.person_outline),
+                    filled: true,
+                    fillColor: AppColors.surface1,
+                    border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                    enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                    focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Nom requis' : null,
                 ),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Nom requis' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: pinController,
-                decoration: const InputDecoration(
-                  labelText: 'PIN (4 chiffres)',
-                  prefixIcon: Icon(Icons.lock_outline),
+                SizedBox(height: AppSpacing.space4),
+                TextFormField(
+                  controller: pinController,
+                  decoration: InputDecoration(
+                    labelText: 'PIN (4 chiffres)',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    filled: true,
+                    fillColor: AppColors.surface1,
+                    border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                    enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                    focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                  ),
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: (v) => v == null || v.length != 4 ? '4 chiffres requis' : null,
                 ),
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                maxLength: 4,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (v) => v == null || v.length != 4 ? '4 chiffres requis' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: confirmPinController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirmer PIN',
-                  prefixIcon: Icon(Icons.check_circle_outline),
+                SizedBox(height: AppSpacing.space4),
+                TextFormField(
+                  controller: confirmPinController,
+                  decoration: InputDecoration(
+                    labelText: 'Confirmer PIN',
+                    prefixIcon: const Icon(Icons.check_circle_outline),
+                    filled: true,
+                    fillColor: AppColors.surface1,
+                    border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                    enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                    focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                  ),
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: (v) => v != pinController.text ? 'Les PIN ne correspondent pas' : null,
                 ),
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                maxLength: 4,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (v) => v != pinController.text ? 'Les PIN ne correspondent pas' : null,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         actions: [
@@ -341,6 +495,10 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                 Navigator.pop(context, true);
               }
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentYellow,
+              foregroundColor: AppColors.payNowText,
+            ),
             child: const Text('Créer l\'utilisateur'),
           ),
         ],
@@ -365,7 +523,6 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
   }
 
   Future<void> _editUserPin(AppUser user) async {
-    // First verify admin PIN
     final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
     if (!isAdmin) {
       if (mounted) {
@@ -378,7 +535,6 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
 
     if (!mounted) return;
 
-    // Now show the new PIN dialog
     final pinController = TextEditingController();
     final confirmPinController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -386,10 +542,12 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
         title: Row(
           children: [
-            const Icon(Icons.password, color: Colors.blue),
-            const SizedBox(width: 12),
+            const Icon(Icons.password, color: AppColors.primary),
+            SizedBox(width: AppSpacing.space3),
             Expanded(child: Text('Changer le PIN de ${user.name}')),
           ],
         ),
@@ -400,9 +558,14 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
             children: [
               TextFormField(
                 controller: pinController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Nouveau PIN (4 chiffres)',
-                  prefixIcon: Icon(Icons.lock_open),
+                  prefixIcon: const Icon(Icons.lock_open),
+                  filled: true,
+                  fillColor: AppColors.surface1,
+                  border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                  enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                  focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
                 ),
                 keyboardType: TextInputType.number,
                 obscureText: true,
@@ -410,12 +573,17 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (v) => v == null || v.length != 4 ? '4 chiffres requis' : null,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: AppSpacing.space4),
               TextFormField(
                 controller: confirmPinController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Confirmer le nouveau PIN',
-                  prefixIcon: Icon(Icons.verified_user_outlined),
+                  prefixIcon: const Icon(Icons.verified_user_outlined),
+                  filled: true,
+                  fillColor: AppColors.surface1,
+                  border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                  enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                  focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
                 ),
                 keyboardType: TextInputType.number,
                 obscureText: true,
@@ -434,6 +602,10 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                 Navigator.pop(context, true);
               }
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentYellow,
+              foregroundColor: AppColors.payNowText,
+            ),
             child: const Text('Enregistrer le nouveau PIN'),
           ),
         ],
@@ -459,13 +631,12 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('L\'administrateur système ne peut pas être supprimé.'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
     }
 
-    // Verify admin PIN before deleting
     final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
     if (!isAdmin) return;
 
@@ -474,14 +645,16 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
         title: const Text('Supprimer l\'utilisateur'),
         content: Text('Voulez-vous vraiment supprimer définitivement l\'utilisateur ${user.name} ?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.danger,
+              foregroundColor: AppColors.surface0,
             ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Supprimer'),
@@ -503,32 +676,61 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(isMobile ? AppSpacing.space3 : AppSpacing.space6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Gestion des Utilisateurs', style: Theme.of(context).textTheme.headlineSmall),
-                  Text(
-                    'Seuls les administrateurs peuvent modifier les accès',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
-              ElevatedButton.icon(
+          if (isMobile) ...[
+            Text('Gestion des Utilisateurs', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 18)),
+            const SizedBox(height: 4),
+            Text(
+              'Seuls les administrateurs peuvent modifier les accès',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.ink3),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
                 onPressed: _addUser,
                 icon: const Icon(Icons.person_add_alt_1),
                 label: const Text('Ajouter'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.payNowText,
+                ),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Gestion des Utilisateurs', style: Theme.of(context).textTheme.headlineSmall),
+                    Text(
+                      'Seuls les administrateurs peuvent modifier les accès',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.ink3),
+                    ),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: _addUser,
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: const Text('Ajouter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentYellow,
+                    foregroundColor: AppColors.payNowText,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          SizedBox(height: isMobile ? AppSpacing.space3 : AppSpacing.space6),
           Expanded(
             child: _users.isEmpty
                 ? const Center(child: Text('Aucun utilisateur configuré'))
@@ -537,23 +739,26 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                     itemBuilder: (context, index) {
                       final user = _users[index];
                       return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        color: AppColors.surface0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.rLg,
+                          side: const BorderSide(color: AppColors.surface3),
+                        ),
+                        margin: EdgeInsets.only(bottom: AppSpacing.space3),
                         child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.space5, vertical: AppSpacing.space2),
                           leading: Container(
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
                               color: user.isAdmin
-                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                  : Colors.grey.shade100,
+                                  ? AppColors.primary.withOpacity(0.1)
+                                  : AppColors.surface2,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               user.isAdmin ? Icons.admin_panel_settings : Icons.person,
-                              color: user.isAdmin
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.grey.shade700,
+                              color: user.isAdmin ? AppColors.primary : AppColors.ink2,
                             ),
                           ),
                           title: Row(
@@ -563,20 +768,20 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               if (user.isAdmin) ...[
-                                const SizedBox(width: 12),
+                                SizedBox(width: AppSpacing.space3),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.space2 + 2, vertical: 2),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        Theme.of(context).colorScheme.primary,
-                                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                        AppColors.primary,
+                                        AppColors.primary.withOpacity(0.8),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: AppRadius.rFull,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                        color: AppColors.primary.withOpacity(0.3),
                                         blurRadius: 4,
                                         offset: const Offset(0, 2),
                                       ),
@@ -587,7 +792,7 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w900,
-                                      color: Colors.white,
+                                      color: AppColors.surface0,
                                       letterSpacing: 1,
                                     ),
                                   ),
@@ -610,12 +815,12 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                                 ),
                               ),
                               if (!user.isAdmin) ...[
-                                const SizedBox(width: 8),
+                                SizedBox(width: AppSpacing.space2),
                                 Tooltip(
                                   message: 'Supprimer l\'utilisateur',
                                   child: IconButton.filledTonal(
                                     icon: const Icon(Icons.delete_outline, size: 20),
-                                    color: Colors.red,
+                                    color: AppColors.danger,
                                     onPressed: () => _deleteUser(user),
                                   ),
                                 ),
@@ -642,19 +847,19 @@ class StoreSettingsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ob = ref.read(objectBoxProvider);
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(AppSpacing.space6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Configuration de la Boutique',
               style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 24),
+          SizedBox(height: AppSpacing.space6),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
                   StoreConfigWidget(objectbox: ob),
-                  const SizedBox(height: 24),
+                  SizedBox(height: AppSpacing.space6),
                   const SurgePriceSettingsSection(),
                 ],
               ),
@@ -722,9 +927,12 @@ class _SurgePriceSettingsSectionState extends ConsumerState<SurgePriceSettingsSe
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
+              backgroundColor: AppColors.surface0,
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
               title: const Text('Sélectionner les produits'),
               content: SizedBox(
-                width: 400,
+                width: MediaQuery.of(context).size.width * 0.8,
+                height: MediaQuery.of(context).size.height * 0.5,
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: allProducts.length,
@@ -732,7 +940,7 @@ class _SurgePriceSettingsSectionState extends ConsumerState<SurgePriceSettingsSe
                     final p = allProducts[index];
                     final isSelected = _selectedProductIds.contains(p.id);
                     return CheckboxListTile(
-                      title: Text(p.name),
+                      title: Text(p.name, overflow: TextOverflow.ellipsis),
                       subtitle: Text('${p.price.toStringAsFixed(2)} DH'),
                       value: isSelected,
                       onChanged: (val) {
@@ -767,18 +975,31 @@ class _SurgePriceSettingsSectionState extends ConsumerState<SurgePriceSettingsSe
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final cardPadding = isMobile ? 12.0 : 16.0;
+    final spacing = isMobile ? 12.0 : AppSpacing.space6;
+
     return Card(
+      color: AppColors.surface0,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.rLg,
+        side: const BorderSide(color: AppColors.surface3),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(cardPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Majoration des Prix (Plus)',
-                  style: Theme.of(context).textTheme.titleLarge,
+                Flexible(
+                  child: Text(
+                    'Majoration des Prix (Plus)',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 Switch(
                   value: _isSurgeEnabled,
@@ -789,51 +1010,111 @@ class _SurgePriceSettingsSectionState extends ConsumerState<SurgePriceSettingsSe
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: AppSpacing.space4),
             Text(
               'Appliquer un supplément fixe aux produits sélectionnés.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.ink3),
             ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    controller: _amountController,
-                    decoration: const InputDecoration(
-                      labelText: 'Montant (DH)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.add_circle_outline),
-                    ),
-                    keyboardType: TextInputType.number,
+            SizedBox(height: spacing),
+            if (isMobile) ...[
+              TextFormField(
+                controller: _amountController,
+                decoration: InputDecoration(
+                  labelText: 'Montant (DH)',
+                  prefixIcon: const Icon(Icons.add_circle_outline),
+                  filled: true,
+                  fillColor: AppColors.surface1,
+                  border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                  enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                  focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: AppSpacing.space3),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _showProductSelection,
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: Text(
+                    _selectedProductIds.isEmpty
+                        ? 'Choisir Produits'
+                        : '${_selectedProductIds.length} Produits',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+                    side: const BorderSide(color: AppColors.surface3),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 3,
-                  child: OutlinedButton.icon(
-                    onPressed: _showProductSelection,
-                    icon: const Icon(Icons.inventory_2_outlined),
-                    label: Text(
-                      _selectedProductIds.isEmpty
-                          ? 'Choisir Produits'
-                          : '${_selectedProductIds.length} Produits',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                IconButton.filled(
+              ),
+              SizedBox(height: AppSpacing.space3),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
                   onPressed: _saveConfig,
                   icon: const Icon(Icons.save),
-                  tooltip: 'Enregistrer',
+                  label: const Text('Enregistrer'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+                    backgroundColor: AppColors.accentYellow,
+                    foregroundColor: AppColors.payNowText,
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _amountController,
+                      decoration: InputDecoration(
+                        labelText: 'Montant (DH)',
+                        prefixIcon: const Icon(Icons.add_circle_outline),
+                        filled: true,
+                        fillColor: AppColors.surface1,
+                        border: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                        enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
+                        focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  SizedBox(width: AppSpacing.space3),
+                  Expanded(
+                    flex: 3,
+                    child: OutlinedButton.icon(
+                      onPressed: _showProductSelection,
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: Text(
+                        _selectedProductIds.isEmpty
+                            ? 'Choisir Produits'
+                            : '${_selectedProductIds.length} Produits',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.space5),
+                        side: const BorderSide(color: AppColors.surface3),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: AppSpacing.space3),
+                  IconButton.filled(
+                    onPressed: _saveConfig,
+                    icon: const Icon(Icons.save),
+                    tooltip: 'Enregistrer',
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.accentYellow,
+                      foregroundColor: AppColors.payNowText,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -888,14 +1169,19 @@ class _AuthModeSectionState extends ConsumerState<AuthModeSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.space6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Sécurité et Authentification', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 32),
+          SizedBox(height: AppSpacing.space8),
           Card(
+            color: AppColors.surface0,
+            shape: RoundedRectangleBorder(
+              borderRadius: AppRadius.rLg,
+              side: const BorderSide(color: AppColors.surface3),
+            ),
             child: Column(
               children: [
                 RadioListTile<String>(
@@ -905,7 +1191,7 @@ class _AuthModeSectionState extends ConsumerState<AuthModeSection> {
                   groupValue: _authMode,
                   onChanged: _saveAuthMode,
                 ),
-                const Divider(height: 1),
+                const Divider(height: 1, color: AppColors.surface3),
                 RadioListTile<String>(
                   title: const Text('Connexion Session'),
                   subtitle: const Text('Sélectionner un utilisateur au lancement de l\'application'),
@@ -913,7 +1199,7 @@ class _AuthModeSectionState extends ConsumerState<AuthModeSection> {
                   groupValue: _authMode,
                   onChanged: _saveAuthMode,
                 ),
-                const Divider(height: 1),
+                const Divider(height: 1, color: AppColors.surface3),
                 RadioListTile<String>(
                   title: const Text('PIN par Commande'),
                   subtitle: const Text('Demander le PIN pour chaque nouvelle commande'),
@@ -926,15 +1212,15 @@ class _AuthModeSectionState extends ConsumerState<AuthModeSection> {
           ),
           if (_userBox.isEmpty())
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.space4),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+                  SizedBox(width: AppSpacing.space2),
                   Expanded(
                     child: Text(
                       'Aucun utilisateur configuré. Les modes d\'authentification ne peuvent pas être activés.',
-                      style: TextStyle(color: Colors.orange.shade800),
+                      style: const TextStyle(color: AppColors.warning),
                     ),
                   ),
                 ],

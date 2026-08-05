@@ -10,7 +10,11 @@ import 'package:Easify/models/expense.dart';
 import 'package:Easify/models/daily_funds.dart';
 import 'package:Easify/models/order_counter.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/navigation_provider.dart';
 import '../router.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../service/activation_service.dart';
 import '../service/auth_service.dart';
 import '../widgets/activation_dialog.dart';
@@ -26,7 +30,6 @@ class NavigationHubScreen extends ConsumerStatefulWidget {
 }
 
 class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
-  bool _showGames = false;
   bool _isLoading = true;
   bool _isCheckingActivation = true;
   AppUser? _selectedUser;
@@ -36,17 +39,16 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _initShowGames();
     _checkActivation();
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> _initShowGames() async {
     final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool('show_games_tab') ?? false;
+    ref.read(showGamesProvider.notifier).state = saved;
     if (mounted) {
-      setState(() {
-        _showGames = prefs.getBool('show_games_tab') ?? false;
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -113,7 +115,6 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
   }
 
   void _navigateTo(String path) async {
-    // Dashboard admin check
     if (path == AppRoutes.dashboard) {
       final objectbox = ref.read(objectBoxProvider);
       final isAdmin = await AdminPinDialog.verify(context, objectbox);
@@ -130,7 +131,6 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
     }
 
     if (mounted) {
-      // Pass the selected user to routes that need it
       if (_selectedUser != null &&
           (path == AppRoutes.order ||
               path == AppRoutes.games ||
@@ -147,8 +147,8 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('⚠️ ATTENTION ⚠️',
-            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        title: Text('⚠️ ATTENTION ⚠️',
+            style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
         content: const Text(
             'Voulez-vous vraiment supprimer TOUTES les données (Commandes, Sessions de jeux, Dépenses) et repartir à zéro ?\n\nCette action est IRRÉVERSIBLE.'),
         actions: [
@@ -157,10 +157,10 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
             child: const Text('Annuler'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('SUPPRIMER TOUT',
-                style: TextStyle(color: Colors.white)),
+                style: TextStyle(color: AppColors.surface0)),
           ),
         ],
       ),
@@ -189,132 +189,167 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showGames = ref.watch(showGamesProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     if (_isCheckingActivation || _isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      appBar: AppBar(
-        title: GestureDetector(
-          onTap: _onTitleTap,
-          child: Text(
-            _selectedUser != null
-                ? 'Easify - ${_selectedUser!.name}'
-                : 'Easify',
-          ),
-        ),
-        actions: [
-          if (_selectedUser != null)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () => _showUserSelectionFlow(),
-              tooltip: "Changer d'utilisateur",
-            ),
-        ],
-      ),
+      backgroundColor: AppColors.surface1,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              child: Text(
-                'Navigation',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isMobile ? AppSpacing.space3 : AppSpacing.space6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'lib/assets/easify (1).png',
+                      width: isMobile ? 20 : 24,
+                      height: isMobile ? 20 : 24,
+                      fit: BoxFit.cover,
                     ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Sélectionnez une section',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // Responsive: 2 columns on narrow, 3 on wide
-                  final crossCount = constraints.maxWidth > 600 ? 3 : 2;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.count(
-                      crossAxisCount: crossCount,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
+                  ),
+                  const SizedBox(width: AppSpacing.space2),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _HubCard(
-                          icon: Icons.shopping_cart,
-                          title: 'Commande',
-                          subtitle: 'Créer une nouvelle commande',
-                          color: colorScheme.primary,
-                          onTap: () => _navigateTo(AppRoutes.order),
-                        ),
-                        _HubCard(
-                          icon: Icons.history,
-                          title: 'Historique',
-                          subtitle: 'Voir les commandes passées',
-                          color: const Color(0xFF5B8DEF),
-                          onTap: () => _navigateTo(AppRoutes.history),
-                          onLongPress: _promptWipeAllOrders,
-                        ),
-                        if (_showGames)
-                          _HubCard(
-                            icon: Icons.sports_esports,
-                            title: 'Jeux',
-                            subtitle: 'Sessions de jeux en cours',
-                            color: const Color(0xFF7C4DFF),
-                            onTap: () => _navigateTo(AppRoutes.games),
+                        GestureDetector(
+                          onTap: _onTitleTap,
+                          child: Text(
+                            _selectedUser != null
+                                ? 'Bienvenue, ${_selectedUser!.name}'
+                                : 'Bienvenue',
+                            style: TextStyle(
+                              fontSize: isMobile ? 22 : 28,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink0,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                        _HubCard(
-                          icon: Icons.dashboard,
-                          title: 'Dashboard',
-                          subtitle: 'Statistiques et métriques',
-                          color: const Color(0xFF00BFA5),
-                          onTap: () => _navigateTo(AppRoutes.dashboard),
                         ),
-                        _HubCard(
-                          icon: Icons.inventory_2,
-                          title: 'Gestion',
-                          subtitle: 'Produits, catégories, dépenses',
-                          color: const Color(0xFFFF6D00),
-                          onTap: () => _navigateTo(AppRoutes.management),
-                        ),
-                        _HubCard(
-                          icon: Icons.settings,
-                          title: 'Paramètres',
-                          subtitle: 'Configuration du magasin',
-                          color: const Color(0xFF78909C),
-                          onTap: () => _navigateTo(AppRoutes.settings),
+                        const SizedBox(height: AppSpacing.space1),
+                        Text(
+                          'Sélectionnez une section',
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 14,
+                            color: AppColors.ink3,
+                          ),
                         ),
                       ],
                     ),
+                  ),
+                  if (_selectedUser != null)
+                    IconButton(
+                      icon: const Icon(Icons.logout_rounded,
+                          color: AppColors.ink3),
+                      onPressed: () => _showUserSelectionFlow(),
+                      tooltip: "Changer d'utilisateur",
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.space6),
+
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  int crossCount;
+                  if (constraints.maxWidth > 900) {
+                    crossCount = 4;
+                  } else if (constraints.maxWidth > 600) {
+                    crossCount = 3;
+                  } else {
+                    crossCount = 2;
+                  }
+
+                  final cards = [
+                    _HubCard(
+                      icon: Icons.shopping_cart_rounded,
+                      title: 'Commande',
+                      subtitle: 'Créer une nouvelle commande',
+                      color: AppColors.accentYellow,
+                      onTap: () => _navigateTo(AppRoutes.order),
+                      compact: isMobile,
+                    ),
+                    _HubCard(
+                      icon: Icons.receipt_long_rounded,
+                      title: 'Historique',
+                      subtitle: 'Voir les commandes passées',
+                      color: AppColors.info,
+                      onTap: () => _navigateTo(AppRoutes.history),
+                      onLongPress: _promptWipeAllOrders,
+                      compact: isMobile,
+                    ),
+                    if (showGames)
+                      _HubCard(
+                        icon: Icons.sports_esports_rounded,
+                        title: 'Jeux',
+                        subtitle: 'Sessions de jeux en cours',
+                        color: AppColors.accentPurple,
+                        onTap: () => _navigateTo(AppRoutes.games),
+                        compact: isMobile,
+                      ),
+                    _HubCard(
+                      icon: Icons.analytics_rounded,
+                      title: 'Dashboard',
+                      subtitle: 'Statistiques et métriques',
+                      color: AppColors.success,
+                      onTap: () => _navigateTo(AppRoutes.dashboard),
+                      compact: isMobile,
+                    ),
+                    _HubCard(
+                      icon: Icons.inventory_2_rounded,
+                      title: 'Gestion',
+                      subtitle: 'Produits, catégories, dépenses',
+                      color: AppColors.warning,
+                      onTap: () => _navigateTo(AppRoutes.management),
+                      compact: isMobile,
+                    ),
+                    _HubCard(
+                      icon: Icons.settings_rounded,
+                      title: 'Paramètres',
+                      subtitle: 'Configuration du magasin',
+                      color: AppColors.ink3,
+                      onTap: () => _navigateTo(AppRoutes.settings),
+                      compact: isMobile,
+                    ),
+                  ];
+
+                  return GridView.count(
+                    crossAxisCount: crossCount,
+                    mainAxisSpacing: isMobile ? AppSpacing.space3 : AppSpacing.space4,
+                    crossAxisSpacing: isMobile ? AppSpacing.space3 : AppSpacing.space4,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: isMobile ? 1.2 : 1.4,
+                    children: cards,
                   );
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _HubCard extends StatelessWidget {
+class _HubCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final bool compact;
 
   const _HubCard({
     required this.icon,
@@ -323,50 +358,77 @@ class _HubCard extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.onLongPress,
+    this.compact = false,
   });
 
   @override
+  State<_HubCard> createState() => _HubCardState();
+}
+
+class _HubCardState extends State<_HubCard> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
+    final padding = widget.compact ? AppSpacing.space3 : AppSpacing.space5;
+    final iconSize = widget.compact ? 22.0 : 28.0;
+    final iconPadding = widget.compact ? AppSpacing.space2 : AppSpacing.space3;
+    final titleSize = widget.compact ? 13.0 : 16.0;
+    final subtitleSize = widget.compact ? 10.0 : 12.0;
+
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      onTapDown: (_) => setState(() => _hovering = true),
+      onTapUp: (_) => setState(() => _hovering = false),
+      onTapCancel: () => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
+          color: AppColors.surface0,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
-            color: color.withValues(alpha: 0.15),
-            width: 1.5,
+            color: _hovering ? widget.color : AppColors.surface3,
+            width: _hovering ? 1.5 : 1,
           ),
+          boxShadow: _hovering ? [
+            const BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ] : null,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(padding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(iconPadding),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
+                  color: widget.color.withAlpha(25),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: Icon(widget.icon, color: widget.color, size: iconSize),
               ),
-              const SizedBox(height: 16),
+              const Spacer(),
               Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF210124),
-                    ),
+                widget.title,
+                style: TextStyle(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink0,
+                ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: widget.compact ? 2 : AppSpacing.space1),
               Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF210124).withValues(alpha: 0.55),
-                    ),
+                widget.subtitle,
+                style: TextStyle(
+                  fontSize: subtitleSize,
+                  color: AppColors.ink3,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

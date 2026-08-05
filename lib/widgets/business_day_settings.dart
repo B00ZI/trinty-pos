@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/store_config.dart';
 import '../objectbox.dart';
+import '../theme/app_colors.dart';
 
 class BusinessDaySettingsWidget extends StatefulWidget {
   final ObjectBox objectbox;
@@ -64,48 +65,61 @@ class _BusinessDaySettingsWidgetState extends State<BusinessDaySettingsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Paramètres de la Journée',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Définissez les heures de début et de fin de votre journée de travail.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-            ),
-            const SizedBox(height: 32),
-            ListTile(
-              title: const Text('Début de journée'),
-              subtitle: Text(_startTime?.format(context) ?? 'Non défini'),
-              trailing: const Icon(Icons.access_time),
-              onTap: () => _selectTime(context, true),
-            ),
-            const Divider(),
-            ListTile(
-              title: const Text('Fin de journée (Affichage)'),
-              subtitle: Text(_endTime?.format(context) ?? 'Non défini'),
-              trailing: const Icon(Icons.access_time),
-              onTap: () => _selectTime(context, false),
-            ),
-            const SizedBox(height: 48),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _saveConfig,
-                icon: const Icon(Icons.save),
-                label: const Text('Enregistrer les Horaires'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final pad = isMobile ? 12.0 : 24.0;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(pad),
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(pad),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Paramètres de la Journée',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: isMobile ? 18 : null,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'Définissez les heures de début et de fin de votre journée de travail.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.ink3),
+              ),
+              SizedBox(height: isMobile ? 16 : 32),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Début de journée'),
+                subtitle: Text(_startTime?.format(context) ?? 'Non défini'),
+                trailing: const Icon(Icons.access_time),
+                onTap: () => _selectTime(context, true),
+              ),
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Fin de journée (Affichage)'),
+                subtitle: Text(_endTime?.format(context) ?? 'Non défini'),
+                trailing: const Icon(Icons.access_time),
+                onTap: () => _selectTime(context, false),
+              ),
+              SizedBox(height: isMobile ? 20 : 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _saveConfig,
+                  icon: const Icon(Icons.save),
+                  label: const Text('Enregistrer les Horaires'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 16),
+                    backgroundColor: AppColors.accentYellow,
+                    foregroundColor: AppColors.payNowText,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

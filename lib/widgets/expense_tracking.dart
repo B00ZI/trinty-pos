@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/expense.dart';
 import '../objectbox.g.dart';
+import '../theme/app_colors.dart';
 
 class ListItem {
   final String title;
@@ -80,7 +81,7 @@ class _AddableListWidgetState extends State<AddableListWidget> {
   void _showAddDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -139,15 +140,17 @@ class _AddableListWidgetState extends State<AddableListWidget> {
               onPressed: () {
                 _titleController.clear();
                 _amountController.clear();
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               },
               child: const Text('Cancel'),
             ),
             FilledButton.icon(
-              onPressed: _addItem,
+              onPressed: () => _addItem(dialogContext),
               icon: const Icon(Icons.check, size: 18),
               label: const Text('Add'),
               style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accentYellow,
+                foregroundColor: AppColors.payNowText,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -159,7 +162,7 @@ class _AddableListWidgetState extends State<AddableListWidget> {
     );
   }
 
-  void _addItem() {
+  void _addItem(BuildContext dialogContext) {
     final title = _titleController.text.trim();
     final amountText = _amountController.text.trim();
 
@@ -167,12 +170,12 @@ class _AddableListWidgetState extends State<AddableListWidget> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade600,
-          content: const Row(
+          backgroundColor: AppColors.danger,
+          content: Row(
             children: [
-              Icon(Icons.error_outline, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text('Please fill in both fields'),
+              Icon(Icons.error_outline, color: AppColors.surface0, size: 18),
+              const SizedBox(width: 8),
+              const Text('Please fill in both fields'),
             ],
           ),
         ),
@@ -185,12 +188,12 @@ class _AddableListWidgetState extends State<AddableListWidget> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade600,
-          content: const Row(
+          backgroundColor: AppColors.danger,
+          content: Row(
             children: [
-              Icon(Icons.error_outline, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text('Please enter a valid amount'),
+              Icon(Icons.error_outline, color: AppColors.surface0, size: 18),
+              const SizedBox(width: 8),
+              const Text('Please enter a valid amount'),
             ],
           ),
         ),
@@ -212,7 +215,7 @@ class _AddableListWidgetState extends State<AddableListWidget> {
 
     _titleController.clear();
     _amountController.clear();
-    Navigator.of(context).pop();
+    Navigator.of(dialogContext).pop();
   }
 
   void _removeItem(int index) {
@@ -324,7 +327,7 @@ class _ListItemCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 0),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.blueGrey.shade100),
+        side: BorderSide(color: AppColors.surface3),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -352,12 +355,12 @@ class _ListItemCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.access_time,
-                          size: 12, color: Colors.grey.shade500),
+                          size: 12, color: AppColors.ink4),
                       const SizedBox(width: 4),
                       Text(
                         'Added: ${_formatDate(item.createdAt)}',
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
+                            fontSize: 12, color: AppColors.ink3),
                       ),
                     ],
                   ),

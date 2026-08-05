@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 class PaymentDialog extends StatefulWidget {
   final double totalAmount;
@@ -65,98 +68,130 @@ class _PaymentDialogState extends State<PaymentDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Paiement de la Commande'),
+      backgroundColor: AppColors.surface0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      elevation: 24,
+      title: const Text(
+        'Paiement de la Commande',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: AppColors.ink0,
+        ),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Total section
-            Card(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    if (widget.sessionDetails != null) ...[
-                      Text(
-                        widget.sessionDetails!,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
-                        ),
-                        textAlign: TextAlign.center,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.space4),
+              decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: AppRadius.rMd,
+              ),
+              child: Column(
+                children: [
+                  if (widget.sessionDetails != null) ...[
+                    Text(
+                      widget.sessionDetails!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.ink2,
                       ),
-                      const SizedBox(height: 8),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                    ],
-                    Text(
-                      'Total à Payer',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${widget.totalAmount.toStringAsFixed(2)} DH',
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
-                    ),
+                    const SizedBox(height: AppSpacing.space2),
+                    const Divider(),
+                    const SizedBox(height: AppSpacing.space2),
                   ],
-                ),
+                  const Text(
+                    'Total à Payer',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.ink3,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.space2),
+                  Text(
+                    '${widget.totalAmount.toStringAsFixed(2)} DH',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.ink0,
+                    ),
+                  ),
+                ],
               ),
             ),
             if (!widget.isGameSession) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.space6),
               // Amount input
               TextField(
                 controller: _amountController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink0,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Montant Reçu',
-                  prefixIcon: const Icon(Icons.attach_money),
+                  prefixIcon: const Icon(Icons.attach_money, color: AppColors.ink3),
+                  filled: true,
+                  fillColor: AppColors.surface2,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppRadius.rMd,
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppRadius.rMd,
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.space6),
             ],
             // Change calculation display
             if (!widget.isGameSession && _changeStatus.isNotEmpty)
-              Card(
-                color: _calculatedChange >= 0
-                    ? Colors.green.shade50
-                    : Colors.red.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _changeStatus,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: _calculatedChange >= 0
-                                  ? Colors.green.shade700
-                                  : Colors.red.shade700,
-                            ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.space4),
+                decoration: BoxDecoration(
+                  color: _calculatedChange >= 0
+                      ? AppColors.successLight
+                      : AppColors.dangerLight,
+                  borderRadius: AppRadius.rMd,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _changeStatus,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _calculatedChange >= 0
+                            ? AppColors.success
+                            : AppColors.danger,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${_calculatedChange.abs().toStringAsFixed(2)} DH',
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: _calculatedChange >= 0
-                                      ? Colors.green.shade700
-                                      : Colors.red.shade700,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                    ),
+                    const SizedBox(height: AppSpacing.space2),
+                    Text(
+                      '${_calculatedChange.abs().toStringAsFixed(2)} DH',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: _calculatedChange >= 0
+                            ? AppColors.success
+                            : AppColors.danger,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -171,6 +206,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
           onPressed: (widget.isGameSession || _amountController.text.isNotEmpty)
               ? () => Navigator.pop(context, true)
               : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accentYellow,
+            foregroundColor: AppColors.payNowText,
+          ),
           child: const Text('Valider'),
         ),
       ],

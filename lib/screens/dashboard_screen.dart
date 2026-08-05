@@ -10,6 +10,9 @@ import '../widgets/insight_item.dart';
 import '../widgets/charts.dart';
 import '../widgets/daily_funds_dialog.dart';
 import '../widgets/expense_tracking.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -48,7 +51,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     showDialog(
       context: context,
       builder: (ctx) => DailyFundsDialog(
-        currentFunds: null, // Let user input the amount
+        currentFunds: null,
         onSave: (amount) {
           ref.read(fundsRepositoryProvider).saveFunds(amount);
         },
@@ -62,8 +65,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Unités Vendues'),
         content: SizedBox(
-          width: 400,
-          height: 500,
+          width: MediaQuery.of(context).size.width * 0.85,
+          height: MediaQuery.of(context).size.height * 0.6,
           child: Consumer(
             builder: (context, ref, child) {
               final unitsAsync = ref.watch(unitsSoldProvider);
@@ -109,26 +112,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final params = ref.watch(dashboardParamsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Dashboard'),
-      ),
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.surface1,
       floatingActionButton: metricsAsync.when(
         data: (metrics) => FloatingActionButton.extended(
           onPressed: () =>
               _showFundsDialog(metrics.todayFunds, metrics.fundsAlreadySet),
-          backgroundColor: const Color(0xFF0F172A),
+          backgroundColor: AppColors.sidebarBg,
           elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.rFull,
+          ),
           icon: const Icon(Icons.account_balance_wallet_outlined,
-              color: Colors.white, size: 18),
+              color: AppColors.surface0, size: 18),
           label: Text(
             'Fond de caisse: ${metrics.todayFunds.toStringAsFixed(2)} DH',
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.surface0,
               fontWeight: FontWeight.bold,
               fontSize: 12,
               letterSpacing: 0.5,
@@ -138,29 +137,60 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         loading: () => const SizedBox.shrink(),
         error: (_, __) => const SizedBox.shrink(),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date Range & User Selector Row
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: _selectDateRange,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: Colors.grey.withOpacity(0.08)),
+            Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space4),
+              decoration: const BoxDecoration(
+                color: AppColors.surface0,
+                border: Border(bottom: BorderSide(color: AppColors.surface3, width: 1)),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                    color: AppColors.ink0,
+                    onPressed: () => context.pop(),
+                  ),
+                  const SizedBox(width: AppSpacing.space2),
+                  const Expanded(
+                    child: Text(
+                      'Dashboard',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink0,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.space5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _selectDateRange,
+                            borderRadius: AppRadius.rLg,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.space4, vertical: AppSpacing.space3),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface0,
+                                borderRadius: AppRadius.rLg,
+                                border: Border.all(color: AppColors.surface3),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: AppColors.ink5.withOpacity(0.1),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -168,41 +198,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calendar_today_outlined,
-                              size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 10),
+                          const Icon(Icons.calendar_today_outlined,
+                              size: 16, color: AppColors.ink3),
+                          const SizedBox(width: AppSpacing.space2 + AppSpacing.space1),
                           Expanded(
                             child: Text(
                               params.startDate != null && params.endDate != null
                                   ? '${DateFormat('MMM dd').format(params.startDate!)} – ${DateFormat('MMM dd, yyyy').format(params.endDate!)}'
                                   : 'Période Actuelle',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey[700],
+                                color: AppColors.ink2,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(Icons.keyboard_arrow_down,
-                              size: 16, color: Colors.grey[600]),
+                          const Icon(Icons.keyboard_arrow_down,
+                              size: 16, color: AppColors.ink3),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.space3),
                 Expanded(
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.space4, vertical: AppSpacing.space1),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.withOpacity(0.08)),
+                      color: AppColors.surface0,
+                      borderRadius: AppRadius.rLg,
+                      border: Border.all(color: AppColors.surface3),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: AppColors.ink5.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -211,24 +241,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int?>(
                         value: params.selectedUserId,
-                        hint: Text(
+                        hint: const Text(
                           'Tous les Utilisateurs',
                           style: TextStyle(
                               fontSize: 13,
-                              color: Colors.grey[600],
+                              color: AppColors.ink3,
                               fontWeight: FontWeight.w600),
                         ),
                         isExpanded: true,
-                        icon: Icon(Icons.keyboard_arrow_down,
-                            size: 16, color: Colors.grey[600]),
+                        icon: const Icon(Icons.keyboard_arrow_down,
+                            size: 16, color: AppColors.ink3),
                         items: [
                           DropdownMenuItem<int?>(
                             value: null,
-                            child: Text(
+                            child: const Text(
                               'Tous les Utilisateurs',
                               style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.grey[700],
+                                  color: AppColors.ink2,
                                   fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -236,16 +266,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 value: user.id,
                                 child: Text(
                                   user.name,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       fontSize: 13,
-                                      color: Colors.grey[700],
+                                      color: AppColors.ink2,
                                       fontWeight: FontWeight.w600),
                                 ),
                               )),
                         ],
                         onChanged: (userId) {
                           ref.read(dashboardParamsProvider.notifier).state =
-                              params.copyWith(selectedUserId: userId);
+                              userId == null
+                                  ? params.copyWith(clearUserId: true)
+                                  : params.copyWith(selectedUserId: userId);
                         },
                       ),
                     ),
@@ -253,9 +285,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.space6),
 
-            // Metrics Cards
             metricsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Erreur: $err')),
@@ -269,14 +300,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           value:
                               '${metrics.todayRevenue.toStringAsFixed(2)} DH',
                           icon: Icons.attach_money,
-                          color: Colors.teal,
+                          color: AppColors.primary,
                           trendText:
                               '${metrics.revenueTrend.toStringAsFixed(1)}%',
                           isPositive: metrics.revenueTrendPositive,
                           comparisonLabel: metrics.comparisonLabel,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.space3),
                       Expanded(
                         child: GestureDetector(
                           onTap: _showUnitsSoldPopup,
@@ -284,7 +315,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             title: 'Orders',
                             value: '${metrics.todayOrderCount.toInt()}',
                             icon: Icons.shopping_bag_outlined,
-                            color: Colors.deepPurple,
+                            color: AppColors.completed,
                             trendText:
                                 '${metrics.ordersTrend.toStringAsFixed(1)}%',
                             isPositive: metrics.ordersTrendPositive,
@@ -294,7 +325,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.space1),
                   Row(
                     children: [
                       Expanded(
@@ -302,20 +333,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           title: 'Spend',
                           value: '${metrics.todayExpenses.toInt()} DH',
                           icon: Icons.credit_card_outlined,
-                          color: Colors.blue,
+                          color: AppColors.info,
                           trendText:
                               '${metrics.expensesTrend.toStringAsFixed(1)}%',
                           isPositive: !metrics.expensesTrendPositive,
                           comparisonLabel: metrics.comparisonLabel,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.space3),
                       Expanded(
                         child: InfoCard(
                           title: 'Profit',
                           value: '${metrics.todayProfit.toStringAsFixed(2)} DH',
                           icon: Icons.trending_up,
-                          color: Colors.orange,
+                          color: AppColors.warning,
                           trendText:
                               '${metrics.profitTrend.toStringAsFixed(1)}%',
                           isPositive: metrics.profitTrendPositive,
@@ -328,7 +359,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.space6),
 
             WeeklyPerformanceChart(
               store: ref.read(objectBoxProvider).store,
@@ -336,23 +367,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               maxYValue: 2000.0,
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.space6),
 
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.08)),
+                color: AppColors.surface0,
+                borderRadius: AppRadius.rXl,
+                border: Border.all(color: AppColors.surface3),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: AppColors.ink5.withOpacity(0.1),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: AppRadius.rXl,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -369,7 +400,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: AppSpacing.space10),
+          ],
+        ),
+              ),
+            ),
           ],
         ),
       ),

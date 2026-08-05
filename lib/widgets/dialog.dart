@@ -4,6 +4,7 @@ import '../models/order.dart' as order_model;
 import '../models/expense.dart' as expense_model;
 import '../objectbox.dart';
 import '../models/product.dart' as product_model;
+import '../theme/app_colors.dart';
 
 // Show daily data dialog
 void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
@@ -23,10 +24,10 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
           height: MediaQuery.of(context).size.height *
               0.6, // Constrain height for scrolling
           child: dailyData.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
                     'Aucune donnée disponible',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    style: TextStyle(fontSize: 16, color: AppColors.ink3),
                   ),
                 )
               : Column(
@@ -40,7 +41,7 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
                             Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.grey[100],
+                                color: AppColors.surface2,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Row(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:Easify/models/product.dart';
 import 'package:Easify/models/category.dart';
 import 'package:Easify/widgets/product_item.dart';
@@ -14,6 +15,9 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'package:share_plus/share_plus.dart';
 import 'package:Easify/service/data_backup_service.dart';
 import 'package:Easify/providers/dashboard_provider.dart';
+import 'package:Easify/theme/app_colors.dart';
+import 'package:Easify/theme/app_spacing.dart';
+import 'package:Easify/theme/app_radius.dart';
 
 class ManagementScreen extends ConsumerStatefulWidget {
   const ManagementScreen({super.key});
@@ -23,7 +27,7 @@ class ManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _ManagementScreenState extends ConsumerState<ManagementScreen> {
-  int _currentIndex = 0; // 0 for Products, 1 for Categories
+  int _currentIndex = 0;
   late final DataBackupService _backupService;
 
   @override
@@ -40,7 +44,6 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
           '${tempDir.path}/easify_backup_${DateTime.now().millisecondsSinceEpoch}.json');
       await file.writeAsString(jsonString);
 
-      // Offer to share/save the file
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'Sauvegarde Easify',
@@ -70,7 +73,7 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
             SnackBar(
               content: Text(
                   'Import réussi: ${importResult['products']} produits, ${importResult['categories']} catégories'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
         }
@@ -78,62 +81,90 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Erreur import: $e'), backgroundColor: Colors.red));
+            content: Text('Erreur import: $e'),
+            backgroundColor: AppColors.danger));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight:
-            0, // We use a custom header or rely on MainScreen's app bar
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Stack(
-            children: [
-              Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildNavIcon(0, Icons.inventory_2, 'Produits'),
-                    const SizedBox(width: 40),
-                    _buildNavIcon(1, Icons.category, 'Catégories'),
-                  ],
-                ),
+      backgroundColor: AppColors.surface1,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? AppSpacing.space2 : AppSpacing.space4,
               ),
-              Positioned(
-                right: 16,
-                top: 0,
-                bottom: 0,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.file_upload_outlined,
-                          color: Colors.blue),
-                      tooltip: 'Exporter',
-                      onPressed: _exportData,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.file_download_outlined,
-                          color: Colors.green),
-                      tooltip: 'Importer',
-                      onPressed: _importData,
-                    ),
-                  ],
-                ),
+              decoration: const BoxDecoration(
+                color: AppColors.surface0,
+                border: Border(bottom: BorderSide(color: AppColors.surface3, width: 1)),
               ),
-            ],
-          ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Back button + tabs + icons on one row
+                  SizedBox(
+                    height: 48,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                          color: AppColors.ink0,
+                          onPressed: () => context.pop(),
+                        ),
+                        // Tabs centered
+                        Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildNavIcon(0, Icons.inventory_2, 'Produits'),
+                              SizedBox(width: isMobile ? AppSpacing.space6 : AppSpacing.space10),
+                              _buildNavIcon(1, Icons.category, 'Catégories'),
+                            ],
+                          ),
+                        ),
+                        // Icons on the right
+                        IconButton(
+                          icon: Icon(Icons.file_upload_outlined,
+                              color: AppColors.info, size: isMobile ? 20 : 24),
+                          tooltip: 'Exporter',
+                          onPressed: _exportData,
+                          padding: EdgeInsets.all(isMobile ? 8 : 12),
+                          constraints: const BoxConstraints(),
+                        ),
+                        SizedBox(width: isMobile ? 4 : 8),
+                        IconButton(
+                          icon: Icon(Icons.file_download_outlined,
+                              color: AppColors.success, size: isMobile ? 20 : 24),
+                          tooltip: 'Importer',
+                          onPressed: _importData,
+                          padding: EdgeInsets.all(isMobile ? 8 : 12),
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: _currentIndex,
+                children: [
+                  const ProductsListSection(),
+                  const CategoriesListSection(),
+                ],
+              ),
+            ),
+          ],
         ),
-      ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          const ProductsListSection(),
-          const CategoriesListSection(),
-        ],
       ),
     );
   }
@@ -146,14 +177,10 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.grey),
+              color: isSelected ? AppColors.primary : AppColors.ink3),
           Text(label,
               style: TextStyle(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey,
+                color: isSelected ? AppColors.primary : AppColors.ink3,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               )),
@@ -161,8 +188,8 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
             Container(
                 height: 2,
                 width: 20,
-                margin: const EdgeInsets.only(top: 4),
-                color: Theme.of(context).colorScheme.primary),
+                margin: EdgeInsets.only(top: AppSpacing.space1),
+                color: AppColors.primary),
         ],
       ),
     );
@@ -173,7 +200,8 @@ class ProductsListSection extends ConsumerStatefulWidget {
   const ProductsListSection({super.key});
 
   @override
-  ConsumerState<ProductsListSection> createState() => _ProductsListSectionState();
+  ConsumerState<ProductsListSection> createState() =>
+      _ProductsListSectionState();
 }
 
 class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
@@ -221,7 +249,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                       decoration: const InputDecoration(labelText: 'Nom'),
                       validator: (v) =>
                           v == null || v.isEmpty ? 'Nom requis' : null),
-                  const SizedBox(height: 16),
+                  SizedBox(height: AppSpacing.space4),
                   TextFormField(
                       controller: _priceController,
                       decoration: const InputDecoration(labelText: 'Prix'),
@@ -229,7 +257,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                       validator: (v) => v == null || double.tryParse(v) == null
                           ? 'Prix valide requis'
                           : null),
-                  const SizedBox(height: 16),
+                  SizedBox(height: AppSpacing.space4),
                   DropdownButtonFormField<String>(
                     value: _categoryController.text.isNotEmpty
                         ? _categoryController.text
@@ -239,8 +267,11 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                       const DropdownMenuItem(
                           value: 'Extra', child: Text('Supplément')),
                       ...(() {
-                        final cats =
-                            ref.read(objectBoxProvider).store.box<Category>().getAll();
+                        final cats = ref
+                            .read(objectBoxProvider)
+                            .store
+                            .box<Category>()
+                            .getAll();
                         cats.sort(
                             (a, b) => a.displayOrder.compareTo(b.displayOrder));
                         return cats.map((cat) => DropdownMenuItem(
@@ -250,7 +281,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                     onChanged: (v) => setDialogState(
                         () => _categoryController.text = v ?? ''),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: AppSpacing.space4),
                   _buildImagePicker(setDialogState),
                 ],
               ),
@@ -274,6 +305,10 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                     Navigator.pop(ctx);
                   }
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.payNowText,
+                ),
                 child: Text(product == null ? 'Ajouter' : 'Mettre à jour')),
           ],
         ),
@@ -298,8 +333,8 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
         height: 100,
         width: double.infinity,
         decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(8)),
+            border: Border.all(color: AppColors.ink5),
+            borderRadius: AppRadius.rMd),
         child: _selectedImagePath != null
             ? Image.file(File(_selectedImagePath!), fit: BoxFit.cover)
             : const Icon(Icons.add_a_photo),
@@ -319,7 +354,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
       appBar: _selectedProduct == null
           ? null
           : AppBar(
-              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+              backgroundColor: AppColors.surface2,
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: _deselectProduct,
@@ -327,7 +362,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
               title: Text(_selectedProduct!.name),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  icon: const Icon(Icons.edit, color: AppColors.info),
                   onPressed: () {
                     final p = _selectedProduct;
                     _deselectProduct();
@@ -335,7 +370,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
+                  icon: const Icon(Icons.delete, color: AppColors.danger),
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
@@ -350,7 +385,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                           TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
                               child: const Text('Supprimer',
-                                  style: TextStyle(color: Colors.red))),
+                                  style: TextStyle(color: AppColors.danger))),
                         ],
                       ),
                     );
@@ -372,7 +407,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
             return const Center(child: CircularProgressIndicator());
           final products = snapshot.data!;
           return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
+            padding: EdgeInsets.only(bottom: AppSpacing.space10),
             itemCount: products.length,
             itemBuilder: (ctx, i) {
               final product = products[i];
@@ -398,7 +433,8 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showProductDialog(),
-        child: const Icon(Icons.add),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: AppColors.surface0),
       ),
     );
   }
@@ -408,7 +444,8 @@ class CategoriesListSection extends ConsumerStatefulWidget {
   const CategoriesListSection({super.key});
 
   @override
-  ConsumerState<CategoriesListSection> createState() => _CategoriesListSectionState();
+  ConsumerState<CategoriesListSection> createState() =>
+      _CategoriesListSectionState();
 }
 
 class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
@@ -417,6 +454,7 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
   final _nameController = TextEditingController();
   String? _selectedImagePath;
   final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -434,16 +472,18 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
               Text(cat == null ? 'Nouvelle Catégorie' : 'Modifier Catégorie'),
           content: Form(
             key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Nom'),
-                    validator: (v) => v == null || v.isEmpty ? 'Requis' : null),
-                const SizedBox(height: 16),
-                _buildImagePicker(setDialogState),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Nom'),
+                      validator: (v) => v == null || v.isEmpty ? 'Requis' : null),
+                  SizedBox(height: AppSpacing.space4),
+                  _buildImagePicker(setDialogState),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -461,6 +501,10 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
                     Navigator.pop(ctx);
                   }
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.payNowText,
+                ),
                 child: const Text('Enregistrer')),
           ],
         ),
@@ -485,8 +529,8 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
         height: 100,
         width: double.infinity,
         decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(8)),
+            border: Border.all(color: AppColors.ink5),
+            borderRadius: AppRadius.rMd),
         child: _selectedImagePath != null
             ? Image.file(File(_selectedImagePath!), fit: BoxFit.cover)
             : const Icon(Icons.add_a_photo),
@@ -507,33 +551,49 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
             return const Center(child: CircularProgressIndicator());
           final categories = snapshot.data!;
           categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-          return ReorderableGridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 6,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8),
-            itemCount: categories.length,
-            onReorder: (oldIndex, newIndex) {
-              setState(() {
-                final cat = categories.removeAt(oldIndex);
-                categories.insert(newIndex, cat);
-                for (int i = 0; i < categories.length; i++) {
-                  categories[i].displayOrder = i;
-                }
-                _categoryBox.putMany(categories);
-              });
-            },
-            itemBuilder: (ctx, i) {
-              final c = categories[i];
-              return CategoryCard(
-                key: ValueKey(c.id),
-                title: c.name,
-                imageUrl: c.imageUrl ?? '',
-                onTap: () {},
-                onEdit: () => _showCategoryDialog(c),
-                onDelete: () => _categoryBox.remove(c.id),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              int crossAxisCount;
+              double aspectRatio;
+              if (constraints.maxWidth < 600) {
+                crossAxisCount = 2;
+                aspectRatio = 0.85;
+              } else if (constraints.maxWidth <= 900) {
+                crossAxisCount = 3;
+                aspectRatio = 0.8;
+              } else {
+                crossAxisCount = 4;
+                aspectRatio = 0.75;
+              }
+              return ReorderableGridView.builder(
+                padding: EdgeInsets.all(AppSpacing.space3),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: aspectRatio,
+                    crossAxisSpacing: AppSpacing.space2,
+                    mainAxisSpacing: AppSpacing.space2),
+                itemCount: categories.length,
+                onReorder: (oldIndex, newIndex) {
+                  setState(() {
+                    final cat = categories.removeAt(oldIndex);
+                    categories.insert(newIndex, cat);
+                    for (int i = 0; i < categories.length; i++) {
+                      categories[i].displayOrder = i;
+                    }
+                    _categoryBox.putMany(categories);
+                  });
+                },
+                itemBuilder: (ctx, i) {
+                  final c = categories[i];
+                  return CategoryCard(
+                    key: ValueKey(c.id),
+                    title: c.name,
+                    imageUrl: c.imageUrl ?? '',
+                    onTap: () {},
+                    onEdit: () => _showCategoryDialog(c),
+                    onDelete: () => _categoryBox.remove(c.id),
+                  );
+                },
               );
             },
           );
@@ -541,7 +601,8 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCategoryDialog(),
-        child: const Icon(Icons.add),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.add, color: AppColors.surface0),
       ),
     );
   }

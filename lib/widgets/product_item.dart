@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:Easify/models/product.dart';
 import 'dart:io';
+import '../theme/app_colors.dart';
 
 class ProductItem extends StatelessWidget {
   final Product product;
@@ -69,7 +70,7 @@ class ProductItem extends StatelessWidget {
                       '${product.price.toStringAsFixed(2)} DH',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.green[700],
+                        color: AppColors.success,
                       ),
                     ),
                   ],

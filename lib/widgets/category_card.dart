@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_shadows.dart';
 
-class CategoryCard extends StatelessWidget {
+class CategoryCard extends StatefulWidget {
   final String title;
   final String imageUrl;
   final VoidCallback onTap;
@@ -18,93 +22,99 @@ class CategoryCard extends StatelessWidget {
   });
 
   @override
+  State<CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<CategoryCard> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _hovering = true),
+      onTapUp: (_) => setState(() => _hovering = false),
+      onTapCancel: () => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: AppColors.surface0,
+          borderRadius: AppRadius.rLg,
+          border: Border.all(
+            color: _hovering ? AppColors.primary : AppColors.surface3,
+            width: _hovering ? 1.5 : 1,
+          ),
+          boxShadow: _hovering ? AppShadows.md : AppShadows.sm,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Category Image
             Expanded(
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: imageUrl.isNotEmpty
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                    child: widget.imageUrl.isNotEmpty
                         ? Image.file(
-                            File(imageUrl),
+                            File(widget.imageUrl),
                             fit: BoxFit.cover,
                           )
                         : Container(
-                            color: Colors.grey[200],
+                            color: AppColors.surface2,
                             child: const Icon(Icons.category,
-                                size: 50, color: Colors.grey),
+                                size: 50, color: AppColors.ink4),
                           ),
                   ),
-                  if (onEdit != null || onDelete != null)
+                  if (widget.onEdit != null || widget.onDelete != null)
                     Positioned(
                       top: 4,
                       right: 4,
-                      child: Row(
-                        children: [
-                          if (onEdit != null)
-                            Container(
-                              margin: const EdgeInsets.only(right: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
-                                shape: BoxShape.circle,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface0.withAlpha(230),
+                          borderRadius: AppRadius.rMd,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.onEdit != null)
+                              GestureDetector(
+                                onTap: widget.onEdit,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(6),
+                                  child: Icon(Icons.edit,
+                                      size: 14, color: AppColors.primary),
+                                ),
                               ),
-                              child: IconButton(
-                                icon: const Icon(Icons.edit,
-                                    size: 18, color: Colors.blue),
-                                onPressed: onEdit,
-                                constraints: const BoxConstraints(),
-                                padding: const EdgeInsets.all(6),
+                            if (widget.onDelete != null)
+                              GestureDetector(
+                                onTap: widget.onDelete,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(6),
+                                  child: Icon(Icons.delete,
+                                      size: 14, color: AppColors.danger),
+                                ),
                               ),
-                            ),
-                          if (onDelete != null)
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                icon: const Icon(Icons.delete,
-                                    size: 18, color: Colors.red),
-                                onPressed: onDelete,
-                                constraints: const BoxConstraints(),
-                                padding: const EdgeInsets.all(6),
-                              ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                 ],
               ),
             ),
-            // Category Details
             Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.space2, vertical: AppSpacing.space2),
+              child: Text(
+                widget.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: AppColors.ink0,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

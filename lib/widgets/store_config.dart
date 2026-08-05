@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import '../models/store_config.dart'; // Make sure this import is correct based on your file structure
+import '../models/store_config.dart';
 import '../objectbox.dart';
-import '../objectbox.g.dart'; // This will be generated
+import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../service/printer_helper.dart';
+import '../theme/app_colors.dart';
 
 class StoreConfigWidget extends StatefulWidget {
   final ObjectBox objectbox;
@@ -58,10 +59,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
         final Directory appDir = await getApplicationDocumentsDirectory();
         final String appDirPath = appDir.path;
         final String fileName = path.basename(image.path);
-        // Create a dedicated directory for store config if you prefer, or just use root
         final String savedImagePath = path.join(appDirPath, 'store_logo_$fileName');
-        
-        // Copy the file
+
         final File localImage = await File(image.path).copy(savedImagePath);
 
         setState(() {
@@ -69,7 +68,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
         });
       } catch (e) {
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Erreur d\'enregistrement de l\'image : $e')),
           );
         }
@@ -85,13 +84,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
       config.wifiPassword = _wifiPasswordController.text;
 
       config.storeLogoPath = _logoImage?.path;
-      
-      // If we're updating, we need to make sure we keep the ID if it was loaded
-      // StoreConfig object from objectbox usually has ID if it was read from box
-      
+
       widget.objectbox.storeConfigBox.put(config);
-      
-      // Reload current config to ensure we have the latest state (like ID)
       _currentConfig = config;
 
       if (mounted) {
@@ -113,9 +107,15 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final cardPadding = isMobile ? 12.0 : 16.0;
+    final fieldSpacing = isMobile ? 12.0 : 16.0;
+    final logoSize = isMobile ? 64.0 : 80.0;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(cardPadding),
         child: Form(
           key: _formKey,
           child: Column(
@@ -125,7 +125,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                 'Détails du Magasin',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: fieldSpacing),
               TextFormField(
                 controller: _storeNameController,
                 decoration: const InputDecoration(
@@ -139,7 +139,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                   }
                   return null;
                 },
-              ),const SizedBox(height: 16),
+              ),
+              SizedBox(height: fieldSpacing),
               TextFormField(
                 controller: _storePhoneController,
                 decoration: const InputDecoration(
@@ -147,15 +148,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone),
                 ),
-                // validator: (value) {
-                //   if (value == null || value.isEmpty) {
-                //     return 'Veuillez entrer le numéro de téléphone';
-                //   }
-                //   return null;
-                // },
-
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: fieldSpacing),
               TextFormField(
                 controller: _wifiPasswordController,
                 decoration: const InputDecoration(
@@ -164,13 +158,13 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                   prefixIcon: Icon(Icons.wifi_password),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: fieldSpacing),
 
               Row(
                 children: [
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: logoSize,
+                    height: logoSize,
                     decoration: BoxDecoration(
                       border: Border.all(color: Theme.of(context).colorScheme.primary),
                       borderRadius: BorderRadius.circular(8),
@@ -184,26 +178,28 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                             ),
                           )
                         : Icon(Icons.image,
-                            size: 40,
+                            size: logoSize / 2,
                             color: Theme.of(context).colorScheme.primary),
                   ),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Logo du Magasin',
-                          style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _pickImage,
-                        icon: const Icon(Icons.upload),
-                        label: const Text('Télécharger une Image'),
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Logo du Magasin',
+                            style: Theme.of(context).textTheme.bodyMedium),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: _pickImage,
+                          icon: const Icon(Icons.upload),
+                          label: const Text('Télécharger une Image'),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: isMobile ? 16 : 24),
               Row(
                 children: [
                   Expanded(
@@ -213,8 +209,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                       label: const Text('Imprimer un test'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                        foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                        backgroundColor: AppColors.surface2,
+                        foregroundColor: AppColors.ink0,
                       ),
                     ),
                   ),
@@ -226,8 +222,8 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
                       label: const Text('Enregistrer les Détails'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        backgroundColor: AppColors.accentYellow,
+                        foregroundColor: AppColors.payNowText,
                       ),
                     ),
                   ),

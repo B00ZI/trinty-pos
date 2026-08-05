@@ -6,7 +6,7 @@
 
 ## 1. EXECUTIVE SUMMARY
 
-The current Easify app uses basic Material 3 with inconsistent styling: two conflicting color schemes (global `#2D7DD2` blue vs OrderScreen `#6366F1` indigo), hardcoded colors scattered across 30+ files, no centralized design system, and a hub-and-spoke navigation pattern that feels disconnected. This plan transforms it into a cohesive, premium POS application with a dark sidebar layout, consistent design tokens, polished micro-interactions, and a professional visual hierarchy.
+The current Easify app uses basic Material 3 with inconsistent styling: two conflicting color schemes (global `#2D7DD2` blue vs OrderScreen `#6366F1` indigo), hardcoded colors scattered across 30+ files, no centralized design system, and a hub-and-spoke navigation pattern that feels disconnected. This plan transforms it into a cohesive, premium POS application with a **collapsible dark sidebar** (on all screen sizes), consistent design tokens, polished micro-interactions, and a professional visual hierarchy. The Hub is the default screen on launch, and all widgets are responsive and scrollable.
 
 ---
 
@@ -193,12 +193,13 @@ The current Easify app uses basic Material 3 with inconsistent styling: two conf
 **Action**: Create new widget that wraps all screens.
 - **Layout**: Row with fixed 260px sidebar + Expanded content area
 - **Sidebar background**: `sidebarBg` (#0F172A)
-- **Sidebar width**: 260px on tablet/desktop, 72px collapsed on mobile
+- **Sidebar width**: 260px expanded, 72px collapsed (icon-only)
+- **Sidebar toggle**: Always visible in ALL screen sizes — user can collapse/expand the sidebar at any breakpoint via a toggle button (hamburger icon at top of sidebar)
 - **Content area**: `surface1` (#F8FAFC) background
-- **Behavior**: Sidebar collapses to icon-only on screens < 900px wide
+- **Behavior**: Sidebar is collapsible on ALL screen sizes (mobile, tablet, desktop). Default state: expanded (260px) on desktop (>900px), collapsed (72px) on mobile/tablet (<900px). User can override at any time.
 
 #### 3.8 CREATE `lib/widgets/sidebar_nav.dart`
-**Purpose**: Dark sidebar navigation component.
+**Purpose**: Dark sidebar navigation component — collapsible on ALL screen sizes.
 **Action**: Create new widget.
 - **Structure**:
   ```
@@ -217,25 +218,28 @@ The current Easify app uses basic Material 3 with inconsistent styling: two conf
   │  ● En ligne          │  ← Status dot (green)
   └──────────────────────┘
   ```
+- **Collapse toggle**: Top of sidebar, hamburger/chevron icon (22px), toggles between expanded (260px) and collapsed (72px). Always visible on ALL screen sizes.
 - **Nav items**: 48px height, 16px horizontal padding, border-radius 10px (on hover/active)
 - **Active indicator**: 3px left bar (40px tall, border-radius 2px) + `sidebarActive` bg
 - **Hover state**: `sidebarSurface` bg (#1E293B)
 - **Icons**: 22px, outlined when inactive, filled when active
-- **Text**: 14px, weight 500 (Medium)
-- **User avatar**: 36px CircleAvatar with user initial, colored bg
-- **Logout button**: bottom of sidebar, icon-only on collapsed
+- **Text**: 14px, weight 500 (Medium) — hidden when collapsed, only icons shown
+- **User avatar**: 36px CircleAvatar with user initial, colored bg — shown below nav items
+- **Logout button**: bottom of sidebar, icon-only when collapsed, full label when expanded
 
 #### 3.9 MODIFY `lib/router.dart`
 **Action**: Update routing to use AppShell as the main wrapper.
 - Wrap routes in ShellRoute with AppShell
 - All screens render inside the content area
+- **Default route**: Navigate to Hub screen on app launch (not Commande)
 
 #### 3.10 MODIFY `lib/screens/navigation_hub_screen.dart`
-**Action**: Transform into the "Commande" landing page within the sidebar layout.
+**Action**: Transform into the "Hub" landing page — the DEFAULT screen shown on app launch.
 - Remove the standalone AppBar
 - The sidebar now provides navigation
 - Keep the hub cards but restyle them to match new design tokens
-- Make "Commande" the default/active screen
+- **Hub is the default/active screen** — router should navigate to Hub on launch, not Commande
+- Hub card grid: 2 columns on mobile, 3 columns on tablet, 4 columns on desktop
 
 ---
 
@@ -657,9 +661,11 @@ The current Easify app uses basic Material 3 with inconsistent styling: two conf
 #### 3.38 RESPONSIVE BREAKPOINTS
 | Breakpoint | Width | Layout |
 |------------|-------|--------|
-| Mobile | < 600px | Full-width content, bottom nav instead of sidebar |
-| Tablet | 600-900px | Collapsed sidebar (72px icons only) + content |
-| Desktop | > 900px | Full sidebar (260px) + content |
+| Mobile | < 600px | Collapsed sidebar (72px) + full-width content |
+| Tablet | 600-900px | Collapsed sidebar (72px) + content |
+| Desktop | > 900px | Expanded sidebar (260px) + content |
+
+**Sidebar**: Always present on ALL screen sizes. Collapsed (72px, icon-only) by default on mobile/tablet. Expanded (260px) by default on desktop. User can toggle collapse/expand at any breakpoint via the sidebar toggle button.
 
 #### 3.39 RESPONSIVE GRID ADJUSTMENTS
 **Category Grid**:
@@ -681,6 +687,18 @@ The current Easify app uses basic Material 3 with inconsistent styling: two conf
 - Mobile: 2 columns
 - Tablet: 3 columns
 - Desktop: 4 columns
+
+#### 3.40 SCROLLABLE WIDGETS
+All content areas must be scrollable when content overflows the viewport:
+- **Main content area**: Wrap in `SingleChildScrollView` or `CustomScrollView` with `AlwaysScrollableScrollPhysics`
+- **Product/Category grids**: Use `GridView` with `shrinkWrap: false` + `NeverScrollableScrollPhysics` on the grid itself; let parent `SingleChildScrollView` handle scrolling
+- **Dashboard**: `SingleChildScrollView` wrapping all metric cards and charts
+- **History list**: `ListView.builder` with automatic scrolling
+- **Games grid**: `GridView` inside `SingleChildScrollView`
+- **Settings**: `SingleChildScrollView` wrapping all form sections
+- **Cart panel**: `ListView.builder` for cart items with `Expanded` to fill available space
+- **Sidebar nav**: Fixed height, no scroll needed (items fit within viewport)
+- All scroll views must use `physics: AlwaysScrollableScrollPhysics()` to ensure scrollability even when content fits
 
 ---
 
@@ -773,11 +791,16 @@ dependencies:
 
 After implementation, verify:
 - [ ] All screens use sidebar navigation (no standalone AppBars)
+- [ ] Sidebar is collapsible on ALL screen sizes (mobile, tablet, desktop)
+- [ ] Sidebar toggle button works at every breakpoint
+- [ ] Hub is the default screen shown on app launch
 - [ ] All colors come from AppColors (zero hardcoded Color values)
 - [ ] All text styles come from AppTypography
 - [ ] All border radii use AppRadius tokens
 - [ ] All shadows use AppShadows tokens
 - [ ] All spacings follow 4px grid
+- [ ] All content areas are scrollable when content overflows
+- [ ] No widget causes overflow on any screen size
 - [ ] OrderScreen cart panel is visually polished
 - [ ] Dashboard metrics cards have consistent styling
 - [ ] History cards have proper visual hierarchy

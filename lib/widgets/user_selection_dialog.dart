@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../objectbox.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 class UserSelectionDialog extends StatefulWidget {
   final ObjectBox objectbox;
@@ -102,7 +105,9 @@ class _UserSelectionDialogState extends State<UserSelectionDialog>
     return PopScope(
       canPop: widget.isCancelable,
       child: Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: AppColors.surface0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+        elevation: 24,
         child: Container(
           width: dialogWidth,
           padding: EdgeInsets.all(padding),
@@ -141,15 +146,30 @@ class _UserSelectionDialogState extends State<UserSelectionDialog>
               itemCount: users.length,
               itemBuilder: (context, index) {
                 final user = users[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.space2),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface0,
+                    borderRadius: AppRadius.rMd,
+                    border: Border.all(color: AppColors.surface3),
+                  ),
                   child: ListTile(
                     dense: isShort,
                     leading: CircleAvatar(
                       radius: isShort ? 16 : 20,
-                      child: Text(user.name[0].toUpperCase()),
+                      backgroundColor: AppColors.primary,
+                      child: Text(
+                        user.name[0].toUpperCase(),
+                        style: const TextStyle(color: AppColors.surface0),
+                      ),
                     ),
-                    title: Text(user.name),
+                    title: Text(
+                      user.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.ink0,
+                      ),
+                    ),
                     onTap: () => setState(() => _selectedUser = user),
                   ),
                 );
@@ -208,7 +228,7 @@ class _UserSelectionDialogState extends State<UserSelectionDialog>
         Text(
           'Entrez votre PIN',
           style: TextStyle(
-            color: Colors.grey,
+            color: AppColors.ink3,
             fontSize: isShort ? 12 : 14,
           ),
         ),
@@ -230,11 +250,11 @@ class _UserSelectionDialogState extends State<UserSelectionDialog>
                       shape: BoxShape.circle,
                       color: isFilled
                           ? (_isError
-                              ? Colors.red
-                              : Theme.of(context).colorScheme.primary)
-                          : Colors.grey.shade300,
+                              ? AppColors.danger
+                              : AppColors.primary)
+                          : AppColors.surface3,
                       border: _isError && isFilled
-                          ? Border.all(color: Colors.red.shade900, width: 2)
+                          ? Border.all(color: AppColors.danger, width: 2)
                           : null,
                     ),
                   );
@@ -273,7 +293,7 @@ class _UserSelectionDialogState extends State<UserSelectionDialog>
                 isAction: true, onTap: _onBackspace),
             _buildKeypadButton('0', keySize),
             _buildKeypadButton('✓', keySize,
-                isAction: true, onTap: _verifyPin, color: Colors.green),
+                isAction: true, onTap: _verifyPin, color: AppColors.accentYellow),
           ],
         ),
       ],
@@ -290,10 +310,10 @@ class _UserSelectionDialogState extends State<UserSelectionDialog>
         height: keySize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color?.withValues(alpha: 0.1) ??
-              (isAction ? Colors.grey.shade100 : null),
+          color: color?.withAlpha(25) ??
+              (isAction ? AppColors.surface2 : null),
           border: Border.all(
-              color: color?.withValues(alpha: 0.5) ?? Colors.grey.shade300),
+              color: color?.withAlpha(128) ?? AppColors.surface3),
         ),
         child: Center(
           child: Text(
@@ -301,7 +321,7 @@ class _UserSelectionDialogState extends State<UserSelectionDialog>
             style: TextStyle(
               fontSize: keySize * 0.35,
               fontWeight: FontWeight.bold,
-              color: color ?? (isAction ? Colors.grey.shade700 : null),
+              color: color ?? (isAction ? AppColors.ink2 : AppColors.ink0),
             ),
           ),
         ),

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_shadows.dart';
 
 class InfoCard extends StatelessWidget {
   final String title;
@@ -22,23 +26,17 @@ class InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = color ?? Colors.blue;
+    final themeColor = color ?? AppColors.primary;
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.space1, horizontal: AppSpacing.space1),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: AppColors.surface0,
+        borderRadius: AppRadius.rLg,
+        border: Border.all(color: AppColors.surface3),
+        boxShadow: AppShadows.sm,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.space4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -47,10 +45,10 @@ class InfoCard extends StatelessWidget {
               children: [
                 if (icon != null)
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(AppSpacing.space2),
                     decoration: BoxDecoration(
-                      color: themeColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      color: themeColor.withAlpha(30),
+                      borderRadius: AppRadius.rMd,
                     ),
                     child: Icon(
                       icon,
@@ -60,10 +58,10 @@ class InfoCard extends StatelessWidget {
                   ),
                 if (trendText != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space2, vertical: AppSpacing.space1),
                     decoration: BoxDecoration(
-                      color: (isPositive ? Colors.green : Colors.red).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      color: (isPositive ? AppColors.success : AppColors.danger).withAlpha(25),
+                      borderRadius: AppRadius.rFull,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -71,7 +69,7 @@ class InfoCard extends StatelessWidget {
                         Icon(
                           isPositive ? Icons.arrow_upward : Icons.arrow_downward,
                           size: 12,
-                          color: isPositive ? Colors.green[700] : Colors.red[700],
+                          color: isPositive ? AppColors.success : AppColors.danger,
                         ),
                         const SizedBox(width: 2),
                         Text(
@@ -79,7 +77,7 @@ class InfoCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isPositive ? Colors.green[700] : Colors.red[700],
+                            color: isPositive ? AppColors.success : AppColors.danger,
                           ),
                         ),
                       ],
@@ -87,31 +85,31 @@ class InfoCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.space3),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 13,
+              style: const TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey[500],
+                color: AppColors.ink3,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.space1),
             Text(
               value,
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B), // Premium slate/dark color
+                color: AppColors.ink0,
               ),
             ),
             if (comparisonLabel != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.space1),
               Text(
                 comparisonLabel!,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 10,
-                  color: Colors.grey[400],
+                  color: AppColors.ink4,
                 ),
               ),
             ],

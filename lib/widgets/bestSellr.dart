@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 class Product {
   final String title;
@@ -32,7 +33,7 @@ class ProductCardsRow extends StatelessWidget {
     this.titleStyle,
     this.cardWidth = 120,
     this.cardHeight = 150,
-    this.cardColor = Colors.white,
+    this.cardColor = AppColors.surface0,
     this.scrollable = true,
   }) : assert(products.length >= 3, 'At least 3 products are required');
 
@@ -49,7 +50,7 @@ class ProductCardsRow extends StatelessWidget {
             style: titleStyle ?? const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: AppColors.ink0,
             ),
           ),
         ),
@@ -96,7 +97,7 @@ class SmallProductCard extends StatelessWidget {
     super.key,
     required this.product,
     this.width = 120,
-    this.cardColor = Colors.white,
+    this.cardColor = AppColors.surface0,
   });
 
   @override
@@ -108,7 +109,7 @@ class SmallProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: AppColors.surface3.withOpacity(0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -127,7 +128,7 @@ class SmallProductCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: (product.rankColor ?? Colors.blue).withOpacity(0.1),
+                    color: (product.rankColor ?? AppColors.info).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -135,7 +136,7 @@ class SmallProductCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: product.rankColor ?? Colors.blue,
+                      color: product.rankColor ?? AppColors.info,
                     ),
                   ),
                 ),
@@ -159,7 +160,7 @@ class SmallProductCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.green,
+                color: AppColors.success,
               ),
             ),
           ],

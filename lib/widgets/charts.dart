@@ -5,6 +5,10 @@ import '../objectbox.g.dart';
 import '../models/order.dart' as order_model;
 import '../models/game_session.dart';
 import '../models/expense.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_shadows.dart';
 
 class DailyData {
   final String day;
@@ -207,8 +211,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
           chart: DashboardLineChart(
             values: revenues,
             labels: labels,
-            lineColor: Colors.blueAccent,
-            gradientColor: Colors.blueAccent.withOpacity(0.2),
+            lineColor: AppColors.info,
+            gradientColor: AppColors.info.withOpacity(0.2),
           ),
         ),
         const SizedBox(height: 20),
@@ -222,7 +226,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
           chart: DashboardBarChart(
             values: orders,
             labels: labels,
-            barColor: Colors.deepPurpleAccent,
+            barColor: AppColors.completed,
           ),
         ),
         const SizedBox(height: 20),
@@ -236,8 +240,8 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
           chart: DashboardLineChart(
             values: profits,
             labels: labels,
-            lineColor: Colors.teal,
-            gradientColor: Colors.teal.withOpacity(0.2),
+            lineColor: AppColors.primary,
+            gradientColor: AppColors.primary.withOpacity(0.2),
           ),
         ),
       ],
@@ -252,18 +256,12 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
     required Widget chart,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(AppSpacing.space5),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: AppColors.surface0,
+        borderRadius: AppRadius.rLg,
+        border: Border.all(color: AppColors.surface3),
+        boxShadow: AppShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,37 +273,35 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                 title,
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink0,
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space3, vertical: AppSpacing.space2),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.withOpacity(0.08)),
+                  color: AppColors.surface2,
+                  borderRadius: AppRadius.rMd,
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Text(
                       'Weekly',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey[600],
+                        color: AppColors.ink3,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Icon(Icons.keyboard_arrow_down,
-                        size: 14, color: Colors.grey[600]),
+                        size: 14, color: AppColors.ink3),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.space3),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -314,29 +310,28 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
+                  color: AppColors.ink0,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.space2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space2, vertical: AppSpacing.space1),
                 decoration: BoxDecoration(
-                  color:
-                      (isPositive ? Colors.green : Colors.red).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
+                  color: (isPositive ? AppColors.success : AppColors.danger).withAlpha(25),
+                  borderRadius: AppRadius.rSm,
                 ),
                 child: Text(
                   trendLabel,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: isPositive ? Colors.green[700] : Colors.red[700],
+                    color: isPositive ? AppColors.success : AppColors.danger,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.space6),
           SizedBox(
             height: 180,
             child: chart,
@@ -408,7 +403,7 @@ class _LineChartPainter extends CustomPainter {
 
     // Draw horizontal grid lines
     final Paint gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.08)
+      ..color = AppColors.surface3.withAlpha(128)
       ..strokeWidth = 1.0;
 
     for (int i = 0; i < gridLines; i++) {
@@ -481,8 +476,8 @@ class _LineChartPainter extends CustomPainter {
       // Bottom day label
       textPainter.text = TextSpan(
         text: labels[i],
-        style: TextStyle(
-          color: Colors.grey[400],
+        style: const TextStyle(
+          color: AppColors.ink4,
           fontSize: 10,
           fontWeight: FontWeight.w500,
         ),
@@ -557,7 +552,7 @@ class _BarChartPainter extends CustomPainter {
 
     // Draw horizontal grid lines
     final Paint gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.08)
+      ..color = AppColors.surface3.withAlpha(128)
       ..strokeWidth = 1.0;
 
     for (int i = 0; i < gridLines; i++) {
@@ -568,7 +563,7 @@ class _BarChartPainter extends CustomPainter {
     // Draw zero line slightly darker if it exists within the chart
     if (zeroY > 0 && zeroY < chartHeight) {
       final Paint zeroPaint = Paint()
-        ..color = Colors.grey.withOpacity(0.2)
+        ..color = AppColors.surface3
         ..strokeWidth = 1.5;
       canvas.drawLine(Offset(0, zeroY), Offset(chartWidth, zeroY), zeroPaint);
     }
@@ -613,8 +608,8 @@ class _BarChartPainter extends CustomPainter {
       // Bottom day label
       textPainter.text = TextSpan(
         text: labels[i],
-        style: TextStyle(
-          color: Colors.grey[400],
+        style: const TextStyle(
+          color: AppColors.ink4,
           fontSize: 10,
           fontWeight: FontWeight.w500,
         ),

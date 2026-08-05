@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/admin_pin_dialog.dart';
 import '../models/order_item.dart';
 import '../objectbox.g.dart';
@@ -15,6 +16,9 @@ import '../models/store_config.dart';
 import '../models/game_session.dart';
 import '../models/app_user.dart';
 import '../providers/dashboard_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   final AppUser? currentUser;
@@ -42,12 +46,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 
   Future<void> _deleteOrder(order_model.Order order) async {
-    // Check if the order belongs to someone else
     final orderUserId = order.user.target?.id;
     final currentUserId = widget.currentUser?.id;
     final isOwnOrder = orderUserId == null || currentUserId == orderUserId;
 
-    // If deleting someone else's order, require admin PIN
     if (!isOwnOrder) {
       final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
       if (!isAdmin) {
@@ -55,10 +57,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red.shade600,
+              backgroundColor: AppColors.danger,
               content: const Row(
                 children: [
-                  Icon(Icons.lock_outline, color: Colors.white, size: 18),
+                  Icon(Icons.lock_outline, color: AppColors.surface0, size: 18),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -110,79 +112,45 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: colorScheme.surfaceContainerLowest,
-      appBar: AppBar(
-        title: const Text(
-          'Historique Unifié',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        elevation: 0,
-        scrolledUnderElevation: 2,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: IconButton.filledTonal(
-              icon: Icon(
-                _showDeletedOrders ? Icons.visibility : Icons.visibility_off,
-              ),
-              onPressed: () async {
-                if (!_showDeletedOrders) {
-                  // Toggling ON: require admin
-                  final isAdmin =
-                      await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
-                  if (isAdmin) {
-                    setState(() => _showDeletedOrders = true);
-                  } else {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: Colors.red.shade600,
-                          content: const Row(
-                            children: [
-                              Icon(Icons.lock_outline,
-                                  color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text('Accès refusé : Admin requis'),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                } else {
-                  // Toggling OFF: just do it
-                  setState(() => _showDeletedOrders = false);
-                }
-              },
-              tooltip: 'Afficher les commandes supprimées',
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.surface1,
       body: Column(
         children: [
           Container(
             decoration: BoxDecoration(
-              color: colorScheme.surface,
+              color: AppColors.surface0,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: AppColors.ink5.withOpacity(0.3),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: BusinessDayFilter(
-              selectedDate: _selectedBusinessDay,
-              onDateChanged: (date) {
-                setState(() {
-                  _selectedBusinessDay = date;
-                });
-              },
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                      color: AppColors.ink0,
+                      onPressed: () => context.pop(),
+                    ),
+                    Expanded(
+                      child: BusinessDayFilter(
+                        selectedDate: _selectedBusinessDay,
+                        onDateChanged: (date) {
+                          setState(() {
+                            _selectedBusinessDay = date;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -190,7 +158,80 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
         ],
       ),
+      floatingActionButton: _SpeedDialFAB(
+        onToggleDeleted: _toggleDeletedOrders,
+        onPrintBrief: _printDayBrief,
+        showDeleted: _showDeletedOrders,
+      ),
     );
+  }
+
+  void _toggleDeletedOrders() async {
+    if (!_showDeletedOrders) {
+      final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
+      if (isAdmin) {
+        setState(() => _showDeletedOrders = true);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppColors.danger,
+              content: const Row(
+                children: [
+                  Icon(Icons.lock_outline, color: AppColors.surface0, size: 18),
+                  SizedBox(width: 8),
+                  Text('Accès refusé : Admin requis'),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+    } else {
+      setState(() => _showDeletedOrders = false);
+    }
+  }
+
+  void _printDayBrief() async {
+    try {
+      await PrinterHelper.printDayBrief(
+        _selectedBusinessDay,
+        ref.read(objectBoxProvider),
+        _config,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.success,
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: AppColors.surface0, size: 18),
+                SizedBox(width: 8),
+                Text('Rapport journalier imprimé'),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.surface0, size: 18),
+                const SizedBox(width: 8),
+                Text('Erreur: $e'),
+              ],
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildUnifiedFeed() {
@@ -207,22 +248,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             final orders = orderSnapshot.data!;
             final sessions = sessionSnapshot.data!;
 
-            // Combine and sort
             final List<dynamic> combined = [];
 
-            // Filter and add orders
             final filteredOrders = _showDeletedOrders
                 ? orders
                 : orders.where((o) => !o.isDeleted).toList();
             combined.addAll(filteredOrders);
 
-            // Add sessions that aren't linked to an order yet
             final unlinkedSessions = sessions
                 .where((s) => s.relatedOrderId == null || s.relatedOrderId == 0)
                 .toList();
             combined.addAll(unlinkedSessions);
 
-            // Sort by time descending
             combined.sort((a, b) {
               final DateTime timeA = (a is order_model.Order)
                   ? a.date
@@ -238,13 +275,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.inbox_outlined,
-                        size: 56, color: Colors.grey.shade400),
-                    const SizedBox(height: 12),
-                    Text(
+                    const Icon(Icons.inbox_outlined,
+                        size: 56, color: AppColors.ink4),
+                    const SizedBox(height: AppSpacing.space3),
+                    const Text(
                       'Aucune activité pour cette journée',
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: AppColors.ink3,
                         fontSize: 15,
                       ),
                     ),
@@ -254,7 +291,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.space2, horizontal: AppSpacing.space1),
               itemCount: combined.length,
               itemBuilder: (context, index) {
                 final item = combined[index];
@@ -282,28 +320,30 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     late final String statusLabel;
     late final IconData statusIcon;
     if (session.status == 1) {
-      statusColor = Colors.green.shade600;
+      statusColor = AppColors.success;
       statusLabel = 'Terminée';
       statusIcon = Icons.check_circle_outline;
     } else if (session.status == 2) {
-      statusColor = Colors.red.shade600;
+      statusColor = AppColors.danger;
       statusLabel = 'Annulée';
       statusIcon = Icons.cancel_outlined;
     } else {
-      statusColor = Colors.blue.shade600;
+      statusColor = AppColors.info;
       statusLabel = 'En cours';
       statusIcon = Icons.play_circle_outline;
     }
 
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.space2, vertical: AppSpacing.space1 + 2),
+      color: AppColors.surface0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.blueGrey.shade100),
+        borderRadius: AppRadius.rLg,
+        side: const BorderSide(color: AppColors.surface3),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.rLg,
         onTap: () {
           showDialog(
             context: context,
@@ -313,7 +353,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 TextButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    PrinterHelper.printGameTicket(session, ref.read(objectBoxProvider));
+                    PrinterHelper.printGameTicket(
+                        session, ref.read(objectBoxProvider));
                   },
                   icon: const Icon(Icons.print_outlined),
                   label: const Text('Réimprimer Ticket'),
@@ -326,19 +367,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(14.0),
+          padding: const EdgeInsets.all(AppSpacing.space3 + 1),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(AppSpacing.space2 + 2),
                 decoration: BoxDecoration(
-                  color: Colors.indigo.shade50,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.primaryLight,
+                  borderRadius: AppRadius.rMd,
                 ),
-                child: Icon(Icons.sports_esports_outlined,
-                    color: Colors.indigo.shade400),
+                child: const Icon(Icons.sports_esports_outlined,
+                    color: AppColors.primary),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,22 +389,22 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 15),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.space1),
                     Text(
                       'Palier : ${session.tierLabel}  •  Staff : $user',
-                      style: TextStyle(
-                          color: Colors.grey.shade700, fontSize: 12.5),
+                      style: const TextStyle(
+                          color: AppColors.ink2, fontSize: 12.5),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppSpacing.space0 + 2),
                     Text(
                       'Début : ${DateFormat('HH:mm').format(session.startTime)}   Fin : ${session.endTime != null ? DateFormat('HH:mm').format(session.endTime!) : "Ouvert"}',
-                      style: TextStyle(
-                          color: Colors.grey.shade600, fontSize: 12.5),
+                      style: const TextStyle(
+                          color: AppColors.ink3, fontSize: 12.5),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.space2),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -373,19 +414,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 15),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.space1),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.space2,
+                        vertical: AppSpacing.space1 - 1),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: AppRadius.rFull,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(statusIcon, size: 12, color: statusColor),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppSpacing.space1),
                         Text(
                           statusLabel,
                           style: TextStyle(
@@ -409,17 +451,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   Widget _buildOrderCard(order_model.Order order) {
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      color: order.isDeleted ? Colors.red.shade50 : Theme.of(context).colorScheme.surface,
+      margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.space2, vertical: AppSpacing.space1 + 2),
+      color: order.isDeleted ? AppColors.dangerLight : AppColors.surface0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.rLg,
         side: BorderSide(
-          color: order.isDeleted ? Colors.red.shade200 : Colors.blueGrey.shade100,
+          color: order.isDeleted ? AppColors.danger : AppColors.surface3,
           width: order.isDeleted ? 1.5 : 1,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.space4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -427,21 +470,21 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(AppSpacing.space2 + 2),
                   decoration: BoxDecoration(
                     color: order.isDeleted
-                        ? Colors.red.shade100
-                        : Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(10),
+                        ? AppColors.dangerLight
+                        : AppColors.successLight,
+                    borderRadius: AppRadius.rMd,
                   ),
                   child: Icon(
                     Icons.receipt_long_outlined,
                     color: order.isDeleted
-                        ? Colors.red.shade400
-                        : Colors.green.shade600,
+                        ? AppColors.danger
+                        : AppColors.success,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.space3),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,14 +494,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               fontWeight: FontWeight.bold, fontSize: 17)),
                       if (order.isEdited || order.isDeleted)
                         Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                          padding: const EdgeInsets.only(top: AppSpacing.space1 + 2),
                           child: Wrap(
-                            spacing: 6,
+                            spacing: AppSpacing.space1 + 2,
                             children: [
                               if (order.isEdited)
-                                _buildBadge('MODIFIÉE', Colors.orange),
+                                _buildBadge('MODIFIÉE', AppColors.warning),
                               if (order.isDeleted)
-                                _buildBadge('SUPPRIMÉE', Colors.red),
+                                _buildBadge('SUPPRIMÉE', AppColors.danger),
                             ],
                           ),
                         ),
@@ -468,51 +511,58 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 IconButton(
                   icon: Icon(Icons.edit_outlined,
                       color: order.isDeleted
-                          ? Colors.grey
-                          : Theme.of(context).colorScheme.secondary),
+                          ? AppColors.ink4
+                          : AppColors.primary),
                   onPressed: order.isDeleted ? null : () => _editOrder(order),
                   tooltip: 'Modifier',
                 ),
                 IconButton(
                   icon: Icon(Icons.delete_outline,
-                      color: order.isDeleted ? Colors.grey : Colors.red),
+                      color: order.isDeleted ? AppColors.ink4 : AppColors.danger),
                   onPressed:
                       order.isDeleted ? null : () => _deleteOrder(order),
                   tooltip: 'Supprimer',
                 ),
               ],
             ),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.space6),
             Row(
               children: [
-                Icon(Icons.schedule, size: 15, color: Colors.grey.shade600),
-                const SizedBox(width: 6),
-                Text(
-                  order.date.toLocal().toString().split('.')[0],
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                const Icon(Icons.schedule, size: 15, color: AppColors.ink3),
+                const SizedBox(width: AppSpacing.space1 + 2),
+                Flexible(
+                  child: Text(
+                    order.date.toLocal().toString().split('.')[0],
+                    style: const TextStyle(color: AppColors.ink2, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.space1),
             Row(
               children: [
-                Icon(Icons.person_outline, size: 15, color: Colors.grey.shade600),
-                const SizedBox(width: 6),
-                Text(
-                  'Staff : ${order.user.target?.name ?? "Inconnu"}',
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                const Icon(Icons.person_outline,
+                    size: 15, color: AppColors.ink3),
+                const SizedBox(width: AppSpacing.space1 + 2),
+                Flexible(
+                  child: Text(
+                    'Staff : ${order.user.target?.name ?? "Inconnu"}',
+                    style: const TextStyle(color: AppColors.ink2, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.space1),
             Row(
               children: [
-                Icon(Icons.shopping_bag_outlined,
-                    size: 15, color: Colors.grey.shade600),
-                const SizedBox(width: 6),
+                const Icon(Icons.shopping_bag_outlined,
+                    size: 15, color: AppColors.ink3),
+                const SizedBox(width: AppSpacing.space1 + 2),
                 Text(
                   'Articles : ${order.items.length}',
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                  style: const TextStyle(color: AppColors.ink2, fontSize: 13),
                 ),
                 const Spacer(),
                 Text(
@@ -520,45 +570,51 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 17,
-                      color: Colors.green),
+                      color: AppColors.success),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.space3),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.space3),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surface2,
+                borderRadius: AppRadius.rMd,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Articles :',
+                  const Text('Articles :',
                       style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 12.5,
-                          color: Colors.grey.shade700)),
-                  const SizedBox(height: 6),
+                          color: AppColors.ink2)),
+                  const SizedBox(height: AppSpacing.space1 + 2),
                   for (final item in order.items)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 6.0),
+                      padding:
+                          const EdgeInsets.only(bottom: AppSpacing.space1 + 2),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                               '• ${item.productName ?? item.product.target?.name ?? 'Produit Supprimé'}  ${item.price ?? 'N/A'} x ${item.quantity}',
-                              style: const TextStyle(fontSize: 13.5)),
+                              style: const TextStyle(fontSize: 13.5),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis),
                           if (item.extras.isNotEmpty)
                             ...item.extras.map((extra) {
                               final qty = item.getExtraQuantity(extra);
                               return Padding(
-                                padding: const EdgeInsets.only(left: 16.0, top: 2),
+                                padding: const EdgeInsets.only(
+                                    left: AppSpacing.space4, top: AppSpacing.space0 + 2),
                                 child: Text(
                                   '+ ${extra.name} ${qty > 1 ? "x$qty" : ""} : ${(extra.price * qty).toStringAsFixed(2)} DH',
-                                  style: TextStyle(
-                                      fontSize: 11.5, color: Colors.grey.shade600),
+                                  style: const TextStyle(
+                                      fontSize: 11.5, color: AppColors.ink3),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               );
                             }),
@@ -568,7 +624,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.space3),
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
@@ -576,8 +632,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 icon: const Icon(Icons.print_outlined, size: 18),
                 label: const Text('Imprimer'),
                 style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryDark,
+                  foregroundColor: AppColors.surface0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: AppRadius.rMd),
                 ),
               ),
             ),
@@ -589,33 +647,36 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   Widget _buildBadge(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.space2, vertical: AppSpacing.space1 - 1),
       decoration:
-          BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+          BoxDecoration(color: color, borderRadius: AppRadius.rFull),
       child: Text(text,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+              color: AppColors.surface0,
+              fontWeight: FontWeight.bold,
+              fontSize: 10)),
     );
   }
 
   void _editOrder(order_model.Order order) async {
-    // Check if the order belongs to someone else
     final orderUserId = order.user.target?.id;
     final currentUserId = widget.currentUser?.id;
     final isOwnOrder = orderUserId == null || currentUserId == orderUserId;
 
-    // If editing someone else's order, require admin PIN
     if (!isOwnOrder) {
-      final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
+      final isAdmin = await AdminPinDialog.verify(
+          context, ref.read(objectBoxProvider));
       if (!isAdmin) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red.shade600,
+              backgroundColor: AppColors.danger,
               content: const Row(
                 children: [
-                  Icon(Icons.lock_outline, color: Colors.white, size: 18),
+                  Icon(Icons.lock_outline,
+                      color: AppColors.surface0, size: 18),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -635,8 +696,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => custom_order_screen.OrderScreen(
-              orderToEdit: order),
+          builder: (context) =>
+              custom_order_screen.OrderScreen(orderToEdit: order),
         ),
       ).then((_) => setState(() {}));
     }
@@ -645,5 +706,130 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   void _printOrder(order_model.Order order) {
     final receiptData = ReceiptData.convertRuciToReceiptData(order);
     PrinterHelper.printReceipt(receiptData, ref.read(objectBoxProvider));
+  }
+}
+
+class _SpeedDialFAB extends StatefulWidget {
+  final VoidCallback onToggleDeleted;
+  final VoidCallback onPrintBrief;
+  final bool showDeleted;
+
+  const _SpeedDialFAB({
+    required this.onToggleDeleted,
+    required this.onPrintBrief,
+    required this.showDeleted,
+  });
+
+  @override
+  State<_SpeedDialFAB> createState() => _SpeedDialFABState();
+}
+
+class _SpeedDialFABState extends State<_SpeedDialFAB>
+    with SingleTickerProviderStateMixin {
+  bool _isOpen = false;
+  late AnimationController _controller;
+  late Animation<double> _expandAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() {
+      _isOpen = !_isOpen;
+      if (_isOpen) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: _expandAnimation,
+          builder: (context, child) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Transform.scale(
+                  scale: _expandAnimation.value,
+                  child: Opacity(
+                    opacity: _expandAnimation.value,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FloatingActionButton.small(
+                        heroTag: 'print_brief',
+                        backgroundColor: AppColors.ink0,
+                        onPressed: () {
+                          _toggle();
+                          widget.onPrintBrief();
+                        },
+                        child: const Icon(Icons.print, color: AppColors.surface0, size: 20),
+                      ),
+                    ),
+                  ),
+                ),
+                Transform.scale(
+                  scale: _expandAnimation.value,
+                  child: Opacity(
+                    opacity: _expandAnimation.value,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FloatingActionButton.small(
+                        heroTag: 'deleted_orders',
+                        backgroundColor: widget.showDeleted
+                            ? AppColors.danger
+                            : AppColors.ink1,
+                        onPressed: () {
+                          _toggle();
+                          widget.onToggleDeleted();
+                        },
+                        child: Icon(
+                          widget.showDeleted
+                              ? Icons.visibility_off
+                              : Icons.delete_outline,
+                          color: AppColors.surface0,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        FloatingActionButton(
+          heroTag: 'main_speed_dial',
+          backgroundColor: AppColors.primary,
+          onPressed: _toggle,
+          child: AnimatedRotation(
+            turns: _isOpen ? 0.125 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(Icons.add, color: AppColors.surface0, size: 28),
+          ),
+        ),
+      ],
+    );
   }
 }

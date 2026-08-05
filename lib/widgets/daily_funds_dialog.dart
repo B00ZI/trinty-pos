@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/daily_funds.dart';
+import '../theme/app_colors.dart';
 
 class DailyFundsDialog extends StatefulWidget {
   final DailyFunds? currentFunds;
@@ -57,15 +58,15 @@ class _DailyFundsDialogState extends State<DailyFundsDialog> {
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
+                  color: AppColors.accentYellowLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade400, width: 1),
+                  border: Border.all(color: AppColors.accentYellow, width: 1),
                 ),
                 child: Text(
                   'Fond de caisse déjà défini pour aujourd\'hui',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.amber.shade900,
+                    color: AppColors.payNowText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -98,8 +99,8 @@ class _DailyFundsDialogState extends State<DailyFundsDialog> {
         ElevatedButton(
           onPressed: _handleSave,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.amber,
-            foregroundColor: Colors.white,
+            backgroundColor: AppColors.accentYellow,
+            foregroundColor: AppColors.payNowText,
           ),
           child: const Text('Enregistrer'),
         ),

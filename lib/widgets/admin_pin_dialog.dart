@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/app_user.dart';
 import '../objectbox.dart';
+import '../theme/app_colors.dart';
 
 class AdminPinDialog extends StatefulWidget {
   final ObjectBox objectbox;
@@ -117,11 +118,11 @@ class _AdminPinDialogState extends State<AdminPinDialog>
         width: dialogWidth,
         padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface0,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: AppColors.ink0.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -158,7 +159,7 @@ class _AdminPinDialogState extends State<AdminPinDialog>
             Text(
               'Veuillez entrer le code administrateur',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: subTitleFontSize),
+              style: TextStyle(color: AppColors.ink3, fontSize: subTitleFontSize),
             ),
             SizedBox(height: isShort ? 12 : 32),
             AnimatedBuilder(
@@ -178,7 +179,7 @@ class _AdminPinDialogState extends State<AdminPinDialog>
                           shape: BoxShape.circle,
                           color: isFilled
                               ? Theme.of(context).colorScheme.primary
-                              : Colors.grey.shade200,
+                              : AppColors.surface3,
                           boxShadow: isFilled
                               ? [
                                   BoxShadow(
@@ -204,7 +205,7 @@ class _AdminPinDialogState extends State<AdminPinDialog>
             TextButton(
               onPressed: () => Navigator.pop(context, null),
               style: TextButton.styleFrom(
-                foregroundColor: Colors.grey.shade600,
+                foregroundColor: AppColors.ink3,
                 padding: EdgeInsets.symmetric(
                     horizontal: 32, vertical: isShort ? 8 : 12),
               ),
@@ -254,13 +255,13 @@ class _AdminPinDialogState extends State<AdminPinDialog>
         width: keySize,
         height: keySize,
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: AppColors.surface1,
           shape: BoxShape.circle,
         ),
         child: Center(
           child: isIcon
               ? Icon(Icons.backspace_outlined,
-                  size: keySize * 0.35, color: Colors.grey.shade800)
+                  size: keySize * 0.35, color: AppColors.ink0)
               : Text(
                   label,
                   style: TextStyle(

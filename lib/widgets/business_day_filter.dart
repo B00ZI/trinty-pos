@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 class BusinessDayFilter extends StatelessWidget {
   final DateTime selectedDate;
@@ -14,17 +17,26 @@ class BusinessDayFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space4, vertical: AppSpacing.space2),
+      decoration: const BoxDecoration(
+        color: AppColors.surface0,
+        border: Border(bottom: BorderSide(color: AppColors.surface3)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () => onDateChanged(selectedDate.subtract(const Duration(days: 1))),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: AppRadius.rMd,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.chevron_left, size: 18, color: AppColors.ink3),
+              padding: EdgeInsets.zero,
+              onPressed: () => onDateChanged(selectedDate.subtract(const Duration(days: 1))),
+            ),
           ),
           InkWell(
             onTap: () async {
@@ -40,18 +52,31 @@ class BusinessDayFilter extends StatelessWidget {
             },
             child: Row(
               children: [
-                const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
-                const SizedBox(width: 8),
+                const Icon(Icons.calendar_today, size: 18, color: AppColors.ink3),
+                const SizedBox(width: AppSpacing.space2),
                 Text(
                   DateFormat('dd/MM/yyyy').format(selectedDate),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppColors.ink0,
+                  ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () => onDateChanged(selectedDate.add(const Duration(days: 1))),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: AppRadius.rMd,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.chevron_right, size: 18, color: AppColors.ink3),
+              padding: EdgeInsets.zero,
+              onPressed: () => onDateChanged(selectedDate.add(const Duration(days: 1))),
+            ),
           ),
         ],
       ),

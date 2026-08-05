@@ -14,6 +14,7 @@ import '../models/daily_funds.dart';
 import '../models/store_config.dart';
 import 'package:objectbox/objectbox.dart';
 import '../providers/dashboard_provider.dart';
+import '../theme/app_colors.dart';
 
 class DevPanelScreen extends ConsumerStatefulWidget {
   const DevPanelScreen({super.key});
@@ -369,26 +370,66 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
     }
   }
 
+  void _deleteAllHistory() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('⚠️ SUPPRIMER TOUT L\'HISTORIQUE',
+            style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+        content: const Text(
+            'Cette action supprimera TOUTES les commandes, sessions de jeux, dépenses et fonds.\n\nCette action est IRRÉVERSIBLE.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('SUPPRIMER TOUT',
+                style: TextStyle(color: AppColors.surface0)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final store = ref.read(objectBoxProvider).store;
+      store.box<order_model.Order>().removeAll();
+      store.box<OrderItem>().removeAll();
+      store.box<GameSession>().removeAll();
+      store.box<Expense>().removeAll();
+      store.box<DailyFunds>().removeAll();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tout l\'historique a été supprimé.')),
+        );
+        _loadData();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title:
-            const Text('Developer Panel', style: TextStyle(color: Colors.red)),
-        backgroundColor: Colors.black,
+            Text('Developer Panel', style: TextStyle(color: AppColors.danger)),
+        backgroundColor: AppColors.ink0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.date_range, color: Colors.white),
+            icon: Icon(Icons.date_range, color: AppColors.surface0),
             onPressed: _selectDateRange,
             tooltip: 'Filtrer par date',
           ),
           IconButton(
-            icon: const Icon(Icons.article, color: Colors.white),
+            icon: Icon(Icons.article, color: AppColors.surface0),
             onPressed: _exportSql,
             tooltip: 'Export SQL',
           ),
           IconButton(
-            icon: const Icon(Icons.save_alt, color: Colors.white),
+            icon: Icon(Icons.save_alt, color: AppColors.surface0),
             onPressed: _exportDb,
             tooltip: 'Export DB',
           ),
@@ -406,13 +447,16 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Row(
                         children: [
-                          const Icon(Icons.filter_alt, color: Colors.orange),
+                          Icon(Icons.filter_alt, color: AppColors.warning),
                           const SizedBox(width: 8),
-                          Text(
-                            'Filtré du: ${DateFormat('dd/MM/yyyy').format(_startDate!)} au ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange),
+                          Flexible(
+                            child: Text(
+                              'Filtré du: ${DateFormat('dd/MM/yyyy').format(_startDate!)} au ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.warning),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const Spacer(),
                           TextButton(
@@ -458,12 +502,12 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
                       final isUnassigned = stat['id'] == null;
                       return Card(
                         color: isUnassigned && stat['revenue'] > 0
-                            ? Colors.red.shade50
+                            ? AppColors.dangerLight
                             : null,
                         child: ListTile(
                           title: Text(stat['name'],
                               style: TextStyle(
-                                  color: isUnassigned ? Colors.red : null,
+                                  color: isUnassigned ? AppColors.danger : null,
                                   fontWeight: FontWeight.bold)),
                           subtitle: Text('Orders: ${stat['orders']}'),
                           trailing: Text(
@@ -476,11 +520,11 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
                   ),
                   if (_unassignedDetails.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    const Text('Unassigned Details',
+                    Text('Unassigned Details',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.red)),
+                            color: AppColors.danger)),
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -493,7 +537,7 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
                               d['type'] == 'Order'
                                   ? Icons.receipt
                                   : Icons.sports_esports,
-                              color: Colors.red,
+                              color: AppColors.danger,
                               size: 20),
                           title: Text('${d['type']} ID: ${d['id']}'),
                           subtitle: Text('Number: ${d['number']}'),
@@ -509,11 +553,28 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
                           TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   if (_missingOrderNumbers.isEmpty)
-                    const Text('No missing order numbers found.',
-                        style: TextStyle(color: Colors.green)),
+                    Text('No missing order numbers found.',
+                        style: TextStyle(color: AppColors.success)),
                   if (_missingOrderNumbers.isNotEmpty)
                     Text(_missingOrderNumbers.join(', '),
-                        style: const TextStyle(color: Colors.red)),
+                        style: TextStyle(color: AppColors.danger),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.danger,
+                        foregroundColor: AppColors.surface0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      icon: const Icon(Icons.delete_forever),
+                      label: const Text('SUPPRIMER TOUT L\'HISTORIQUE',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: _deleteAllHistory,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -527,7 +588,7 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           children: [
-            Text(title, style: const TextStyle(color: Colors.grey)),
+            Text(title, style: TextStyle(color: AppColors.ink3)),
             Text(count.toString(),
                 style:
                     const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

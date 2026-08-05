@@ -18,26 +18,10 @@ import '../providers/order_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/settings_provider.dart';
-
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-
-class _AppColors {
-  static const surface = Color(0xFFF8FAFC);
-  static const card = Color(0xFFFFFFFF);
-  static const ink = Color(0xFF0F172A);
-  static const inkMuted = Color(0xFF64748B);
-  static const inkLight = Color(0xFFCBD5E1);
-  static const accent = Color(0xFF6366F1); // indigo
-  static const accentSoft = Color(0xFFEEF2FF);
-  static const danger = Color(0xFFEF4444);
-  static const dangerSoft = Color(0xFFFEF2F2);
-  static const success = Color(0xFF10B981);
-  static const border = Color(0xFFE2E8F0);
-  static const cartBg = Color(0xFF1E1B4B); // deep indigo sidebar
-  static const cartSurface = Color(0xFF2D2A5E);
-  static const cartText = Color(0xFFF1F5F9);
-  static const cartMuted = Color(0xFF94A3B8);
-}
+import '../router.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
 
 class OrderScreen extends ConsumerStatefulWidget {
   final order_model.Order? orderToEdit;
@@ -101,138 +85,159 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     ref.read(cartProvider.notifier).addToCart(product);
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
     final isEditing = widget.orderToEdit != null;
+    final itemCount = cartState.lines.fold<int>(0, (s, l) => s + l.quantity);
 
     return Scaffold(
-      backgroundColor: _AppColors.surface,
-      appBar: _buildAppBar(isEditing, cartState),
+      backgroundColor: AppColors.surface1,
       body: SafeArea(
-        child: OrientationBuilder(
-          builder: (context, orientation) {
-            final isLandscape = orientation == Orientation.landscape;
-            final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
-
-            if (isLandscape || isTablet) {
-              return _buildLandscapeLayout(cartState);
-            }
-            return _buildPortraitLayout(cartState);
-          },
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(bool isEditing, CartState cartState) {
-    final itemCount = cartState.lines.fold<int>(0, (s, l) => s + l.quantity);
-    return AppBar(
-      backgroundColor: _AppColors.card,
-      elevation: 0,
-      scrolledUnderElevation: 1,
-      shadowColor: _AppColors.border,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-        color: _AppColors.ink,
-        onPressed: () => context.pop(),
-      ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            isEditing
-                ? 'Modifier N°${widget.orderToEdit!.orderNumber}'
-                : 'Nouvelle Commande',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: _AppColors.ink,
-              letterSpacing: -0.3,
-            ),
-          ),
-          if (isEditing)
-            Text(
-              'Modifiez les articles puis confirmez',
-              style: TextStyle(
-                fontSize: 11,
-                color: _AppColors.inkMuted,
-                fontWeight: FontWeight.w400,
+        child: Column(
+          children: [
+            // Slim header bar
+            Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space4),
+              decoration: const BoxDecoration(
+                color: AppColors.surface0,
+                border: Border(bottom: BorderSide(color: AppColors.surface3, width: 1)),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                    color: AppColors.ink0,
+                    onPressed: () => context.pop(),
+                  ),
+                  const SizedBox(width: AppSpacing.space2),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEditing
+                              ? 'Modifier N°${widget.orderToEdit!.orderNumber}'
+                              : 'Nouvelle Commande',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink0,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        if (isEditing)
+                          const Text(
+                            'Modifiez les articles puis confirmez',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.ink3,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.receipt_long_rounded, size: 20),
+                    color: AppColors.ink3,
+                    onPressed: () => context.push(AppRoutes.history),
+                    tooltip: 'Historique',
+                  ),
+                  if (itemCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: AppRadius.rFull,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.shopping_bag_outlined,
+                              size: 14, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$itemCount',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
-        ],
+
+            // Main content
+            Expanded(
+              child: OrientationBuilder(
+                builder: (context, orientation) {
+                  final isLandscape = orientation == Orientation.landscape;
+                  final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+
+                  if (isLandscape || isTablet) {
+                    return _buildLandscapeLayout(cartState);
+                  }
+                  return _buildPortraitLayout(cartState);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
-      actions: [
-        if (itemCount > 0)
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.shopping_bag_outlined,
-                    size: 14, color: _AppColors.accent),
-                const SizedBox(width: 4),
-                Text(
-                  '$itemCount',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _AppColors.accent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
     );
   }
 
-  // ─── Layouts ──────────────────────────────────────────────────────────────
-
   Widget _buildLandscapeLayout(CartState cartState) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Cart panel — fixed left in landscape
-        SizedBox(
-          width: 300,
-          child: _buildCartPanel(cartState),
-        ),
-        // Product area — takes remaining space
-        Expanded(
-          child: _buildProductArea(cartState),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cartWidth = constraints.maxWidth < 500
+            ? (constraints.maxWidth * 0.45).clamp(200.0, 340.0)
+            : 340.0;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: cartWidth,
+              child: _buildCartPanel(cartState),
+            ),
+            Expanded(
+              child: _buildProductArea(cartState),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildPortraitLayout(CartState cartState) {
     final lines = cartState.lines;
-    return Column(
-      children: [
-        // Product area — scrollable top
-        Expanded(
-          child: _buildProductArea(cartState),
-        ),
-        // Cart sheet — bottom panel
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          height: lines.isEmpty ? 72 : 300,
-          child: _buildCartPanel(cartState),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxCartHeight = (constraints.maxHeight * 0.45).clamp(120.0, 320.0);
+        final cartHeight = lines.isEmpty ? 72.0 : maxCartHeight;
+        return Column(
+          children: [
+            Expanded(
+              child: _buildProductArea(cartState),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              height: cartHeight,
+              child: _buildCartPanel(cartState),
+            ),
+          ],
+        );
+      },
     );
   }
-
-  // ─── Product Area ─────────────────────────────────────────────────────────
 
   Widget _buildProductArea(CartState cartState) {
     if (cartState.activeParentForExtras != null) {
@@ -240,7 +245,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         children: [
           _buildBreadcrumbBar(
             icon: Icons.add_circle_outline_rounded,
-            iconColor: _AppColors.accent,
+            iconColor: AppColors.primary,
             label:
                 'Suppléments pour ${cartState.activeParentForExtras?.product?.name ?? "Article"}',
             action: TextButton.icon(
@@ -249,7 +254,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
               icon: const Icon(Icons.check_rounded, size: 16),
               label: const Text('Terminer'),
               style: TextButton.styleFrom(
-                foregroundColor: _AppColors.success,
+                foregroundColor: AppColors.success,
                 textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -264,7 +269,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         children: [
           _buildBreadcrumbBar(
             icon: Icons.grid_view_rounded,
-            iconColor: _AppColors.inkMuted,
+            iconColor: AppColors.ink3,
             label: cartState.categoryFilter!,
             action: TextButton.icon(
               onPressed: () =>
@@ -272,7 +277,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
               icon: const Icon(Icons.arrow_back_rounded, size: 16),
               label: const Text('Catégories'),
               style: TextButton.styleFrom(
-                foregroundColor: _AppColors.inkMuted,
+                foregroundColor: AppColors.ink3,
                 textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -294,22 +299,23 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     required Widget action,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: _AppColors.card,
-        border: Border(bottom: BorderSide(color: _AppColors.border)),
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space4),
+      decoration: const BoxDecoration(
+        color: AppColors.surface0,
+        border: Border(bottom: BorderSide(color: AppColors.surface3)),
       ),
       child: Row(
         children: [
           Icon(icon, size: 16, color: iconColor),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.space2),
           Expanded(
             child: Text(
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
-                color: _AppColors.ink,
+                color: AppColors.ink0,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -325,7 +331,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
     return productsAsync.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: _AppColors.accent),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (err, _) => _buildErrorState('$err'),
       data: (allProducts) {
@@ -347,13 +353,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
             if (crossAxisCount < 1) crossAxisCount = 1;
 
             return ReorderableGridView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.space3),
               itemCount: products.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                childAspectRatio: 0.55,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                childAspectRatio: 0.65,
+                crossAxisSpacing: AppSpacing.space4,
+                mainAxisSpacing: AppSpacing.space4,
               ),
               onReorder: (oldIndex, newIndex) {
                 final p = products.removeAt(oldIndex);
@@ -385,7 +391,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
     return categoriesAsync.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: _AppColors.accent),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (err, _) => _buildErrorState('$err'),
       data: (allCategories) {
@@ -406,12 +412,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
             if (crossAxisCount < 2) crossAxisCount = 2;
 
             return ReorderableGridView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.space3),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                childAspectRatio: 0.85,
+                crossAxisSpacing: AppSpacing.space4,
+                mainAxisSpacing: AppSpacing.space4,
               ),
               onReorder: (oldIndex, newIndex) {
                 final cat = categories.removeAt(oldIndex);
@@ -440,8 +446,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     );
   }
 
-  // ─── Cart Panel ───────────────────────────────────────────────────────────
-
   Widget _buildCartPanel(CartState cartState) {
     final config = ref.watch(storeConfigProvider);
     final printerConfigs =
@@ -453,19 +457,19 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
     return Container(
       decoration: const BoxDecoration(
-        color: _AppColors.cartBg,
+        color: AppColors.cartBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
-          // Handle bar (portrait only hint)
+          // Handle bar
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 10, bottom: 4),
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: _AppColors.cartMuted.withOpacity(0.4),
+                color: AppColors.cartMuted.withAlpha(102),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -473,26 +477,26 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
           // Cart Header
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.space4, vertical: AppSpacing.space3),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _AppColors.cartSurface,
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.cartSurface,
+                    borderRadius: AppRadius.rMd,
                   ),
                   child: const Icon(Icons.receipt_long_rounded,
-                      size: 16, color: _AppColors.accent),
+                      size: 20, color: AppColors.cartAccent),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.space3),
                 Text(
                   lines.isEmpty
                       ? 'Panier vide'
                       : '${lines.length} article${lines.length > 1 ? 's' : ''}',
                   style: const TextStyle(
-                    color: _AppColors.cartText,
+                    color: AppColors.cartText,
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
@@ -505,16 +509,16 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                       Text(
                         '${grandTotal.toStringAsFixed(2)} DH',
                         style: const TextStyle(
-                          color: _AppColors.cartText,
+                          color: AppColors.cartText,
                           fontWeight: FontWeight.w800,
-                          fontSize: 18,
-                          letterSpacing: -0.5,
+                          fontSize: 20,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Total',
                         style: TextStyle(
-                          color: _AppColors.cartMuted,
+                          color: AppColors.cartMuted,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
@@ -528,14 +532,14 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
           if (lines.isNotEmpty) ...[
             Divider(
               height: 1,
-              color: _AppColors.cartMuted.withOpacity(0.15),
+              color: AppColors.cartMuted.withAlpha(38),
             ),
 
             // Items list
             Expanded(
               child: ListView.builder(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.space3, vertical: AppSpacing.space2),
                 itemCount: lines.length,
                 itemBuilder: (context, index) {
                   return _buildCartItem(lines[index], index, config);
@@ -554,13 +558,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                     Icon(
                       Icons.shopping_cart_outlined,
                       size: 32,
-                      color: _AppColors.cartMuted.withOpacity(0.4),
+                      color: AppColors.cartMuted.withAlpha(102),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
+                    const SizedBox(height: AppSpacing.space2),
+                    const Text(
                       'Ajoutez des articles',
                       style: TextStyle(
-                        color: _AppColors.cartMuted,
+                        color: AppColors.cartMuted,
                         fontSize: 13,
                       ),
                     ),
@@ -580,26 +584,26 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
       onDismissed: (_) =>
           ref.read(cartProvider.notifier).removeLineAt(index),
       background: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
+        margin: const EdgeInsets.symmetric(vertical: AppSpacing.space1),
         decoration: BoxDecoration(
-          color: _AppColors.danger.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.dangerLight,
+          borderRadius: AppRadius.rMd,
         ),
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 16),
+        padding: const EdgeInsets.only(left: AppSpacing.space4),
         child: const Icon(Icons.delete_outline_rounded,
-            color: _AppColors.danger, size: 18),
+            color: AppColors.danger, size: 18),
       ),
       secondaryBackground: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
+        margin: const EdgeInsets.symmetric(vertical: AppSpacing.space1),
         decoration: BoxDecoration(
-          color: _AppColors.danger.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.dangerLight,
+          borderRadius: AppRadius.rMd,
         ),
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
+        padding: const EdgeInsets.only(right: AppSpacing.space4),
         child: const Icon(Icons.delete_outline_rounded,
-            color: _AppColors.danger, size: 18),
+            color: AppColors.danger, size: 18),
       ),
       child: AnimatedBuilder(
         animation: _shakeController,
@@ -611,23 +615,21 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
           return Transform.translate(
             offset: Offset(offset, 0),
             child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 3),
+              margin: const EdgeInsets.symmetric(vertical: AppSpacing.space1),
               decoration: BoxDecoration(
-                color: _AppColors.cartSurface,
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.cartSurface,
+                borderRadius: AppRadius.rMd,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                        horizontal: AppSpacing.space3, vertical: AppSpacing.space3),
                     child: Row(
                       children: [
-                        // Qty controls
                         _buildQtyControl(index, line),
-                        const SizedBox(width: 10),
-                        // Product info
+                        const SizedBox(width: AppSpacing.space3),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -635,7 +637,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                               Text(
                                 line.product?.name ?? 'Produit Inconnu',
                                 style: const TextStyle(
-                                  color: _AppColors.cartText,
+                                  color: AppColors.cartText,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                 ),
@@ -645,8 +647,8 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                               const SizedBox(height: 2),
                               Text(
                                 '${line.total(config).toStringAsFixed(2)} DH',
-                                style: TextStyle(
-                                  color: _AppColors.accent.withOpacity(0.9),
+                                style: const TextStyle(
+                                  color: AppColors.cartAccent,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
                                 ),
@@ -654,7 +656,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                             ],
                           ),
                         ),
-                        // Extras button
                         GestureDetector(
                           onTap: () => ref
                               .read(cartProvider.notifier)
@@ -662,56 +663,55 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: _AppColors.accent.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
+                              color: AppColors.cartAccent.withAlpha(38),
+                              borderRadius: AppRadius.rMd,
                             ),
                             child: const Icon(
                               Icons.add_rounded,
                               size: 16,
-                              color: _AppColors.accent,
+                              color: AppColors.cartAccent,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // Extras
                   if (line.orderItem.extras.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.only(
-                          left: 52, right: 12, bottom: 10),
+                          left: 52, right: AppSpacing.space3, bottom: AppSpacing.space3),
                       child: Column(
                         children: line.orderItem.extras.map((extra) {
                           final qty = line.orderItem.getExtraQuantity(extra);
                           return Padding(
-                            padding: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.only(top: AppSpacing.space1),
                             child: Row(
                               children: [
                                 Container(
                                   width: 3,
                                   height: 3,
-                                  margin: const EdgeInsets.only(right: 6),
-                                  decoration: BoxDecoration(
-                                    color: _AppColors.cartMuted,
+                                  margin: const EdgeInsets.only(right: AppSpacing.space2),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.cartMuted,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                                 Text(
                                   '${extra.name}${qty > 1 ? " ×$qty" : ""}',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 11,
-                                    color: _AppColors.cartMuted,
+                                    color: AppColors.cartMuted,
                                   ),
                                 ),
                                 const Spacer(),
                                 Text(
                                   '${(extra.price * qty).toStringAsFixed(2)} DH',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 11,
-                                    color: _AppColors.cartMuted,
+                                    color: AppColors.cartMuted,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: AppSpacing.space2),
                                 GestureDetector(
                                   onTap: () => ref
                                       .read(cartProvider.notifier)
@@ -719,7 +719,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                                   child: const Icon(
                                     Icons.remove_circle_outline_rounded,
                                     size: 14,
-                                    color: _AppColors.danger,
+                                    color: AppColors.danger,
                                   ),
                                 ),
                               ],
@@ -740,8 +740,8 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
   Widget _buildQtyControl(int index, CartLine line) {
     return Container(
       decoration: BoxDecoration(
-        color: _AppColors.cartBg,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.cartBg,
+        borderRadius: AppRadius.rMd,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -752,13 +752,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                 ref.read(cartProvider.notifier).removeItem(index),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space2),
             child: Text(
               line.quantity.toString(),
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: _AppColors.cartText,
+                color: AppColors.cartText,
               ),
             ),
           ),
@@ -774,29 +774,28 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
   Widget _buildCartActions(bool singleTicketMode) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.space3, AppSpacing.space2, AppSpacing.space3, AppSpacing.space4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Primary CTA
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 52,
             child: ElevatedButton(
               onPressed: () => _handleCartAction('save-print'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _AppColors.accent,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accentYellow,
+                foregroundColor: AppColors.payNowText,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle_outline_rounded, size: 16),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.check_circle_outline_rounded, size: 18),
+                  const SizedBox(width: AppSpacing.space2),
                   Text(
                     widget.orderToEdit != null
                         ? 'Mettre à jour'
@@ -810,27 +809,26 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
               ),
             ),
           ),
-          // Secondary CTA
           if (!singleTicketMode) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.space2),
             SizedBox(
               width: double.infinity,
-              height: 42,
+              height: 44,
               child: OutlinedButton(
                 onPressed: () => _handleCartAction('single-print'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _AppColors.cartMuted,
+                  foregroundColor: AppColors.cartMuted,
                   side: BorderSide(
-                      color: _AppColors.cartMuted.withOpacity(0.3)),
+                      color: AppColors.cartMuted.withAlpha(77)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.print_outlined, size: 15),
-                    SizedBox(width: 8),
+                    SizedBox(width: AppSpacing.space2),
                     Text(
                       'Ticket Simple',
                       style: TextStyle(
@@ -848,19 +846,17 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     );
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-
   Widget _buildQtyButton(
       {required IconData icon, required VoidCallback onPressed}) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: _AppColors.cartSurface,
-          borderRadius: BorderRadius.circular(6),
+          color: AppColors.cartSurface,
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 13, color: _AppColors.cartText),
+        child: Icon(icon, size: 14, color: AppColors.cartText),
       ),
     );
   }
@@ -871,12 +867,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 48, color: _AppColors.inkLight),
-          const SizedBox(height: 12),
+          Icon(icon, size: 48, color: AppColors.ink4),
+          const SizedBox(height: AppSpacing.space3),
           Text(
             message,
             style: const TextStyle(
-              color: _AppColors.inkMuted,
+              color: AppColors.ink3,
               fontSize: 14,
               height: 1.5,
             ),
@@ -893,12 +889,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.error_outline_rounded,
-              size: 40, color: _AppColors.danger),
-          const SizedBox(height: 10),
+              size: 40, color: AppColors.danger),
+          const SizedBox(height: AppSpacing.space3),
           Text(
             'Erreur : $message',
             style: const TextStyle(
-              color: _AppColors.danger,
+              color: AppColors.danger,
               fontSize: 13,
             ),
             textAlign: TextAlign.center,
@@ -907,8 +903,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
       ),
     );
   }
-
-  // ─── Cart Actions (logic untouched) ───────────────────────────────────────
 
   Future<void> _handleCartAction(String actionType) async {
     final cartState = ref.read(cartProvider);

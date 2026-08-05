@@ -10,10 +10,12 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import '../models/printer_config.dart';
 import 'package:Easify/objectbox.dart';
-import '../models/order.dart' show Order;
+import '../objectbox.g.dart' as ob;
+import '../models/order.dart' as order_model;
 import '../models/game_session.dart';
 import 'image_generatore.dart';
 import 'package:intl/intl.dart';
+import 'business_day_helper.dart';
 
 // final _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
 
@@ -66,7 +68,7 @@ class ReceiptData {
     );
   }
 
-  static ReceiptData convertRuciToReceiptData(Order order) {
+  static ReceiptData convertRuciToReceiptData(order_model.Order order) {
     return ReceiptData(
       id: order.id.toString(),
       dailyNumber: order.orderNumber.toString(),
@@ -635,6 +637,130 @@ class PrinterHelper {
       printer.disconnect();
     } catch (e) {
       debugPrint('Printing error: $e');
+    }
+  }
+
+  static Future<void> printDayBrief(
+      DateTime selectedDay, ObjectBox objectbox, StoreConfig config) async {
+    final printer = await connectToPrinter(objectbox);
+
+    try {
+      final range = BusinessDayHelper.getBusinessDayRange(selectedDay, config);
+      final orderBox = objectbox.store.box<order_model.Order>();
+      final gameSessionBox = objectbox.store.box<GameSession>();
+
+      final orders = orderBox
+          .query(ob.Order_.date.between(
+              range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
+          .build()
+          .find();
+
+      final gameSessions = gameSessionBox
+          .query(ob.GameSession_.startTime.between(
+              range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
+          .build()
+          .find();
+
+      final activeOrders = orders.where((o) => !o.isDeleted).toList();
+      final deletedOrders = orders.where((o) => o.isDeleted).toList();
+
+      double totalRevenue = 0;
+      int totalItems = 0;
+      for (final order in activeOrders) {
+        for (final item in order.items) {
+          final price = item.price ?? item.product.target?.price ?? 0;
+          totalItems += item.quantity;
+          totalRevenue += price * item.quantity;
+        }
+      }
+
+      final activeSessions = gameSessions.where((s) => !s.isCancelled).toList();
+      double totalGameRevenue = 0;
+      for (final session in activeSessions) {
+        totalGameRevenue += session.currentCalculatedPrice;
+      }
+
+      final storeConfigBox = objectbox.store.box<StoreConfig>();
+      final storeConfig = storeConfigBox.getAll().isNotEmpty
+          ? storeConfigBox.getAll().first
+          : null;
+
+      final storeName =
+          storeConfig?.storeName?.isNotEmpty == true ? storeConfig!.storeName! : 'EASIFY POS';
+
+      printer.reset();
+
+      printer.text(
+        storeName,
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          height: PosTextSize.size2,
+          width: PosTextSize.size2,
+        ),
+      );
+
+      printer.text(
+        'RAPPORT JOURNALIER',
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+        ),
+      );
+
+      printer.feed(1);
+      printer.text(
+        'Date: ${selectedDay.day}/${selectedDay.month}/${selectedDay.year}',
+        styles: const PosStyles(align: PosAlign.center),
+      );
+      printer.feed(1);
+
+      printer.text('--- COMMANDES ---', styles: const PosStyles(bold: true));
+      printer.row([
+        PosColumn(text: 'Commandes actives:', width: 8, styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(text: '${activeOrders.length}', width: 4, styles: const PosStyles(align: PosAlign.right)),
+      ]);
+      printer.row([
+        PosColumn(text: 'Commandes supprimees:', width: 8, styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(text: '${deletedOrders.length}', width: 4, styles: const PosStyles(align: PosAlign.right)),
+      ]);
+      printer.row([
+        PosColumn(text: 'Articles vendus:', width: 8, styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(text: '$totalItems', width: 4, styles: const PosStyles(align: PosAlign.right)),
+      ]);
+      printer.row([
+        PosColumn(text: 'CA Commandes:', width: 8, styles: const PosStyles(align: PosAlign.left, bold: true)),
+        PosColumn(text: '${totalRevenue.toStringAsFixed(2)} DH', width: 4, styles: const PosStyles(align: PosAlign.right, bold: true)),
+      ]);
+
+      printer.feed(1);
+      printer.text('--- JEUX ---', styles: const PosStyles(bold: true));
+      printer.row([
+        PosColumn(text: 'Sessions actives:', width: 8, styles: const PosStyles(align: PosAlign.left)),
+        PosColumn(text: '${activeSessions.length}', width: 4, styles: const PosStyles(align: PosAlign.right)),
+      ]);
+      printer.row([
+        PosColumn(text: 'CA Jeux:', width: 8, styles: const PosStyles(align: PosAlign.left, bold: true)),
+        PosColumn(text: '${totalGameRevenue.toStringAsFixed(2)} DH', width: 4, styles: const PosStyles(align: PosAlign.right, bold: true)),
+      ]);
+
+      printer.feed(1);
+      printer.text('--- TOTAL ---', styles: const PosStyles(bold: true));
+      printer.row([
+        PosColumn(text: 'TOTAL CA:', width: 8, styles: const PosStyles(align: PosAlign.left, bold: true, height: PosTextSize.size2, width: PosTextSize.size2)),
+        PosColumn(text: '${(totalRevenue + totalGameRevenue).toStringAsFixed(2)} DH', width: 4, styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2, width: PosTextSize.size2)),
+      ]);
+
+      printer.feed(2);
+      printer.text(
+        'Genere le ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+        styles: const PosStyles(align: PosAlign.center),
+      );
+
+      printer.feed(2);
+      printer.cut(mode: PosCutMode.partial);
+    } finally {
+      printer.disconnect();
     }
   }
 }
