@@ -15,7 +15,7 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 |----|------------------|-----|-------|--------|--------------------------|
 | P01 | App contains its own license **signing key**; code is on a **public** GitHub repo → anyone can make activation codes for any device | 🔴 | activation_service.dart:25-53 | ⚠️ by design | Keep as-is: offline licensing, manual client installs; changing the key flow would conflict with the existing app / register-pin workflow used by recent + main apps |
 | P02 | Entering a wrong activation key **prints the correct key** in the log; fingerprint also logged | 🔴→🟡 | activation_service.dart:84,107 | ✅ fixed | You approved: removed `expected=` leak, all prints now `kDebugMode`-only (dev builds still show them) |
-| P03 | Dev panel ships in release: 5 taps on title → export DB/SQL (**PIN hashes, Wi-Fi password**), delete all data — no PIN | 🔴 | navigation_hub_screen.dart:101-115, dev_panel_screen.dart | ⬜ | |
+| P03 | Dev panel ships in release: 5 taps on title → export DB/SQL (**PIN hashes, Wi-Fi password**), delete all data — no PIN | 🔴 | navigation_hub_screen.dart:101-115, dev_panel_screen.dart | ✅ fixed | You approved: 5 taps now open a PIN keypad, panel opens only with code `9999` (`AdminPinDialog.verifyFixedCode`) |
 | P04 | Long-press "Historique" card → **wipe every sale** with only a yes/no dialog, no PIN | 🔴 | navigation_hub_screen.dart:146-188 | ⬜ | |
 | P05 | Default admin PIN is **0000**, no lockout/attempt limit (10,000 combos = guessable in hours) | 🟠 | main.dart:32-39, admin_pin_dialog.dart | ⬜ | |
 | P06 | Only Security tab + Dashboard are PIN-gated; **pricing, Wi-Fi password, business-day, printer settings, full product CRUD are open** | 🟡 | settings_screen.dart, management_screen.dart | ⬜ | |
@@ -106,4 +106,5 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 |------|-----|----------|------------------------|
 | 2026-10-17 | P01 | ⚠️ keep as-is | Offline licensing with manual client installs; key flow change would conflict with the existing app / register-pin workflow (recent + main apps) |
 | 2026-10-17 | P02 | ✅ fixed | Removed `expected=` key leak + wrapped all activation prints in kDebugMode (dev builds still show them) |
+| 2026-10-17 | P03 | ✅ fixed | PIN-gate the dev panel: 5 taps open the keypad, code `9999` opens the panel (owner keeps all tools) |
 |      |     |          |                       |

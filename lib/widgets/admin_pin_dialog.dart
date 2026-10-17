@@ -41,6 +41,19 @@ class AdminPinDialog extends StatefulWidget {
     return false;
   }
 
+  /// Helper to show the dialog and check the entered code against a
+  /// fixed value instead of a stored admin PIN (used to gate the hidden
+  /// dev panel — PROBLEMS.md P03).
+  static Future<bool> verifyFixedCode(
+      BuildContext context, ObjectBox objectbox, String expectedCode) async {
+    final enteredPin = await showDialog<String>(
+      context: context,
+      builder: (context) => AdminPinDialog(objectbox: objectbox),
+    );
+    if (enteredPin == null) return false;
+    return enteredPin == expectedCode;
+  }
+
   @override
   State<AdminPinDialog> createState() => _AdminPinDialogState();
 }

@@ -110,7 +110,23 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
 
     if (_titleTapCount >= 5) {
       _titleTapCount = 0;
+      _openDevPanel();
+    }
+  }
+
+  /// The 5 taps only reveal the keypad — the panel itself opens with the
+  /// fixed owner code (PROBLEMS.md P03).
+  Future<void> _openDevPanel() async {
+    final objectbox = ref.read(objectBoxProvider);
+    final allowed =
+        await AdminPinDialog.verifyFixedCode(context, objectbox, '9999');
+    if (!mounted) return;
+    if (allowed) {
       context.push(AppRoutes.devPanel);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Accès développeur restreint')),
+      );
     }
   }
 
