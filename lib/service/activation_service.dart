@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:crypton/crypton.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -80,8 +80,10 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
       final raw =
           '${windowsInfo.productId}|${windowsInfo.digitalProductId.join(',')}';
       final id = sha256.convert(utf8.encode(raw)).toString();
-      // ignore: avoid_print
-      print('Windows device fingerprint: $id'); // Used by tool/generate_activation_key.dart
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('Windows device fingerprint: $id'); // Shown in dev only; used by tool/generate_activation_key.dart
+      }
       return id;
     }
     return "unsupported_platform";
@@ -101,14 +103,25 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
       final cleanExpected = expectedKey.replaceAll('-', '').toUpperCase();
 
       if (cleanInput == cleanExpected) {
-        print("Short Key verification successful");
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print("Short Key verification successful");
+        }
         return true;
       } else {
-        print("Short Key mismatch: input=$cleanInput expected=$cleanExpected");
+        // Never log the expected key here — it would reveal the valid
+        // activation code for this device (see PROBLEMS.md P02).
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print("Short Key mismatch for this device");
+        }
         return false;
       }
     } catch (e) {
-      print("Short Key verification exception: $e");
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print("Short Key verification exception: $e");
+      }
       return false;
     }
   }
@@ -133,7 +146,10 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
       final hash = sha256.convert(signatureBytes).toString().toUpperCase();
       return "${hash.substring(0, 4)}-${hash.substring(4, 8)}";
     } catch (e) {
-      print("Error generating expected short key: $e");
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print("Error generating expected short key: $e");
+      }
       return "ERROR";
     }
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../service/activation_service.dart';
@@ -22,7 +23,10 @@ class _ActivationDialogState extends State<ActivationDialog> {
     super.initState();
     _loadAndroidId();
     ActivationService.getAndroidId().then((id) {
-      print("Android ID: $id");
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print("Android ID: $id");
+      }
     });
   }
 
