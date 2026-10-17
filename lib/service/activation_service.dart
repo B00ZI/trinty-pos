@@ -64,12 +64,25 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
     return await verifyShortKey(storedKey);
   }
 
-  /// Retrieves the unique Android ID.
+  /// Retrieves the unique device ID used for activation.
+  /// Android: the standard Android ID (unchanged behavior).
+  /// Windows: a SHA-256 fingerprint of stable machine properties
+  /// (ProductId + DigitalProductId) so the app can run on desktop for
+  /// development/testing. Keep in sync with tool/generate_activation_key.dart.
   static Future<String> getAndroidId() async {
     final deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {
       final androidInfo = await deviceInfo.androidInfo;
       return androidInfo.id;
+    }
+    if (Platform.isWindows) {
+      final windowsInfo = await deviceInfo.windowsInfo;
+      final raw =
+          '${windowsInfo.productId}|${windowsInfo.digitalProductId.join(',')}';
+      final id = sha256.convert(utf8.encode(raw)).toString();
+      // ignore: avoid_print
+      print('Windows device fingerprint: $id'); // Used by tool/generate_activation_key.dart
+      return id;
     }
     return "unsupported_platform";
   }
