@@ -8,6 +8,7 @@ import 'package:Easify/providers/dashboard_provider.dart';
 import 'models/app_user.dart';
 import 'service/history_cleanup_service.dart';
 import 'service/notification_service.dart';
+import 'service/printer_helper.dart';
 import 'service/wifi_password_store.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -55,6 +56,12 @@ Future<void> main() async {
     }
   });
 
+  // P32/P37: any print failure surfaces as a snackbar — a ticket never
+  // fails silently behind a button that "does nothing".
+  PrinterHelper.onError = (message) => rootMessengerKey.currentState
+      ?.showSnackBar(SnackBar(
+          content: Text(message), duration: const Duration(seconds: 4)));
+
   runApp(
     ProviderScope(
       overrides: [
@@ -65,6 +72,10 @@ Future<void> main() async {
   );
 }
 
+/// Global key so print errors can reach the screen from any service.
+final GlobalKey<ScaffoldMessengerState> rootMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
 class Easify extends ConsumerWidget {
   final ObjectBox objectbox;
   const Easify({super.key, required this.objectbox});
@@ -74,6 +85,7 @@ class Easify extends ConsumerWidget {
     final router = createRouter(ref);
 
     return MaterialApp.router(
+      scaffoldMessengerKey: rootMessengerKey,
       title: 'Easify',
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

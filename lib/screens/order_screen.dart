@@ -11,6 +11,7 @@ import '../models/store_config.dart';
 import '../objectbox.g.dart';
 import '../service/printer_helper.dart';
 import '../service/auth_service.dart';
+import '../service/pricing_service.dart';
 import '../widgets/product_card.dart';
 import '../widgets/category_card.dart';
 import '../widgets/payment_dialog.dart';
@@ -43,6 +44,9 @@ class OrderScreen extends ConsumerStatefulWidget {
 class _OrderScreenState extends ConsumerState<OrderScreen>
     with SingleTickerProviderStateMixin {
   AppUser? _currentAuthUser;
+  // P35: while a confirm/print action runs, both action buttons are dead —
+  // a double-tap used to create an empty order and parallel printer links.
+  bool _isHandlingAction = false;
 
   late AnimationController _shakeController;
   int? _shakingCartIndex;
@@ -783,7 +787,9 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () => _handleCartAction('save-print'),
+              onPressed: _isHandlingAction
+                  ? null
+                  : () => _handleCartAction('save-print'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentYellow,
                 foregroundColor: AppColors.payNowText,
@@ -816,7 +822,9 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
               width: double.infinity,
               height: 44,
               child: OutlinedButton(
-                onPressed: () => _handleCartAction('single-print'),
+                onPressed: _isHandlingAction
+                    ? null
+                    : () => _handleCartAction('single-print'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.cartMuted,
                   side: BorderSide(
@@ -906,6 +914,18 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
   }
 
   Future<void> _handleCartAction(String actionType) async {
+    // P35: ignore double-taps while an action is already running — a second
+    // tap used to spawn a second dialog/order/printer connection.
+    if (_isHandlingAction) return;
+    setState(() => _isHandlingAction = true);
+    try {
+      await _handleCartActionInner(actionType);
+    } finally {
+      if (mounted) setState(() => _isHandlingAction = false);
+    }
+  }
+
+  Future<void> _handleCartActionInner(String actionType) async {
     final cartState = ref.read(cartProvider);
     final config = ref.read(storeConfigProvider);
 
@@ -1006,10 +1026,14 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
           orderRepo.incrementOrderNumber();
           orderRepo.putOrder(order);
         });
-        ref.read(cartProvider.notifier).clearCart();
       }
 
+      // P13: print while the cart still holds the takeaway flag and the
+      // kitchen comment — clear it only after the receipt is built.
       _printReceipt(order);
+      if (widget.orderToEdit == null) {
+        ref.read(cartProvider.notifier).clearCart();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1051,6 +1075,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         date: DateTime.now(),
         orderNumber: orderNumber,
       );
+      // P13: "Ticket Simple" orders were saved WITHOUT a seller — attach
+      // the same user the normal confirm flow uses.
+      if (widget.assignedUser != null) {
+        order.user.target = widget.assignedUser;
+      } else if (_currentAuthUser != null) {
+        order.user.target = _currentAuthUser;
+      }
       for (final line in cartState.lines) {
         order.items.add(line.orderItem);
       }
@@ -1059,38 +1090,36 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         orderRepo.incrementOrderNumber();
         orderRepo.putOrder(order);
       });
-      ref.read(cartProvider.notifier).clearCart();
     }
 
     await Future.delayed(const Duration(milliseconds: 1000));
-    _printReceipt(order, singleTicket: true);
+    _printReceipt(order);
+    if (widget.orderToEdit == null) {
+      // P13: clear only after the receipt read the cart's takeaway/comment.
+      ref.read(cartProvider.notifier).clearCart();
+    }
   }
 
-  void _printReceipt(order_model.Order order, {bool singleTicket = false}) {
+  void _printReceipt(order_model.Order order) {
     final cartState = ref.read(cartProvider);
+    final pricing = PricingService();
 
     final orderPayload = {
       'id': order.id,
       'dailyNumber': order.orderNumber,
       'createdat': order.date.toIso8601String(),
-      'total': order.items.fold<double>(
-        0,
-        (sum, item) {
-          double basePrice =
-              (item.price ?? item.product.target?.price ?? 0).toDouble();
-          double t = item.quantity * basePrice;
-          for (final extra in item.extras) {
-            t += extra.price * item.getExtraQuantity(extra);
-          }
-          return sum + t;
-        },
-      ),
+      // P14: one money formula everywhere — stored price + extras.
+      'total': order.items
+          .fold<double>(0, (sum, item) => sum + pricing.calculateItemTotal(item)),
       'items': order.items
           .map((item) => {
                 'id': item.product.target?.id,
-                'title': item.product.target?.name,
+                // P14: name/price as sold — survive deleted & edited products.
+                'title': item.productName ??
+                    item.product.target?.name ??
+                    'Article',
                 'quantity': item.quantity,
-                'price': item.product.target?.price,
+                'price': item.price ?? item.product.target?.price ?? 0,
                 'extras': item.extras
                     .map((extra) => {
                           'id': extra.id,
@@ -1107,16 +1136,14 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     final receiptData = ReceiptData.fromJson(orderPayload);
     final ob = ref.read(objectBoxProvider);
 
-    if (!singleTicket) {
-      PrinterHelper.printReceipt(receiptData, ob);
-    }
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      PrinterHelper.printReceipt(
-        receiptData,
-        ob,
-        comment: cartState.comment.isNotEmpty ? cartState.comment : '',
-        isTakeAway: cartState.isTakeAway,
-      );
-    });
+    // P13: ONE print carrying the real options — the old code printed twice
+    // (once without options, once after a delay) and read the cart after it
+    // was cleared, so takeaway & comments never reached the paper.
+    PrinterHelper.printReceipt(
+      receiptData,
+      ob,
+      comment: cartState.comment.isNotEmpty ? cartState.comment : '',
+      isTakeAway: cartState.isTakeAway,
+    );
   }
 }

@@ -3,7 +3,11 @@ import 'package:Easify/models/store_config.dart';
 import 'package:flutter/foundation.dart';
 
 class PricingService {
-  double calculateItemTotal(OrderItem item, StoreConfig config, {String? debugContext}) {
+  /// The one money formula (P14): price stored on the sale first, live
+  /// product price only as a fallback, extras on top — so every screen
+  /// agrees. [config] optional (kept for older callers).
+  double calculateItemTotal(OrderItem item,
+      {StoreConfig? config, String? debugContext}) {
     final tag = debugContext != null ? '[$debugContext]' : '';
     final persistedPrice = item.price;
     final productPrice = item.product.target?.price;

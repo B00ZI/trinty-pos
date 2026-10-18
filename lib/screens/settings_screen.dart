@@ -268,14 +268,18 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
 
   Future<void> _saveConfig() async {
     if (_formKey.currentState!.validate()) {
-      _printerConfigBox.removeAll();
       final config = PrinterConfig(
         ipAddress: _ipAddressController.text,
         port: int.parse(_portController.text),
         singleTicketMode: _singleTicketMode,
         enableChangeWindow: _enableChangeWindow,
       );
-      _printerConfigBox.put(config);
+      // P29: delete-then-rewrite commits as ONE sealed save — a crash in
+      // between used to leave no printer config at all.
+      ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+        _printerConfigBox.removeAll();
+        _printerConfigBox.put(config);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Configuration enregistrée')),
       );

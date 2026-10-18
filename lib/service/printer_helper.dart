@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 import '../models/store_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:esc_pos_printer/esc_pos_printer.dart';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import '../models/printer_config.dart';
 import 'package:Easify/objectbox.dart';
@@ -16,6 +15,7 @@ import '../models/game_session.dart';
 import 'image_generatore.dart';
 import 'package:intl/intl.dart';
 import 'business_day_helper.dart';
+import 'pricing_service.dart';
 import 'wifi_password_store.dart';
 
 // final _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
@@ -69,27 +69,37 @@ class ReceiptData {
     );
   }
 
+  /// Reprint path (P14): builds a receipt from what was ACTUALLY sold —
+  /// the price stored on the sale, the name saved at sale time, and the
+  /// extras — never today's product data (an edited price or a deleted
+  /// product used to show wrong money or 0.00 on reprints).
   static ReceiptData convertRuciToReceiptData(order_model.Order order) {
+    final pricing = PricingService();
     return ReceiptData(
       id: order.id.toString(),
       dailyNumber: order.orderNumber.toString(),
       createdAt: order.date.toIso8601String(),
       total: order.items
           .fold<double>(
-            0,
-            (sum, item) =>
-                sum + (item.quantity * (item.product.target?.price ?? 0)),
-          )
+              0, (sum, item) => sum + pricing.calculateItemTotal(item))
           .toStringAsFixed(2),
       items: order.items.map((item) {
         return ReceiptItem(
           id: item.id.toString(),
-          title: item.product.target?.name ?? 'Unknown Product',
+          title: item.productName ?? item.product.target?.name ?? 'Article',
           quantity: item.quantity,
-          price: item.product.target?.price ?? 0.0,
+          price: (item.price ?? item.product.target?.price ?? 0).toDouble(),
+          extras: item.extras
+              .map((extra) => ReceiptItem(
+                    id: extra.id.toString(),
+                    title: extra.name,
+                    quantity: item.getExtraQuantity(extra),
+                    price: extra.price,
+                  ))
+              .toList(),
         );
       }).toList(),
-      paymentMethod: 'cash', // Add a default payment method if needed
+      paymentMethod: 'cash',
     );
   }
 }
@@ -138,18 +148,44 @@ class ReceiptItem {
 }
 
 class PrinterHelper {
+  /// Wired once in main.dart (P32/P37): any print failure surfaces as a
+  /// snackbar so the owner ALWAYS learns the ticket did not print.
+  static void Function(String message)? onError;
+
+  /// French, friendly text for the common failures.
+  static String _friendlyError(Object e) {
+    final s = e.toString();
+    if (s.contains('no_printer_config')) {
+      return 'Aucune imprimante configurée (Paramètres → Imprimante)';
+    }
+    if (s.contains('Failed to connect') ||
+        s.contains('printer_conn_failed')) {
+      return 'Connexion à l\'imprimante échouée — vérifiez l\'adresse IP';
+    }
+    return 'Erreur d\'impression : $e';
+  }
+
+  static void _notifyPrintFailure(Object e) {
+    if (kDebugMode) {
+      debugPrint('Print failed: $e');
+    }
+    onError?.call(_friendlyError(e));
+  }
+
   static Future<NetworkPrinter> connectToPrinter(ObjectBox objectbox) async {
     final printerConfigBox = objectbox.store.box<PrinterConfig>();
-    final printerConfig = printerConfigBox.getAll().first;
-    // final ipAddress = prefs.getString('printer_ip') ?? '';
-    // final port = prefs.getInt('printer_port') ?? 9100;
+    final configs = printerConfigBox.getAll();
+    // P32: no config at all used to throw a cryptic StateError from `.first`
+    // that all 8 call sites swallowed — the button "did nothing".
+    if (configs.isEmpty) throw StateError('no_printer_config');
+    final printerConfig = configs.first;
 
     if (printerConfig.ipAddress.isEmpty) {
-      throw Exception('Printer IP address not configured');
+      throw StateError('no_printer_config');
     }
 
     final profile = await CapabilityProfile.load();
-    final printer = NetworkPrinter(PaperSize.mm80, profile);
+    final printer = SafePrinter(PaperSize.mm80, profile);
 
     final PosPrintResult result = await printer.connect(printerConfig.ipAddress,
         port: printerConfig.port);
@@ -182,6 +218,10 @@ class PrinterHelper {
       _printFooter(printer, receipt);
 
       printer.cut(mode: PosCutMode.partial);
+    } catch (e) {
+      // P32/P37: a failed ticket is never swallowed silently — the owner
+      // gets a snackbar via onError (wired in main.dart).
+      _notifyPrintFailure(e);
     } finally {
       printer.disconnect();
     }
@@ -287,16 +327,18 @@ class PrinterHelper {
         return;
       }
 
-      if (imgBytes == null) return;
-
-      // Decode the image
-      final img.Image? image = img.decodeImage(imgBytes);
-      if (image == null) {
+      // P36: decode + resize off the UI thread — a big logo used to stutter
+      // the whole screen while printing.
+      final logoBytes = imgBytes;
+      final img.Image? resized = await Isolate.run(() {
+        final im = img.decodeImage(logoBytes);
+        if (im == null) return null;
+        // Resize (thermal printers work best at 200–250px width)
+        return img.copyResize(im, width: 200);
+      });
+      if (resized == null) {
         throw Exception('Failed to decode image');
       }
-
-      // Resize (thermal printers work best at 200–250px width)
-      final img.Image resized = img.copyResize(image, width: 200);
 
       // Directly print using built-in ESC/POS image handling
       printer.image(resized);
@@ -486,6 +528,10 @@ class PrinterHelper {
       printer.text('✅ Printer Test Successful');
       printer.feed(2);
       printer.cut(mode: PosCutMode.partial);
+    } catch (e) {
+      // P31/P32: the test button used to die silently (latin1 crash on ✅,
+      // cryptic missing-printer StateError) — report it instead.
+      _notifyPrintFailure(e);
     } finally {
       printer.disconnect();
     }
@@ -528,6 +574,9 @@ class PrinterHelper {
 
       printer.feed(3);
       printer.cut(mode: PosCutMode.partial);
+    } catch (e) {
+      // P37: config-test print failures surface too, never vanish.
+      _notifyPrintFailure(e);
     } finally {
       printer.disconnect();
     }
@@ -541,16 +590,23 @@ class PrinterHelper {
       GameSession session, ObjectBox objectbox) async {
     final printerConfigBox = objectbox.store.box<PrinterConfig>();
     final configs = printerConfigBox.getAll();
-    if (configs.isEmpty) return;
+    if (configs.isEmpty) {
+      // P32: no printer configured → tell the owner instead of nothing.
+      _notifyPrintFailure(StateError('no_printer_config'));
+      return;
+    }
     final config = configs.first;
 
     final profile = await CapabilityProfile.load();
-    final printer = NetworkPrinter(PaperSize.mm80, profile);
+    final printer = SafePrinter(PaperSize.mm80, profile);
+    var connected = false;
 
     try {
       final PosPrintResult res =
           await printer.connect(config.ipAddress, port: config.port);
-      if (res != PosPrintResult.success) return;
+      connected = res == PosPrintResult.success;
+      // P37: a failed connection used to `return` silently.
+      if (!connected) throw StateError('printer_conn_failed');
 
       printer.reset();
       printer.text('===== TICKET JEUX =====',
@@ -586,25 +642,36 @@ class PrinterHelper {
           styles: const PosStyles(align: PosAlign.center));
       printer.feed(2);
       printer.cut();
-      printer.disconnect();
     } catch (e) {
-      debugPrint('Printing error: $e');
+      // P32/P37: surface instead of swallowing.
+      _notifyPrintFailure(e);
+    } finally {
+      // P33: ALWAYS release the socket — a leaked connection made every
+      // later print fail silently.
+      if (connected) printer.disconnect();
     }
   }
 
   static Future<void> printSessionStartTicket(
       GameSession session, ObjectBox objectbox) async {
     final configBox = objectbox.store.box<PrinterConfig>();
-    if (configBox.isEmpty()) return;
+    if (configBox.isEmpty()) {
+      // P32: no printer configured → tell the owner instead of nothing.
+      _notifyPrintFailure(StateError('no_printer_config'));
+      return;
+    }
     final config = configBox.getAll().first;
 
     final profile = await CapabilityProfile.load();
-    final printer = NetworkPrinter(PaperSize.mm80, profile);
+    final printer = SafePrinter(PaperSize.mm80, profile);
+    var connected = false;
 
     try {
       final PosPrintResult res =
           await printer.connect(config.ipAddress, port: config.port);
-      if (res != PosPrintResult.success) return;
+      connected = res == PosPrintResult.success;
+      // P37: a failed connection used to `return` silently.
+      if (!connected) throw StateError('printer_conn_failed');
 
       printer.reset();
       printer.text('===== DEBUT PARTIE =====',
@@ -639,9 +706,13 @@ class PrinterHelper {
           styles: const PosStyles(align: PosAlign.center));
       printer.feed(2);
       printer.cut();
-      printer.disconnect();
     } catch (e) {
-      debugPrint('Printing error: $e');
+      // P32/P37: surface instead of swallowing.
+      _notifyPrintFailure(e);
+    } finally {
+      // P33: ALWAYS release the socket — a leaked connection made every
+      // later print fail silently.
+      if (connected) printer.disconnect();
     }
   }
 
@@ -669,19 +740,27 @@ class PrinterHelper {
       final activeOrders = orders.where((o) => !o.isDeleted).toList();
       final deletedOrders = orders.where((o) => o.isDeleted).toList();
 
+      final pricing = PricingService();
       double totalRevenue = 0;
       int totalItems = 0;
       for (final order in activeOrders) {
         for (final item in order.items) {
-          final price = item.price ?? item.product.target?.price ?? 0;
           totalItems += item.quantity;
-          totalRevenue += price * item.quantity;
+          // P14: the same formula as the dashboard — stored price + extras
+          // (the report used to miss every extra's price).
+          totalRevenue += pricing.calculateItemTotal(item);
         }
       }
 
       final activeSessions = gameSessions.where((s) => !s.isCancelled).toList();
       double totalGameRevenue = 0;
       for (final session in activeSessions) {
+        // P16: a session already saved as an order is counted with the
+        // orders — adding it again inflated TOTAL CA (the dashboard skips
+        // linked sessions via relatedOrderId).
+        if (session.relatedOrderId != null && session.relatedOrderId != 0) {
+          continue;
+        }
         totalGameRevenue += session.currentCalculatedPrice;
       }
 
@@ -764,8 +843,96 @@ class PrinterHelper {
 
       printer.feed(2);
       printer.cut(mode: PosCutMode.partial);
+    } catch (e) {
+      // P37: daily-report failures surface too, never vanish.
+      _notifyPrintFailure(e);
     } finally {
       printer.disconnect();
     }
+  }
+}
+
+/// Replaces every character a thermal printer cannot encode (P31).
+/// The printer package encodes text as Latin-1, which THROWS on ✅, €, œ
+/// and emojis — killing the test button and dying mid-receipt.
+String printableText(String input) {
+  final out = StringBuffer();
+  for (final rune in input.runes) {
+    if (rune <= 0xFF) {
+      out.writeCharCode(rune);
+      continue;
+    }
+    switch (rune) {
+      case 0x2705: // ✅
+      case 0x2713: // ✓
+      case 0x2714: // ✔
+        out.write('OK');
+        break;
+      case 0x20AC: // €
+        out.write('EUR');
+        break;
+      case 0x0152: // Œ
+        out.write('OE');
+        break;
+      case 0x0153: // œ
+        out.write('oe');
+        break;
+      case 0x2018: // ‘
+      case 0x2019: // ’
+        out.write("'");
+        break;
+      case 0x201C: // “
+      case 0x201D: // ”
+        out.write('"');
+        break;
+      case 0x2026: // …
+        out.write('...');
+        break;
+      case 0x2013: // –
+      case 0x2014: // —
+        out.write('-');
+        break;
+      case 0x2764: // ❤
+        out.write('<3');
+        break;
+      default:
+        if (rune < 0x1F000) out.write('?'); // unknown symbol
+        // emojis (U+1F000 and up) are dropped quietly
+    }
+  }
+  return out.toString();
+}
+
+/// A NetworkPrinter that can never crash on modern characters: every text
+/// and table column is scrubbed to printable Latin-1 before it reaches the
+/// wire (P31). Construction sites just use this instead of NetworkPrinter.
+class SafePrinter extends NetworkPrinter {
+  SafePrinter(super.paperSize, super.profile);
+
+  @override
+  void text(
+    String text, {
+    PosStyles styles = const PosStyles(),
+    int linesAfter = 0,
+    bool containsChinese = false,
+    int? maxCharsPerLine,
+  }) {
+    super.text(
+      printableText(text),
+      styles: styles,
+      linesAfter: linesAfter,
+      containsChinese: containsChinese,
+      maxCharsPerLine: maxCharsPerLine,
+    );
+  }
+
+  @override
+  void row(List<PosColumn> cols) {
+    // PosColumn.text is mutable and each column is built fresh per print —
+    // scrub in place, then hand the same list to the printer.
+    for (final col in cols) {
+      col.text = printableText(col.text);
+    }
+    super.row(cols);
   }
 }

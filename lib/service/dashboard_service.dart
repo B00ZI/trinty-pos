@@ -82,7 +82,8 @@ class DashboardService {
     double totalRevenue = 0.0;
     for (final ruci in periodOrders) {
       for (final orderItem in ruci.items) {
-        totalRevenue += _pricingService.calculateItemTotal(orderItem, config, debugContext: 'orderId=${ruci.id}');
+        totalRevenue += _pricingService.calculateItemTotal(orderItem,
+            config: config, debugContext: 'orderId=${ruci.id}');
       }
     }
 
