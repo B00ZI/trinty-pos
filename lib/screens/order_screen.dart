@@ -8,6 +8,7 @@ import '../models/order.dart' as order_model;
 import '../models/product.dart';
 import '../models/app_user.dart';
 import '../models/store_config.dart';
+import '../objectbox.g.dart';
 import '../service/printer_helper.dart';
 import '../service/auth_service.dart';
 import '../widgets/product_card.dart';
@@ -962,18 +963,22 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
       if (widget.orderToEdit != null) {
         order = widget.orderToEdit!;
-        final itemsToRemove = order.items.toList();
-        order.items.clear();
-        orderRepo.putOrder(order);
-        for (final id in itemsToRemove.map((i) => i.id)) {
-          orderRepo.removeOrderItem(id);
-        }
+        // P12: clear → delete old → re-add must commit as ONE sealed save —
+        // a crash in between used to leave the order with zero items.
+        ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+          final itemsToRemove = order.items.toList();
+          order.items.clear();
+          orderRepo.putOrder(order);
+          for (final id in itemsToRemove.map((i) => i.id)) {
+            orderRepo.removeOrderItem(id);
+          }
 
-        for (final line in cartState.lines) {
-          order.items.add(line.orderItem);
-        }
-        order.isEdited = true;
-        orderRepo.putOrder(order);
+          for (final line in cartState.lines) {
+            order.items.add(line.orderItem);
+          }
+          order.isEdited = true;
+          orderRepo.putOrder(order);
+        });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -983,7 +988,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
           Navigator.of(context).pop();
         }
       } else {
-        final orderNumber = orderRepo.incrementOrderNumber();
+        final orderNumber = orderRepo.getNextOrderNumber();
         order = order_model.Order(
           date: DateTime.now(),
           orderNumber: orderNumber,
@@ -996,7 +1001,11 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         for (final line in cartState.lines) {
           order.items.add(line.orderItem);
         }
-        orderRepo.putOrder(order);
+        // P12: number bump + order save commit together — all or nothing.
+        ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+          orderRepo.incrementOrderNumber();
+          orderRepo.putOrder(order);
+        });
         ref.read(cartProvider.notifier).clearCart();
       }
 
@@ -1017,24 +1026,27 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
 
     if (widget.orderToEdit != null) {
       order = widget.orderToEdit!;
-      final itemsToRemove = order.items.toList();
-      order.items.clear();
-      orderRepo.putOrder(order);
-      for (final id in itemsToRemove.map((i) => i.id)) {
-        orderRepo.removeOrderItem(id);
-      }
+      // P12: same sealed save as _saveOrder — crash-safe rewrite.
+      ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+        final itemsToRemove = order.items.toList();
+        order.items.clear();
+        orderRepo.putOrder(order);
+        for (final id in itemsToRemove.map((i) => i.id)) {
+          orderRepo.removeOrderItem(id);
+        }
 
-      for (final line in cartState.lines) {
-        order.items.add(line.orderItem);
-      }
-      orderRepo.putOrder(order);
+        for (final line in cartState.lines) {
+          order.items.add(line.orderItem);
+        }
+        orderRepo.putOrder(order);
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Commande mise à jour avec succès !')),
       );
       if (mounted) Navigator.of(context).pop();
     } else {
-      final orderNumber = orderRepo.incrementOrderNumber();
+      final orderNumber = orderRepo.getNextOrderNumber();
       order = order_model.Order(
         date: DateTime.now(),
         orderNumber: orderNumber,
@@ -1042,7 +1054,11 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
       for (final line in cartState.lines) {
         order.items.add(line.orderItem);
       }
-      orderRepo.putOrder(order);
+      // P12: number bump + order save commit together — all or nothing.
+      ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+        orderRepo.incrementOrderNumber();
+        orderRepo.putOrder(order);
+      });
       ref.read(cartProvider.notifier).clearCart();
     }
 

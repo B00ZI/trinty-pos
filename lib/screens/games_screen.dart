@@ -144,9 +144,12 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
     item.productName = 'Jeu (${minutes}min): ${post.label}';
     order.items.add(item);
 
-    orderBox.put(order);
-    orderCounter.value += 1;
-    orderCounterBox.put(orderCounter);
+    // P12: order + counter must commit together — all or nothing.
+    ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+      orderBox.put(order);
+      orderCounter.value += 1;
+      orderCounterBox.put(orderCounter);
+    });
 
     // Start Session
     final session = await GameSessionService.startSession(
@@ -292,10 +295,12 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                   item.productName = 'Jeu: ${session.postLabel}';
                   order.items.add(item);
 
-                  orderBox.put(order);
-
-                  orderCounter.value += 1;
-                  orderCounterBox.put(orderCounter);
+                  // P12: order + counter must commit together — all or nothing.
+                  ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+                    orderBox.put(order);
+                    orderCounter.value += 1;
+                    orderCounterBox.put(orderCounter);
+                  });
 
                   GameSessionService.endSession(session, ref.read(objectBoxProvider),
                       relatedOrderId: order.id);
