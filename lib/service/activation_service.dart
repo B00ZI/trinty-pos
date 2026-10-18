@@ -95,8 +95,11 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
       final androidId = await getAndroidId();
       if (androidId == "unsupported_platform") return false;
 
-      // Reconstruct the expected Short Key for this device
+      // Reconstruct the expected Short Key for this device.
+      // null = generation failed → fail CLOSED (P08): a broken key
+      // generator must never accept anything, not even "ERROR".
       final expectedKey = _generateExpectedShortKey(androidId);
+      if (expectedKey == null) return false;
       
       // Compare (case-insensitive and ignore dashes)
       final cleanInput = inputKey.replaceAll('-', '').toUpperCase();
@@ -128,7 +131,8 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
 
   /// Internal logic to generate the expected short key for a given androidId.
   /// Matches the output of the generator app.
-  static String _generateExpectedShortKey(String androidId) {
+  /// Returns null when generation fails — callers must fail closed (P08).
+  static String? _generateExpectedShortKey(String androidId) {
     try {
       final parser = encrypt.RSAKeyParser();
       final privateKey = parser.parse(_privateKeyPem) as pc_api.RSAPrivateKey;
@@ -139,7 +143,7 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
 
       final signer = pc.Signer('SHA-256/RSA')
         ..init(true, pc.PrivateKeyParameter<pc_api.RSAPrivateKey>(privateKey));
-      
+
       final sig = signer.generateSignature(Uint8List.fromList(utf8.encode(data))) as pc.RSASignature;
       final signatureBytes = sig.bytes;
 
@@ -150,7 +154,7 @@ d277L8iSfpacBpQzZ1rhAvlZm7Xp3IRr9gGCsZiuZj7pYMsGL9CMpw==
         // ignore: avoid_print
         print("Error generating expected short key: $e");
       }
-      return "ERROR";
+      return null;
     }
   }
 
