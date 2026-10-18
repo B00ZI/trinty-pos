@@ -1,9 +1,7 @@
 # PROBLEMS.md — Easify POS · full problem list (branch 2.0.0.3)
 
 **Source:** full audit of branch `2.0.0.2` (see `AUDIT_EASIFY_2.0.0.2.md` for file:line detail).
-**Workflow:** we go one problem at a time. For each: I explain it simply → you decide:
-`✅ fix it` · `⚠️ by design — <your real-world reason>` · `📋 later` · `❓ question`.
-Your decision is recorded in the Status column. Nothing is changed without your approval.
+**Workflow (batched, per owner 2026-10-18):** related problems are fixed **together in one batch** — one explain → one approval → one fix+build+test round per batch. UI/design problems are **split off into section D and deferred** to a later UI pass. Still: nothing is changed without your approval.
 
 **Legend:** 🔴 critical · 🟠 high · 🟡 medium · 🔵 low — severity = impact if it bites, not effort.
 
@@ -42,7 +40,6 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 | P22 | Deleting a product leaves dangling links → **past revenue can show 0.00** | 🟠 | management_screen.dart:393, pricing_service.dart:10 | ⬜ | |
 | P23 | Edit an old order → tap "Nouvelle Commande" → **cart still has the old order's lines** (double-charge risk) | 🟠 | order_screen.dart:963-984 | ⬜ | |
 | P24 | Game order ↔ session link written as a separate 2nd save → crash in between = **same sale counted twice** | 🟠 | games_screen.dart:147-160 | ⬜ | |
-| P25 | Dashboard chart trend labels are **hardcoded fiction** (`+12.5%`, `+8.4%`, `+18.7%`) shown next to real numbers | 🟡 | charts.dart:209,224,238 | ⬜ | |
 | P26 | "Sauvegarde" (backup) only saves **products+categories** (no orders/users/expenses) but looks like a full backup; import silently overwrites by name | 🟡 | data_backup_service.dart:27-87 | ⬜ | |
 | P27 | Business-day **"end time" setting does nothing** (start+24h hardcoded) | 🟡 | business_day_helper.dart:16 | ⬜ | |
 | P28 | Midnight boundary: `between()` is inclusive → record exactly at the boundary counts in **two days** | 🟡 | order_repository.dart:54-55 + 4 more | ⬜ | |
@@ -61,14 +58,15 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 | P36 | Logo/image decode + receipt rasterization run on the UI thread → frame stutter during printing | 🟡 | printer_helper.dart:292-404 | ⬜ | |
 | P37 | Print failures swallowed (`return;` on non-success) → user never told the ticket didn't print | 🔵 | printer_helper.dart:548,602 | ⬜ | |
 
-## D. Design / UI (possible deliberate choices)
+## D. Design / UI — ⏸ **DEFERRED to a later UI pass** (your call, 2026-10-18)
 
 | ID | Problem (short) | Sev | Where | Status | Your decision / reason |
 |----|------------------|-----|-------|--------|--------------------------|
-| P38 | PDR palette (blue #2D7DD2 etc.) replaced by **teal theme** — 0% palette compliance, 462 references. Documented as intentional in UI_MODERNIZATION_PLAN.md | 🔴* | theme/app_colors.dart | ⬜ | |
-| P39 | **Order-card sizes changed** (aspect 0.55→0.65, cart/buttons resized) though PDR says "DO NOT change card sizes" — same commit | 🔴* | order_screen.dart:360,418 | ⬜ | |
-| P40 | Not localizable: ~280 hardcoded French strings, no `.arb`; **some English** leaks in UI ("Add expense", "Revenue Overview") | 🟡 | throughout, expense_tracking.dart, charts.dart | ⬜ | |
-| P41 | Product/category images: **no error fallback** → deleted file = broken/red tile on the main order grid | 🟡 | product_card.dart:53-57, category_card.dart:59 | ⬜ | |
+| P38 | PDR palette (blue #2D7DD2 etc.) replaced by **teal theme** — 0% palette compliance, 462 references. Documented as intentional in UI_MODERNIZATION_PLAN.md | 🔴* | theme/app_colors.dart | ⏸ deferred | UI pass (decide then whether the teal theme stays) |
+| P39 | **Order-card sizes changed** (aspect 0.55→0.65, cart/buttons resized) though PDR says "DO NOT change card sizes" — same commit | 🔴* | order_screen.dart:360,418 | ⏸ deferred | UI pass |
+| P40 | Not localizable: ~280 hardcoded French strings, no `.arb`; **some English** leaks in UI ("Add expense", "Revenue Overview") | 🟡 | throughout, expense_tracking.dart, charts.dart | ⏸ deferred | UI pass (localization + English leaks) |
+| P41 | Product/category images: **no error fallback** → deleted file = broken/red tile on the main order grid | 🟡 | product_card.dart:53-57, category_card.dart:59 | ⏸ deferred | UI pass |
+| P25 | Dashboard chart trend labels are **hardcoded fiction** (`+12.5%`, `+8.4%`, `+18.7%`) shown next to real numbers | 🟡 | charts.dart:209,224,238 | ⏸ deferred | Moved from B → chart display = UI pass |
 | P58 | Product selection requires a **long-press** to enter select mode (edit/delete toolbar), and there's **no multi-select** — "why do I keep holding?" | 🟡 | management_screen.dart:354-399 | ⏸ deferred | Raised by you during P06 (2026-10-18): deferred to a dedicated UI/UX fixes pass |
 | P59 | Found by you (2026-10-18): **edit-product dialog crashes** — red assertion screen `value: pp, either zero or 2 or more items` — when the product's category was deleted or exists twice; tablets "look fine" only because release builds skip the assertion (same fault, silent) | 🟡 | management_screen.dart:262-284 | ✅ fixed | Dropdown now only passes a category that still exists (deleted → empty box, pick a new one) and collapses duplicate names to a single item; the underlying by-name category data issue stays with P21/P22 |
 
