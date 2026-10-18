@@ -70,6 +70,7 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 | P40 | Not localizable: ~280 hardcoded French strings, no `.arb`; **some English** leaks in UI ("Add expense", "Revenue Overview") | 🟡 | throughout, expense_tracking.dart, charts.dart | ⬜ | |
 | P41 | Product/category images: **no error fallback** → deleted file = broken/red tile on the main order grid | 🟡 | product_card.dart:53-57, category_card.dart:59 | ⬜ | |
 | P58 | Product selection requires a **long-press** to enter select mode (edit/delete toolbar), and there's **no multi-select** — "why do I keep holding?" | 🟡 | management_screen.dart:354-399 | ⏸ deferred | Raised by you during P06 (2026-10-18): deferred to a dedicated UI/UX fixes pass |
+| P59 | Found by you (2026-10-18): **edit-product dialog crashes** — red assertion screen `value: pp, either zero or 2 or more items` — when the product's category was deleted or exists twice; tablets "look fine" only because release builds skip the assertion (same fault, silent) | 🟡 | management_screen.dart:262-284 | ✅ fixed | Dropdown now only passes a category that still exists (deleted → empty box, pick a new one) and collapses duplicate names to a single item; the underlying by-name category data issue stays with P21/P22 |
 
 *🔴* = violates the written spec; severity depends on whether that spec still governs.
 
@@ -115,4 +116,5 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 | 2026-10-18 | P08 | ✅ fixed | Fail-closed activation: `_generateExpectedShortKey` returns null on error, `verifyShortKey` rejects immediately — the literal `"ERROR"` backdoor can no longer occur |
 | 2026-10-18 | P09 | ⚠️ keep as-is | Desktop is secondary; Windows-reinstall lockouts recover through your existing manual token → new key flow; hardware fingerprint would add a dependency + require changes to your generator app |
 | 2026-10-18 | P10 | ⚠️ keep + back up keystore | Client tablets already installed → switching signing key/app id = forced uninstall = data wipe; keep debug signing, migrate deliberately later. Owner must back up `debug.keystore` from the build machine (this laptop doesn't have it — a machine without it silently generates a NEW identity on first Android build) |
+| 2026-10-18 | P59 | ✅ fixed | Raised by you while testing: red assertion screen editing a product (category "pp" deleted/duplicated). Dialog made tolerant: deleted category → empty dropdown (no crash), duplicate names → single item. Tablet "behaved normally" only because release builds skip the assertion — the same fault exists there, silently |
 |      |     |          |                       |

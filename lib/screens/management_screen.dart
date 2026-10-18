@@ -260,9 +260,21 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                           : null),
                   SizedBox(height: AppSpacing.space4),
                   DropdownButtonFormField<String>(
-                    value: _categoryController.text.isNotEmpty
-                        ? _categoryController.text
-                        : null,
+                    value: () {
+                      final selected = _categoryController.text;
+                      if (selected.isEmpty) return null;
+                      if (selected == 'Extra') return selected;
+                      // P59: only show a category that still exists — a
+                      // deleted (or duplicated) category used to crash this
+                      // dialog with a red assertion screen.
+                      final exists = ref
+                          .read(objectBoxProvider)
+                          .store
+                          .box<Category>()
+                          .getAll()
+                          .any((cat) => cat.name == selected);
+                      return exists ? selected : null;
+                    }(),
                     decoration: const InputDecoration(labelText: 'Catégorie'),
                     items: [
                       const DropdownMenuItem(
@@ -275,8 +287,13 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                             .getAll();
                         cats.sort(
                             (a, b) => a.displayOrder.compareTo(b.displayOrder));
-                        return cats.map((cat) => DropdownMenuItem(
-                            value: cat.name, child: Text(cat.name)));
+                        // P59: collapse duplicate names to a single entry —
+                        // two categories with the same name crashed the list.
+                        final seenNames = <String>{};
+                        return cats
+                            .where((cat) => seenNames.add(cat.name))
+                            .map((cat) => DropdownMenuItem(
+                                value: cat.name, child: Text(cat.name)));
                       })(),
                     ],
                     onChanged: (v) => setDialogState(
