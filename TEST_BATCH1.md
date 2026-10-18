@@ -41,10 +41,11 @@ Work through the list top to bottom. Every line should be ✅.
 
 ## 8. Printing always tells you what happened (P32/P37)
 Try each of these:
-- **No printer configured** → sell an order → ✅ red message "Aucune imprimante configurée (Paramètres → Imprimante)".
+- **No printer set** → Settings → Printer → **clear the IP** and save (empty IP is now allowed = "pas d'imprimante", hint says it under the field) → sell an order → ✅ red message "Aucune imprimante configurée (Paramètres → Imprimante)".
 - **Wrong IP** (e.g. 1.1.1.1) → sell an order → ✅ red message "Connexion à l'imprimante échouée — vérifiez l'adresse IP" (was: nothing at all — the hole you found on desktop).
 - **Right IP but printer turned off** → sell an order → ✅ red connection message (was: nothing).
-- **Printer working** → sell an order → ✅ message **"Ticket imprimé"** appears when the paper really comes out (once per copy — client copy and kitchen copy each confirm).
+- **Settings → Test button** with wrong IP / printer off → ✅ short French message (was: a long raw "timed out" dump).
+- **Printer working** → sell an order → ✅ message **"Ticket envoyé — en cours d'impression…"** appears INSTANTLY when the printer accepts the job, then **"Ticket imprimé"** when the paper really comes out (once per copy — client copy and kitchen copy each confirm). You always know the order went through, even while the paper is still coming.
 
 ## 9. Printer settings save safely (P29)
 - Change a printer setting, save, restart the app.

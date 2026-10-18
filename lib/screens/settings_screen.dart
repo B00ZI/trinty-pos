@@ -17,6 +17,7 @@ import '../widgets/admin_pin_dialog.dart';
 import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../providers/dashboard_provider.dart';
+import '../service/printer_helper.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
@@ -269,7 +270,7 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
   Future<void> _saveConfig() async {
     if (_formKey.currentState!.validate()) {
       final config = PrinterConfig(
-        ipAddress: _ipAddressController.text,
+        ipAddress: _ipAddressController.text.trim(),
         port: int.parse(_portController.text),
         singleTicketMode: _singleTicketMode,
         enableChangeWindow: _enableChangeWindow,
@@ -288,8 +289,14 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
 
   Future<void> _testPrinter() async {
     if (_formKey.currentState!.validate()) {
+      final ip = _ipAddressController.text.trim();
+      if (ip.isEmpty) {
+        // No printer on purpose — say it instead of crashing the socket.
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Aucune imprimante configurée')));
+        return;
+      }
       try {
-        final ip = _ipAddressController.text;
         final port = int.parse(_portController.text);
         final socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
         final List<int> bytes = [
@@ -302,7 +309,9 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
         await socket.close();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Test envoyé')));
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        // Short French message instead of the raw socket dump (timeouts).
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(PrinterHelper.friendlyError(e))));
       }
     }
   }
@@ -322,6 +331,7 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
               controller: _ipAddressController,
               decoration: InputDecoration(
                 labelText: 'Adresse IP',
+                hintText: 'Laisser vide = pas d\'imprimante',
                 prefixIcon: const Icon(Icons.router),
                 filled: true,
                 fillColor: AppColors.surface0,
@@ -329,7 +339,7 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
                 enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
                 focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
               ),
-              validator: (v) => v == null || !isIP(v) ? 'IP invalide' : null,
+              validator: (v) => v == null || (v.trim().isNotEmpty && !isIP(v.trim())) ? 'IP invalide' : null,
             ),
             SizedBox(height: AppSpacing.space4),
             TextFormField(

@@ -152,14 +152,18 @@ class PrinterHelper {
   /// snackbar so the owner ALWAYS learns the ticket did not print.
   static void Function(String message)? onError;
 
-  /// French, friendly text for the common failures.
-  static String _friendlyError(Object e) {
+  /// French, friendly text for the common failures. Public — the Settings
+  /// test button reuses it so no raw socket dump (timeout texts!) ever
+  /// reaches the screen.
+  static String friendlyError(Object e) {
     final s = e.toString();
     if (s.contains('no_printer_config')) {
       return 'Aucune imprimante configurée (Paramètres → Imprimante)';
     }
     if (s.contains('Failed to connect') ||
-        s.contains('printer_conn_failed')) {
+        s.contains('printer_conn_failed') ||
+        s.contains('timed out') ||
+        s.contains('SocketException')) {
       return 'Connexion à l\'imprimante échouée — vérifiez l\'adresse IP';
     }
     return 'Erreur d\'impression : $e';
@@ -169,7 +173,7 @@ class PrinterHelper {
     if (kDebugMode) {
       debugPrint('Print failed: $e');
     }
-    onError?.call(_friendlyError(e));
+    onError?.call(friendlyError(e));
   }
 
   /// Wired once in main.dart too: a SUCCESSFUL print confirms with a short
@@ -208,6 +212,9 @@ class PrinterHelper {
     NetworkPrinter? printer;
     try {
       printer = await connectToPrinter(objectbox);
+      // Instant feedback (owner request): the printer accepted the job —
+      // the paper is coming, the user never wonders if it "went".
+      onSuccess?.call('Ticket envoyé — en cours d\'impression…');
 
       final storeConfigBox = objectbox.store.box<StoreConfig>();
       final storeConfig = storeConfigBox.getAll().isNotEmpty
@@ -518,6 +525,7 @@ class PrinterHelper {
     NetworkPrinter? printer;
     try {
       printer = await connectToPrinter(objectBox);
+      onSuccess?.call('Test envoyé à l\'imprimante…');
 
       printer.text(
         'PRINTER TEST',
@@ -555,6 +563,7 @@ class PrinterHelper {
     NetworkPrinter? printer;
     try {
       printer = await connectToPrinter(objectbox);
+      onSuccess?.call('Ticket envoyé — en cours d\'impression…');
 
       final storeConfigBox = objectbox.store.box<StoreConfig>();
       final storeConfig = storeConfigBox.getAll().isNotEmpty
@@ -623,6 +632,7 @@ class PrinterHelper {
       connected = res == PosPrintResult.success;
       // P37: a failed connection used to `return` silently.
       if (!connected) throw StateError('printer_conn_failed');
+      onSuccess?.call('Ticket envoyé — en cours d\'impression…');
 
       printer.reset();
       printer.text('===== TICKET JEUX =====',
@@ -689,6 +699,7 @@ class PrinterHelper {
       connected = res == PosPrintResult.success;
       // P37: a failed connection used to `return` silently.
       if (!connected) throw StateError('printer_conn_failed');
+      onSuccess?.call('Ticket envoyé — en cours d\'impression…');
 
       printer.reset();
       printer.text('===== DEBUT PARTIE =====',
@@ -741,6 +752,7 @@ class PrinterHelper {
     NetworkPrinter? printer;
     try {
       printer = await connectToPrinter(objectbox);
+      onSuccess?.call('Rapport envoyé — en cours d\'impression…');
 
       final range = BusinessDayHelper.getBusinessDayRange(selectedDay, config);
       final orderBox = objectbox.store.box<order_model.Order>();
