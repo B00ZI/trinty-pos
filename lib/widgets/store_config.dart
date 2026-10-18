@@ -28,6 +28,7 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
   File? _logoImage;
   final ImagePicker _picker = ImagePicker();
   StoreConfig? _currentConfig;
+  bool _wifiPasswordVisible = false;
 
   @override
   void initState() {
@@ -152,10 +153,20 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
               SizedBox(height: fieldSpacing),
               TextFormField(
                 controller: _wifiPasswordController,
-                decoration: const InputDecoration(
+                obscureText: !_wifiPasswordVisible,
+                decoration: InputDecoration(
                   labelText: 'Mot de passe WIFI',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.wifi_password),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.wifi_password),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _wifiPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () => setState(
+                        () => _wifiPasswordVisible = !_wifiPasswordVisible),
+                  ),
                 ),
               ),
               SizedBox(height: fieldSpacing),

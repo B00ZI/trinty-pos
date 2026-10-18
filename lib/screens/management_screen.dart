@@ -15,6 +15,7 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'package:share_plus/share_plus.dart';
 import 'package:Easify/service/data_backup_service.dart';
 import 'package:Easify/providers/dashboard_provider.dart';
+import 'package:Easify/widgets/admin_pin_dialog.dart';
 import 'package:Easify/theme/app_colors.dart';
 import 'package:Easify/theme/app_spacing.dart';
 import 'package:Easify/theme/app_radius.dart';
@@ -372,6 +373,19 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                 IconButton(
                   icon: const Icon(Icons.delete, color: AppColors.danger),
                   onPressed: () async {
+                    // Deleting a product is a destructive admin action (P06):
+                    // same gate as history cleanup.
+                    final isAdmin = await AdminPinDialog.verify(
+                        context, ref.read(objectBoxProvider));
+                    if (!context.mounted) return;
+                    if (!isAdmin) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                'Suppression annulée : code administrateur requis')),
+                      );
+                      return;
+                    }
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
@@ -591,7 +605,22 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
                     imageUrl: c.imageUrl ?? '',
                     onTap: () {},
                     onEdit: () => _showCategoryDialog(c),
-                    onDelete: () => _categoryBox.remove(c.id),
+                    onDelete: () async {
+                      // Deleting a category unlinks its products (P06/P21):
+                      // destructive → admin PIN.
+                      final isAdmin = await AdminPinDialog.verify(
+                          context, ref.read(objectBoxProvider));
+                      if (!context.mounted) return;
+                      if (!isAdmin) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Suppression annulée : code administrateur requis')),
+                        );
+                        return;
+                      }
+                      _categoryBox.remove(c.id);
+                    },
                   );
                 },
               );

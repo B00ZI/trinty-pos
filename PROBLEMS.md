@@ -17,8 +17,8 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 | P02 | Entering a wrong activation key **prints the correct key** in the log; fingerprint also logged | 🔴→🟡 | activation_service.dart:84,107 | ✅ fixed | You approved: removed `expected=` leak, all prints now `kDebugMode`-only (dev builds still show them) |
 | P03 | Dev panel ships in release: 5 taps on title → export DB/SQL (**PIN hashes, Wi-Fi password**), delete all data — no PIN | 🔴 | navigation_hub_screen.dart:101-115, dev_panel_screen.dart | ✅ fixed | You approved: 5 taps now open a PIN keypad, panel opens only with code `9999` (`AdminPinDialog.verifyFixedCode`) |
 | P04 | Long-press "Historique" card → **wipe every sale** with only a yes/no dialog, no PIN | 🔴→✅ | navigation_hub_screen.dart, widgets/maintenance_section.dart, service/history_cleanup_service.dart | ✅ fixed | You approved: long-press removed; new Settings → **Maintenance** section (PIN-gated) with auto-retention (OFF/30/90/180/365 j, runs at startup) + manual cleanup (older than X / keep today / delete all) behind the **admin PIN**; `9999` stays dev-panel-only |
-| P05 | Default admin PIN is **0000**, no lockout/attempt limit (10,000 combos = guessable in hours) | 🟠 | main.dart:32-39, admin_pin_dialog.dart | ⬜ | |
-| P06 | Only Security tab + Dashboard are PIN-gated; **pricing, Wi-Fi password, business-day, printer settings, full product CRUD are open** | 🟡 | settings_screen.dart, management_screen.dart | ⬜ | |
+| P05 | Default admin PIN is **0000**, no lockout/attempt limit (10,000 combos = guessable in hours) | 🟠 | main.dart:32-39, admin_pin_dialog.dart | ⚠️ by design | Keep as-is: onboarding is your manual demo and most clients hand the code to their staff anyway — PIN is an optional deterrent; you advise clients to set a stronger code if they want to block admin/deletion actions |
+| P06 | Only Security tab + Dashboard are PIN-gated; **pricing, Wi-Fi password, business-day, printer settings, full product CRUD are open** | 🟡→✅ | settings_screen.dart, management_screen.dart | ✅ fixed | You approved the selective gate: admin PIN on **product delete** + **category delete** (create/edit stay free); **Wi-Fi password masked** with tap-to-reveal; operational settings stay open (consistent with your P05 model) |
 | P07 | Database file unencrypted in Documents (PIN hashes, revenue); **Wi-Fi password stored plaintext** | 🟡 | objectbox.dart, store_config.dart | ⬜ | |
 | P08 | Latent fail-open: if key parsing ever throws, expected key = literal `"ERROR"` → typing ERROR activates the app | 🟡 | activation_service.dart:135-138 | ⬜ | |
 | P09 | Windows fingerprint uses Windows **DigitalProductId** → re-activating/reinstalling Windows can lock a customer out; cloned VMs share one key *(our desktop patch)* | 🟡 | activation_service.dart:78-86 | ⬜ | |
@@ -69,6 +69,7 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 | P39 | **Order-card sizes changed** (aspect 0.55→0.65, cart/buttons resized) though PDR says "DO NOT change card sizes" — same commit | 🔴* | order_screen.dart:360,418 | ⬜ | |
 | P40 | Not localizable: ~280 hardcoded French strings, no `.arb`; **some English** leaks in UI ("Add expense", "Revenue Overview") | 🟡 | throughout, expense_tracking.dart, charts.dart | ⬜ | |
 | P41 | Product/category images: **no error fallback** → deleted file = broken/red tile on the main order grid | 🟡 | product_card.dart:53-57, category_card.dart:59 | ⬜ | |
+| P58 | Product selection requires a **long-press** to enter select mode (edit/delete toolbar), and there's **no multi-select** — "why do I keep holding?" | 🟡 | management_screen.dart:354-399 | ⏸ deferred | Raised by you during P06 (2026-10-18): deferred to a dedicated UI/UX fixes pass |
 
 *🔴* = violates the written spec; severity depends on whether that spec still governs.
 
@@ -108,4 +109,6 @@ Your decision is recorded in the Status column. Nothing is changed without your 
 | 2026-10-17 | P02 | ✅ fixed | Removed `expected=` key leak + wrapped all activation prints in kDebugMode (dev builds still show them) |
 | 2026-10-17 | P03 | ✅ fixed | PIN-gate the dev panel: 5 taps open the keypad, code `9999` opens the panel (owner keeps all tools) |
 | 2026-10-18 | P04 | ✅ fixed | Quick-wipe existed because slow tablets need cleanup; replaced by Settings → **Maintenance**: auto-clean (owner picks OFF/30/90/180/365 j, runs at startup) + manual scoped clean behind the **admin PIN** (the PIN the owner sets in-app); `9999` stays dev-panel-only |
+| 2026-10-18 | P05 | ⚠️ keep as-is | Manual demo onboarding; clients give the code to their staff anyway; PIN = optional deterrent — you advise clients to set a stronger code if they want protection |
+| 2026-10-18 | P06 | ✅ fixed | Selective gate (your approval): admin PIN on product + category **delete** (create/edit free), Wi-Fi password masked with tap-to-reveal; operational settings stay open per the P05 model; you raised P58 (hold-to-select products) → deferred to UI/UX pass |
 |      |     |          |                       |
