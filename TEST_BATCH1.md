@@ -39,11 +39,12 @@ Work through the list top to bottom. Every line should be ✅.
 - End the day → print the daily report (rapport journalier).
 - ✅ **TOTAL CA** on the paper equals the revenue on the dashboard (was: paper higher — games counted twice).
 
-## 8. Printer errors are loud now (P32/P37)
-- Settings → Printer → put a **wrong IP** (e.g. 1.1.1.1) → save.
-- Sell an order.
-- ✅ A French snackbar appears ("Connexion à l'imprimante échouée — vérifiez l'adresse IP" or similar) — the app never pretends the ticket printed.
-- Put the right IP back.
+## 8. Printing always tells you what happened (P32/P37)
+Try each of these:
+- **No printer configured** → sell an order → ✅ red message "Aucune imprimante configurée (Paramètres → Imprimante)".
+- **Wrong IP** (e.g. 1.1.1.1) → sell an order → ✅ red message "Connexion à l'imprimante échouée — vérifiez l'adresse IP" (was: nothing at all — the hole you found on desktop).
+- **Right IP but printer turned off** → sell an order → ✅ red connection message (was: nothing).
+- **Printer working** → sell an order → ✅ message **"Ticket imprimé"** appears when the paper really comes out (once per copy — client copy and kitchen copy each confirm).
 
 ## 9. Printer settings save safely (P29)
 - Change a printer setting, save, restart the app.

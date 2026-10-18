@@ -61,6 +61,11 @@ Future<void> main() async {
   PrinterHelper.onError = (message) => rootMessengerKey.currentState
       ?.showSnackBar(SnackBar(
           content: Text(message), duration: const Duration(seconds: 4)));
+  // Success feedback too: "Ticket imprimé" appears when the paper really
+  // came out — no more guessing if it worked.
+  PrinterHelper.onSuccess = (message) => rootMessengerKey.currentState
+      ?.showSnackBar(SnackBar(
+          content: Text(message), duration: const Duration(seconds: 2)));
 
   runApp(
     ProviderScope(

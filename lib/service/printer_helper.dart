@@ -172,6 +172,10 @@ class PrinterHelper {
     onError?.call(_friendlyError(e));
   }
 
+  /// Wired once in main.dart too: a SUCCESSFUL print confirms with a short
+  /// snackbar ("Ticket imprimé") so the owner knows the paper came out.
+  static void Function(String message)? onSuccess;
+
   static Future<NetworkPrinter> connectToPrinter(ObjectBox objectbox) async {
     final printerConfigBox = objectbox.store.box<PrinterConfig>();
     final configs = printerConfigBox.getAll();
@@ -199,9 +203,12 @@ class PrinterHelper {
 
   static Future<void> printReceipt(ReceiptData receipt, ObjectBox objectbox,
       {String comment = "", bool isTakeAway = false}) async {
-    final printer = await connectToPrinter(objectbox);
-
+    // P32/P37: the connection is INSIDE the try — an unreachable printer
+    // used to throw before the catcher and die silently (no message at all).
+    NetworkPrinter? printer;
     try {
+      printer = await connectToPrinter(objectbox);
+
       final storeConfigBox = objectbox.store.box<StoreConfig>();
       final storeConfig = storeConfigBox.getAll().isNotEmpty
           ? storeConfigBox.getAll().first
@@ -218,12 +225,13 @@ class PrinterHelper {
       _printFooter(printer, receipt);
 
       printer.cut(mode: PosCutMode.partial);
+      onSuccess?.call('Ticket imprimé');
     } catch (e) {
       // P32/P37: a failed ticket is never swallowed silently — the owner
       // gets a snackbar via onError (wired in main.dart).
       _notifyPrintFailure(e);
     } finally {
-      printer.disconnect();
+      printer?.disconnect();
     }
   }
 
@@ -496,8 +504,6 @@ class PrinterHelper {
   }
 
   static Future<void> testPrinter(ObjectBox objectBox) async {
-    final printer = await connectToPrinter(objectBox);
-
     // Fetch store config
     final storeConfigBox = objectBox.store.box<StoreConfig>();
     final storeConfig = storeConfigBox.getAll().isNotEmpty
@@ -507,7 +513,12 @@ class PrinterHelper {
         ? storeConfig!.storeName!
         : 'Easify POS System';
 
+    // P32/P37: the connection is INSIDE the try — an unreachable printer
+    // used to throw before the catcher and die silently.
+    NetworkPrinter? printer;
     try {
+      printer = await connectToPrinter(objectBox);
+
       printer.text(
         'PRINTER TEST',
         styles: const PosStyles(
@@ -528,19 +539,23 @@ class PrinterHelper {
       printer.text('✅ Printer Test Successful');
       printer.feed(2);
       printer.cut(mode: PosCutMode.partial);
+      onSuccess?.call('Test imprimé');
     } catch (e) {
       // P31/P32: the test button used to die silently (latin1 crash on ✅,
       // cryptic missing-printer StateError) — report it instead.
       _notifyPrintFailure(e);
     } finally {
-      printer.disconnect();
+      printer?.disconnect();
     }
   }
 
   static Future<void> printStoreConfig(ObjectBox objectbox) async {
-    final printer = await connectToPrinter(objectbox);
-
+    // P32/P37: the connection is INSIDE the try — an unreachable printer
+    // used to throw before the catcher and die silently.
+    NetworkPrinter? printer;
     try {
+      printer = await connectToPrinter(objectbox);
+
       final storeConfigBox = objectbox.store.box<StoreConfig>();
       final storeConfig = storeConfigBox.getAll().isNotEmpty
           ? storeConfigBox.getAll().first
@@ -574,11 +589,12 @@ class PrinterHelper {
 
       printer.feed(3);
       printer.cut(mode: PosCutMode.partial);
+      onSuccess?.call('Ticket de configuration imprimé');
     } catch (e) {
       // P37: config-test print failures surface too, never vanish.
       _notifyPrintFailure(e);
     } finally {
-      printer.disconnect();
+      printer?.disconnect();
     }
   }
 
@@ -642,6 +658,7 @@ class PrinterHelper {
           styles: const PosStyles(align: PosAlign.center));
       printer.feed(2);
       printer.cut();
+      onSuccess?.call('Ticket imprimé');
     } catch (e) {
       // P32/P37: surface instead of swallowing.
       _notifyPrintFailure(e);
@@ -706,6 +723,7 @@ class PrinterHelper {
           styles: const PosStyles(align: PosAlign.center));
       printer.feed(2);
       printer.cut();
+      onSuccess?.call('Ticket imprimé');
     } catch (e) {
       // P32/P37: surface instead of swallowing.
       _notifyPrintFailure(e);
@@ -718,9 +736,12 @@ class PrinterHelper {
 
   static Future<void> printDayBrief(
       DateTime selectedDay, ObjectBox objectbox, StoreConfig config) async {
-    final printer = await connectToPrinter(objectbox);
-
+    // P32/P37: the connection is INSIDE the try — an unreachable printer
+    // used to throw before the catcher and die silently.
+    NetworkPrinter? printer;
     try {
+      printer = await connectToPrinter(objectbox);
+
       final range = BusinessDayHelper.getBusinessDayRange(selectedDay, config);
       final orderBox = objectbox.store.box<order_model.Order>();
       final gameSessionBox = objectbox.store.box<GameSession>();
@@ -843,11 +864,12 @@ class PrinterHelper {
 
       printer.feed(2);
       printer.cut(mode: PosCutMode.partial);
+      onSuccess?.call('Rapport journalier imprimé');
     } catch (e) {
       // P37: daily-report failures surface too, never vanish.
       _notifyPrintFailure(e);
     } finally {
-      printer.disconnect();
+      printer?.disconnect();
     }
   }
 }
