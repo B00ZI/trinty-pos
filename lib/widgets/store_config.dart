@@ -8,6 +8,7 @@ import '../objectbox.dart';
 import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../service/printer_helper.dart';
+import '../service/wifi_password_store.dart';
 import '../theme/app_colors.dart';
 
 class StoreConfigWidget extends StatefulWidget {
@@ -36,12 +37,13 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
     _loadConfig();
   }
 
-  void _loadConfig() {
+  Future<void> _loadConfig() async {
     final configs = widget.objectbox.storeConfigBox.getAll();
     if (configs.isNotEmpty) {
       _currentConfig = configs.first;
       _storeNameController.text = _currentConfig?.storeName ?? '';
       _storePhoneController.text = _currentConfig?.storePhone ?? '';
+      // Legacy fallback: the startup migration clears this field (P07).
       _wifiPasswordController.text = _currentConfig?.wifiPassword ?? '';
 
       if (_currentConfig?.storeLogoPath != null) {
@@ -50,6 +52,11 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
           _logoImage = file;
         }
       }
+    }
+    // The real value lives in platform secure storage (P07).
+    final wifi = await WifiPasswordStore.read();
+    if (wifi.isNotEmpty) {
+      _wifiPasswordController.text = wifi;
     }
   }
 
@@ -82,7 +89,9 @@ class _StoreConfigWidgetState extends State<StoreConfigWidget> {
       final config = _currentConfig ?? StoreConfig();
       config.storeName = _storeNameController.text;
       config.storePhone = _storePhoneController.text;
-      config.wifiPassword = _wifiPasswordController.text;
+      // P07: the password is kept in secure storage, never in the database.
+      config.wifiPassword = null;
+      await WifiPasswordStore.write(_wifiPasswordController.text);
 
       config.storeLogoPath = _logoImage?.path;
 

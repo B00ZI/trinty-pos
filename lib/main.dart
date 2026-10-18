@@ -8,6 +8,7 @@ import 'package:Easify/providers/dashboard_provider.dart';
 import 'models/app_user.dart';
 import 'service/history_cleanup_service.dart';
 import 'service/notification_service.dart';
+import 'service/wifi_password_store.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -39,6 +40,10 @@ Future<void> main() async {
       isAdmin: true,
     ));
   }
+
+  // One-time move of the Wi-Fi password from the database into platform
+  // secure storage (Windows DPAPI / Android Keystore) — P07.
+  await WifiPasswordStore.migrateFromConfigs(objectbox.storeConfigBox);
 
   // Quiet automatic cleanup of old history, if the owner enabled it
   // (Settings → Maintenance, PROBLEMS.md P04). Never touches setup data.

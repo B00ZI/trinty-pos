@@ -16,6 +16,7 @@ import '../models/game_session.dart';
 import 'image_generatore.dart';
 import 'package:intl/intl.dart';
 import 'business_day_helper.dart';
+import 'wifi_password_store.dart';
 
 // final _printerConfigBox = widget.objectbox.store.box<PrinterConfig>();
 
@@ -177,7 +178,7 @@ class PrinterHelper {
       debugPrint('Items to print: ${receipt.items}');
 
       _printItems(printer, receipt.items);
-      _printTotals(printer, receipt, isTakeAway, storeConfig);
+      await _printTotals(printer, receipt, isTakeAway, storeConfig);
       _printFooter(printer, receipt);
 
       printer.cut(mode: PosCutMode.partial);
@@ -374,8 +375,8 @@ class PrinterHelper {
     printer.hr();
   }
 
-  static void _printTotals(NetworkPrinter printer, ReceiptData receipt,
-      bool isTakeAway, StoreConfig? config) {
+  static Future<void> _printTotals(NetworkPrinter printer, ReceiptData receipt,
+      bool isTakeAway, StoreConfig? config) async {
     final subtotal = receipt.items.fold(0.0, (sum, item) => sum + item.total);
     final total = double.tryParse(receipt.total) ?? subtotal;
 
@@ -404,9 +405,13 @@ class PrinterHelper {
       printer.feed(1);
     }
 
-    if (config?.wifiPassword?.isNotEmpty == true) {
+    // Wi-Fi password comes from secure storage (P07); the legacy DB field
+    // is only a fallback so a receipt can never lose it.
+    var wifiPassword = await WifiPasswordStore.read();
+    if (wifiPassword.isEmpty) wifiPassword = config?.wifiPassword ?? '';
+    if (wifiPassword.isNotEmpty) {
       printer.text(
-        'WIFI: ${config!.wifiPassword!}',
+        'WIFI: $wifiPassword',
         styles: const PosStyles(align: PosAlign.left, bold: true),
       );
     }
