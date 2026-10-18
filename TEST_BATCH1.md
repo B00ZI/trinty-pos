@@ -11,8 +11,8 @@ Work through the list top to bottom. Every line should be ✅.
 ## 2. Takeaway + kitchen comment (was never printed — P13)
 - Add items, set a **kitchen comment** (e.g. "sans sucre"), mark the order **takeaway**.
 - Confirm and pay.
-- ✅ Exactly **ONE** ticket prints (was: two).
-- ✅ The ticket shows the black **IN HOUSE** strip and the comment "sans sucre" (was: both missing).
+- ✅ **TWO** tickets print, one second apart (by design: one for the client, one for the kitchen).
+- ✅ **BOTH** tickets show the black **IN HOUSE** strip and the comment "sans sucre" (was: the first ticket had neither).
 
 ## 3. Ticket Simple now saves with a seller (P13)
 - Sell with **Ticket Simple**.

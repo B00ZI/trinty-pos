@@ -1093,14 +1093,14 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     }
 
     await Future.delayed(const Duration(milliseconds: 1000));
-    _printReceipt(order);
+    _printReceipt(order, singleTicket: true);
     if (widget.orderToEdit == null) {
       // P13: clear only after the receipt read the cart's takeaway/comment.
       ref.read(cartProvider.notifier).clearCart();
     }
   }
 
-  void _printReceipt(order_model.Order order) {
+  void _printReceipt(order_model.Order order, {bool singleTicket = false}) {
     final cartState = ref.read(cartProvider);
     final pricing = PricingService();
 
@@ -1136,14 +1136,29 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     final receiptData = ReceiptData.fromJson(orderPayload);
     final ob = ref.read(objectBoxProvider);
 
-    // P13: ONE print carrying the real options — the old code printed twice
-    // (once without options, once after a delay) and read the cart after it
-    // was cleared, so takeaway & comments never reached the paper.
+    // P13: the two copies are BY DESIGN (owner confirmed) — first for the
+    // client, second for the kitchen/saving. The old bug: the cart was
+    // already cleared when this ran, so takeaway & comment never printed.
+    // Both copies now carry the real options, captured before clearing.
+    final comment = cartState.comment.isNotEmpty ? cartState.comment : '';
+    final takeAway = cartState.isTakeAway;
+
     PrinterHelper.printReceipt(
       receiptData,
       ob,
-      comment: cartState.comment.isNotEmpty ? cartState.comment : '',
-      isTakeAway: cartState.isTakeAway,
+      comment: comment,
+      isTakeAway: takeAway,
     );
+    if (!singleTicket) {
+      // Kitchen/saving copy, one second later (single ticket = one copy).
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        PrinterHelper.printReceipt(
+          receiptData,
+          ob,
+          comment: comment,
+          isTakeAway: takeAway,
+        );
+      });
+    }
   }
 }
