@@ -41,7 +41,7 @@ Work through the list top to bottom. Every line should be ✅.
 
 ## 8. Printing always tells you what happened (P32/P37)
 Try each of these:
-- **No printer set** → Settings → Printer → **clear the IP** and save (empty IP is now allowed = "pas d'imprimante", hint says it under the field) → sell an order → ✅ red message "Aucune imprimante configurée (Paramètres → Imprimante)".
+- **No printer set** → Settings → Printer → **clear the IP and the port** and save (empty = "pas d'imprimante"; port empty = standard 91000 — both fields say it in their hint) → sell an order → ✅ red message "Aucune imprimante configurée (Paramètres → Imprimante)".
 - **Wrong IP** (e.g. 1.1.1.1) → sell an order → ✅ red message "Connexion à l'imprimante échouée — vérifiez l'adresse IP" (was: nothing at all — the hole you found on desktop).
 - **Right IP but printer turned off** → sell an order → ✅ red connection message (was: nothing).
 - **Settings → Test button** with wrong IP / printer off → ✅ short French message (was: a long raw "timed out" dump).

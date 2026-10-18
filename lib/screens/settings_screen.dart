@@ -271,7 +271,7 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
     if (_formKey.currentState!.validate()) {
       final config = PrinterConfig(
         ipAddress: _ipAddressController.text.trim(),
-        port: int.parse(_portController.text),
+        port: int.tryParse(_portController.text.trim()) ?? 91000,
         singleTicketMode: _singleTicketMode,
         enableChangeWindow: _enableChangeWindow,
       );
@@ -297,7 +297,7 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
         return;
       }
       try {
-        final port = int.parse(_portController.text);
+        final port = int.tryParse(_portController.text.trim()) ?? 91000;
         final socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
         final List<int> bytes = [
           ...utf8.encode("Test Print\n\n\n"),
@@ -346,6 +346,7 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
               controller: _portController,
               decoration: InputDecoration(
                 labelText: 'Port',
+                hintText: 'Laisser vide = 91000',
                 prefixIcon: const Icon(Icons.settings_input_component),
                 filled: true,
                 fillColor: AppColors.surface0,
@@ -356,7 +357,11 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (v) {
-                final p = int.tryParse(v ?? '');
+                // Empty port = default 91000 (the standard printer port) —
+                // clearing IP + port ("no printer") must stay savable.
+                final s = (v ?? '').trim();
+                if (s.isEmpty) return null;
+                final p = int.tryParse(s);
                 return p == null || p < 1 || p > 65535 ? 'Port invalide' : null;
               },
             ),
