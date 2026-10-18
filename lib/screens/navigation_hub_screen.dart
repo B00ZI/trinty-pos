@@ -2,13 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:Easify/models/order.dart' as order_model;
 import 'package:Easify/models/app_user.dart';
-import 'package:Easify/models/game_session.dart';
-import 'package:Easify/models/order_item.dart';
-import 'package:Easify/models/expense.dart';
-import 'package:Easify/models/daily_funds.dart';
-import 'package:Easify/models/order_counter.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../router.dart';
@@ -159,50 +153,6 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
     }
   }
 
-  void _promptWipeAllOrders() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('⚠️ ATTENTION ⚠️',
-            style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
-        content: const Text(
-            'Voulez-vous vraiment supprimer TOUTES les données (Commandes, Sessions de jeux, Dépenses) et repartir à zéro ?\n\nCette action est IRRÉVERSIBLE.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('SUPPRIMER TOUT',
-                style: TextStyle(color: AppColors.surface0)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      final objectbox = ref.read(objectBoxProvider);
-      final store = objectbox.store;
-      store.box<order_model.Order>().removeAll();
-      store.box<OrderItem>().removeAll();
-      store.box<GameSession>().removeAll();
-      store.box<Expense>().removeAll();
-      store.box<DailyFunds>().removeAll();
-      final orderCounterBox = store.box<OrderCounter>();
-      orderCounterBox.removeAll();
-      orderCounterBox.put(OrderCounter(id: 1, value: 1));
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Toutes les données ont été supprimées.')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final showGames = ref.watch(showGamesProvider);
@@ -301,7 +251,6 @@ class _NavigationHubScreenState extends ConsumerState<NavigationHubScreen> {
                       subtitle: 'Voir les commandes passées',
                       color: AppColors.info,
                       onTap: () => _navigateTo(AppRoutes.history),
-                      onLongPress: _promptWipeAllOrders,
                       compact: isMobile,
                     ),
                     if (showGames)
@@ -364,7 +313,6 @@ class _HubCard extends StatefulWidget {
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress;
   final bool compact;
 
   const _HubCard({
@@ -373,7 +321,6 @@ class _HubCard extends StatefulWidget {
     required this.subtitle,
     required this.color,
     required this.onTap,
-    this.onLongPress,
     this.compact = false,
   });
 
@@ -394,7 +341,6 @@ class _HubCardState extends State<_HubCard> {
 
     return GestureDetector(
       onTap: widget.onTap,
-      onLongPress: widget.onLongPress,
       onTapDown: (_) => setState(() => _hovering = true),
       onTapUp: (_) => setState(() => _hovering = false),
       onTapCancel: () => setState(() => _hovering = false),

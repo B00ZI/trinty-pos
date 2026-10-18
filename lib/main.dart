@@ -6,6 +6,7 @@ import 'models/order_counter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Easify/providers/dashboard_provider.dart';
 import 'models/app_user.dart';
+import 'service/history_cleanup_service.dart';
 import 'service/notification_service.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -38,6 +39,16 @@ Future<void> main() async {
       isAdmin: true,
     ));
   }
+
+  // Quiet automatic cleanup of old history, if the owner enabled it
+  // (Settings → Maintenance, PROBLEMS.md P04). Never touches setup data.
+  Future.microtask(() async {
+    try {
+      await HistoryCleanupService(objectbox).runAutoClean();
+    } catch (e) {
+      debugPrint('Auto-clean failed: $e');
+    }
+  });
 
   runApp(
     ProviderScope(

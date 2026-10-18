@@ -12,6 +12,7 @@ import '../models/app_user.dart';
 import '../widgets/store_config.dart';
 import '../widgets/business_day_settings.dart';
 import '../widgets/games_settings_section.dart';
+import '../widgets/maintenance_section.dart';
 import '../widgets/admin_pin_dialog.dart';
 import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
@@ -46,6 +47,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         objectbox: ref.read(objectBoxProvider),
         onSettingsChanged: widget.onSettingsChanged,
       ),
+      const MaintenanceSection(),
     ];
 
     if (isMobile) {
@@ -75,6 +77,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           _buildMobileTab(3, Icons.schedule_outlined, 'Horaires'),
                           _buildMobileTab(4, Icons.security_outlined, 'Sécurité'),
                           _buildMobileTab(5, Icons.sports_esports_outlined, 'Jeux'),
+                          _buildMobileTab(6, Icons.cleaning_services_outlined, 'Maintenance'),
                         ],
                       ),
                     ),
@@ -122,7 +125,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               selectedLabelTextStyle: const TextStyle(color: AppColors.accentYellow, fontWeight: FontWeight.w600),
                               unselectedLabelTextStyle: const TextStyle(color: AppColors.ink4),
                               onDestinationSelected: (int index) async {
-                                if (index == 4) {
+                                if (index == 4 || index == 6) {
                                   final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
                                   if (!isAdmin) return;
                                 }
@@ -162,6 +165,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   selectedIcon: Icon(Icons.sports_esports),
                                   label: Text('Jeux'),
                                 ),
+                                NavigationRailDestination(
+                                  icon: Icon(Icons.cleaning_services_outlined),
+                                  selectedIcon: Icon(Icons.cleaning_services),
+                                  label: Text('Maintenance'),
+                                ),
                               ],
                             ),
                           ),
@@ -186,7 +194,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () async {
-        if (index == 4) {
+        if (index == 4 || index == 6) {
           final isAdmin = await AdminPinDialog.verify(context, ref.read(objectBoxProvider));
           if (!isAdmin) return;
         }
