@@ -14,10 +14,12 @@ class ExpenseRepository {
     return _expenseBox.query().watch();
   }
 
+  /// Expenses in [start, end) — [end] EXCLUSIVE (P28: `between()` is
+  /// inclusive on both ends and double-counted exact boundaries).
   List<Expense> getExpensesByDateRange(DateTime start, DateTime end) {
     final query = _expenseBox
-        .query(Expense_.date
-            .between(start.millisecondsSinceEpoch, end.millisecondsSinceEpoch))
+        .query(Expense_.date.between(
+            start.millisecondsSinceEpoch, end.millisecondsSinceEpoch - 1))
         .build();
     final periodExpenses = query.find();
     query.close();

@@ -6,6 +6,7 @@ import 'package:Easify/repositories/funds_repository.dart';
 import 'package:Easify/repositories/config_repository.dart';
 import 'package:Easify/service/pricing_service.dart';
 import 'package:Easify/service/dashboard_service.dart';
+import 'package:Easify/service/business_day_helper.dart';
 import 'package:Easify/models/dashboard_metrics.dart';
 
 // ObjectBox must be provided by overriding this provider in the ProviderScope
@@ -125,12 +126,18 @@ final unitsSoldProvider = FutureProvider<List<MapEntry<String, int>>>((ref) asyn
   DateTime endDate;
 
   if (params.startDate != null && params.endDate != null) {
+    // The picker stores an END-EXCLUSIVE range (P28).
     startDate = params.startDate!;
     endDate = params.endDate!;
   } else {
-    final now = DateTime.now();
-    startDate = DateTime(now.year, now.month, now.day);
-    endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    // P19: the same business day as the dashboard cards — this widget
+    // used plain calendar midnight, so before the shop's opening hour
+    // "today's top products" showed a different day than the dashboard.
+    final config = ref.watch(configRepositoryProvider).getStoreConfig();
+    final range = BusinessDayHelper.getBusinessDayRange(
+        BusinessDayHelper.getBusinessDayDate(DateTime.now(), config), config);
+    startDate = range.$1;
+    endDate = range.$2; // exclusive
   }
 
   final periodOrders = orderRepo.getOrdersByDateRange(startDate, endDate, params.selectedUserId);

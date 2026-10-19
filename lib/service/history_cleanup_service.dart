@@ -4,8 +4,10 @@ import 'package:Easify/models/game_session.dart';
 import 'package:Easify/models/order.dart' as order_model;
 import 'package:Easify/models/order_counter.dart';
 import 'package:Easify/models/order_item.dart';
+import 'package:Easify/models/store_config.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:Easify/objectbox.g.dart';
+import 'package:Easify/service/business_day_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Summary of what a cleanup deleted (for user feedback).
@@ -39,6 +41,14 @@ class HistoryCleanupService {
   Box<OrderCounter> get _orderCounterBox =>
       _objectbox.store.box<OrderCounter>();
 
+  /// P19: cleanup cutoffs use the BUSINESS day, like every other screen —
+  /// an auto-clean at 7am (before an 7:30 opening) no longer eats part of
+  /// the day the owner is still looking at.
+  StoreConfig get _config {
+    final configs = _objectbox.storeConfigBox.getAll();
+    return configs.isNotEmpty ? configs.first : StoreConfig();
+  }
+
   /// Auto-clean setting: how many days of history to keep. 0 = OFF.
   /// Stored in SharedPreferences like the auth-mode setting.
   Future<int> getAutoCleanDays() async {
@@ -63,19 +73,31 @@ class HistoryCleanupService {
   /// Deletes orders, game sessions and expenses started before
   /// ([days] days ago), plus any soft-deleted order at any age.
   /// DailyFunds (one small row per day) is kept.
+  ///
+  /// P19: "days" are BUSINESS days now — the cutoff is the start of the
+  /// business day [days] back, so exactly [days] business days (today
+  /// included) survive, matching what the owner sees as "days".
   CleanupResult cleanOlderThan(int days) {
-    final cutoff = DateTime.now()
-        .subtract(Duration(days: days))
+    final config = _config;
+    final today =
+        BusinessDayHelper.getBusinessDayDate(DateTime.now(), config);
+    final cutoffDate = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: days - 1));
+    final cutoff = BusinessDayHelper.getBusinessDayRange(cutoffDate, config)
+        .$1
         .millisecondsSinceEpoch;
     return _cleanBefore(cutoff, deleteOldDailyFunds: false);
   }
 
-  /// Deletes everything except today's data. Daily totals of past days
-  /// are removed too; order numbering continues.
+  /// Deletes everything except the current BUSINESS day's data. Daily
+  /// totals of past days are removed too; order numbering continues.
   CleanupResult cleanKeepingToday() {
-    final todayStart = DateTime(
-        DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    return _cleanBefore(todayStart.millisecondsSinceEpoch,
+    final config = _config;
+    final start = BusinessDayHelper.getBusinessDayRange(
+            BusinessDayHelper.getBusinessDayDate(DateTime.now(), config),
+            config)
+        .$1;
+    return _cleanBefore(start.millisecondsSinceEpoch,
         deleteOldDailyFunds: true);
   }
 

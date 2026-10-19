@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/expense.dart';
+import '../models/store_config.dart';
 import '../objectbox.g.dart';
+import '../service/business_day_helper.dart';
 import '../service/money_parser.dart';
 import '../theme/app_colors.dart';
 
@@ -21,6 +23,12 @@ class ListItem {
 
 class AddableListWidget extends StatefulWidget {
   final Box<Expense> expenseBox;
+
+  /// Business-day settings (P19): "today" for this expenses list is the
+  /// business day — the same day the dashboard, history and the funds
+  /// dialog show. Null → plain calendar day (legacy fallback).
+  final StoreConfig? config;
+
   final String buttonText;
   final String dialogTitle;
   final String emptyListMessage;
@@ -31,6 +39,7 @@ class AddableListWidget extends StatefulWidget {
   const AddableListWidget({
     super.key,
     required this.expenseBox,
+    this.config,
     this.buttonText = 'Add expense',
     this.dialogTitle = 'Add New expense',
     this.emptyListMessage = 'No expenses added yet',
@@ -55,17 +64,30 @@ class _AddableListWidgetState extends State<AddableListWidget> {
     _loadTodayExpenses(); // Load today's expenses on initialization
   }
 
-  // Load expenses from database for today
+  @override
+  void didUpdateWidget(covariant AddableListWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The owner changed the business-day setting → "today" moved.
+    if (oldWidget.config?.dayStartHour != widget.config?.dayStartHour ||
+        oldWidget.config?.dayStartMinute != widget.config?.dayStartMinute) {
+      _loadTodayExpenses();
+    }
+  }
+
+  // Load expenses from database for today (the BUSINESS day — P19)
   void _loadTodayExpenses() {
-    final DateTime todayStart =
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final now = DateTime.now();
+    final DateTime todayStart = widget.config == null
+        ? DateTime(now.year, now.month, now.day)
+        : BusinessDayHelper.getBusinessDayDate(now, widget.config!);
     final DateTime todayEnd = todayStart.add(const Duration(days: 1));
 
-    // Query expenses for today
+    // Query expenses for today. P28: end-exclusive — between() is
+    // inclusive on both ends and double-counted the exact boundary.
     final query = widget.expenseBox
         .query(Expense_.date.between(
           todayStart.millisecondsSinceEpoch,
-          todayEnd.millisecondsSinceEpoch,
+          todayEnd.millisecondsSinceEpoch - 1,
         ))
         .build();
     final expenses = query.find();

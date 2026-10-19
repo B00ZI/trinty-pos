@@ -759,15 +759,17 @@ class PrinterHelper {
       final orderBox = objectbox.store.box<order_model.Order>();
       final gameSessionBox = objectbox.store.box<GameSession>();
 
+      // P28: end-exclusive — the report must match the dashboard exactly
+      // (between() is inclusive and double-counted the boundary instant).
       final orders = orderBox
-          .query(ob.Order_.date.between(
-              range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
+          .query(ob.Order_.date.between(range.$1.millisecondsSinceEpoch,
+              range.$2.millisecondsSinceEpoch - 1))
           .build()
           .find();
 
       final gameSessions = gameSessionBox
-          .query(ob.GameSession_.startTime.between(
-              range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
+          .query(ob.GameSession_.startTime.between(range.$1.millisecondsSinceEpoch,
+              range.$2.millisecondsSinceEpoch - 1))
           .build()
           .find();
 

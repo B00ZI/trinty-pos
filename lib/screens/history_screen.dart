@@ -84,9 +84,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final range =
         BusinessDayHelper.getBusinessDayRange(_selectedBusinessDay, _config);
     final ob = ref.read(objectBoxProvider);
+    // P28: end-exclusive — between() is inclusive and would double-count
+    // a session landing exactly on the day boundary into two days.
     return ob.gameSessionBox
         .query(GameSession_.startTime.between(
-            range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
+            range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch - 1))
         .watch(triggerImmediately: true)
         .map((q) => q.find());
   }
@@ -94,9 +96,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   Stream<List<order_model.Order>> _getOrdersStream() {
     final range =
         BusinessDayHelper.getBusinessDayRange(_selectedBusinessDay, _config);
+    // P28: end-exclusive, same rule as above.
     return _orderBox
         .query(Order_.date.between(
-            range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch))
+            range.$1.millisecondsSinceEpoch, range.$2.millisecondsSinceEpoch - 1))
         .watch(triggerImmediately: true)
         .map((q) => q.find());
   }

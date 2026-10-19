@@ -49,10 +49,13 @@ class OrderRepository {
     }
   }
 
+  /// Orders in [start, end). [end] is EXCLUSIVE (P28: ObjectBox
+  /// `between()` is inclusive on both ends — a record landing exactly on
+  /// a day boundary used to count in two days).
   List<order_model.Order> getOrdersByDateRange(
       DateTime start, DateTime end, int? userId) {
     final orderQueryBuilder = _orderBox.query(Order_.date
-        .between(start.millisecondsSinceEpoch, end.millisecondsSinceEpoch)
+        .between(start.millisecondsSinceEpoch, end.millisecondsSinceEpoch - 1)
         .and(Order_.isDeleted.equals(false)));
 
     if (userId != null) {
@@ -66,11 +69,12 @@ class OrderRepository {
     return periodOrders;
   }
 
+  /// Same end-exclusive rule as [getOrdersByDateRange] (P28).
   Stream<List<order_model.Order>> watchOrdersByDateRange(
       DateTime start, DateTime end) {
     return _orderBox
-        .query(Order_.date
-            .between(start.millisecondsSinceEpoch, end.millisecondsSinceEpoch))
+        .query(Order_.date.between(
+            start.millisecondsSinceEpoch, end.millisecondsSinceEpoch - 1))
         .watch(triggerImmediately: true)
         .map((q) => q.find());
   }
@@ -116,10 +120,12 @@ class OrderRepository {
     return _gameSessionBox.query().watch();
   }
 
+  /// Sessions in [start, end) — [end] EXCLUSIVE (P28, same rule as
+  /// [getOrdersByDateRange]).
   List<GameSession> getGameSessionsByDateRange(
       DateTime start, DateTime end, int? userId) {
     Condition<GameSession> gameCondition = GameSession_.startTime
-        .between(start.millisecondsSinceEpoch, end.millisecondsSinceEpoch)
+        .between(start.millisecondsSinceEpoch, end.millisecondsSinceEpoch - 1)
         .and(GameSession_.status.equals(1)); // Completed only
 
     if (userId != null) {

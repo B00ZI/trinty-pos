@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/order.dart' as order_model;
 import '../models/expense.dart' as expense_model;
+import '../models/store_config.dart';
 import '../objectbox.dart';
+import '../service/business_day_helper.dart';
 import '../service/pricing_service.dart';
 import '../theme/app_colors.dart';
 
@@ -240,13 +242,19 @@ Future<List<DailySummary>> _getAllDailyData(ObjectBox objectbox) async {
   final ordersBox = objectbox.store.box<order_model.Order>();
   final expensesBox = objectbox.store.box<expense_model.Expense>();
 
-  final allDates = await _getAllUniqueDates(ordersBox, expensesBox);
+  // P19: the dialog's days are BUSINESS days — the same days the
+  // dashboard and history show. It used plain calendar midnights, so a
+  // night café's single evening was split into two calendar days.
+  final configs = objectbox.storeConfigBox.getAll();
+  final config = configs.isNotEmpty ? configs.first : StoreConfig();
+
+  final allDates = await _getAllUniqueDates(ordersBox, expensesBox, config);
 
   for (final date in allDates) {
-    final revenue = await _getDayRevenue(ordersBox, date);
-    final expenses = await _getDayExpenses(expensesBox, date);
-    final profit = await _calculateProfit(ordersBox, expensesBox, date);
-    final orders = await _getDayOrders(ordersBox, date);
+    final revenue = await _getDayRevenue(ordersBox, date, config);
+    final expenses = await _getDayExpenses(expensesBox, date, config);
+    final profit = await _calculateProfit(ordersBox, expensesBox, date, config);
+    final orders = await _getDayOrders(ordersBox, date, config);
 
     dailyData.add(DailySummary(
       rawDate: date,
@@ -262,35 +270,39 @@ Future<List<DailySummary>> _getAllDailyData(ObjectBox objectbox) async {
   return dailyData;
 }
 
-// Extract all unique days
-Future<List<DateTime>> _getAllUniqueDates(Box<order_model.Order> ordersBox,
-    Box<expense_model.Expense> expensesBox) async {
+/// P19: does [moment] fall on business day [businessDay]?
+bool _sameBusinessDay(
+    DateTime moment, DateTime businessDay, StoreConfig config) =>
+    BusinessDayHelper.getBusinessDayDate(moment, config)
+            .millisecondsSinceEpoch ==
+        businessDay.millisecondsSinceEpoch;
+
+// Extract all unique business days
+Future<List<DateTime>> _getAllUniqueDates(
+    Box<order_model.Order> ordersBox,
+    Box<expense_model.Expense> expensesBox,
+    StoreConfig config) async {
   final Set<DateTime> unique = {};
 
   for (final o in ordersBox.getAll()) {
     if (o.isDeleted) continue; // Skip deleted orders
-    final d = DateTime(o.date.year, o.date.month, o.date.day);
-    unique.add(d);
+    unique.add(BusinessDayHelper.getBusinessDayDate(o.date, config));
   }
 
   for (final e in expensesBox.getAll()) {
-    final d = DateTime(e.date.year, e.date.month, e.date.day);
-    unique.add(d);
+    unique.add(BusinessDayHelper.getBusinessDayDate(e.date, config));
   }
 
   return unique.toList();
 }
 
-// Revenue for specific day
-Future<double> _getDayRevenue(
-    Box<order_model.Order> ordersBox, DateTime day) async {
+// Revenue for specific business day
+Future<double> _getDayRevenue(Box<order_model.Order> ordersBox, DateTime day,
+    StoreConfig config) async {
   final all = ordersBox.getAll();
 
-  final sameDayOrders = all.where((order) =>
-      !order.isDeleted &&
-      order.date.year == day.year &&
-      order.date.month == day.month &&
-      order.date.day == day.day);
+  final sameDayOrders = all.where(
+      (order) => !order.isDeleted && _sameBusinessDay(order.date, day, config));
 
   double total = 0;
   final pricing = PricingService();
@@ -308,15 +320,13 @@ Future<double> _getDayRevenue(
   return total;
 }
 
-// Expenses for specific day
+// Expenses for specific business day
 Future<double> _getDayExpenses(
-    Box<expense_model.Expense> expensesBox, DateTime day) async {
+    Box<expense_model.Expense> expensesBox, DateTime day, StoreConfig config) async {
   final all = expensesBox.getAll();
 
-  final sameDayExpenses = all.where((e) =>
-      e.date.year == day.year &&
-      e.date.month == day.month &&
-      e.date.day == day.day);
+  final sameDayExpenses =
+      all.where((e) => _sameBusinessDay(e.date, day, config));
 
   double total = 0.0;
   for (final e in sameDayExpenses) {
@@ -327,24 +337,20 @@ Future<double> _getDayExpenses(
 }
 
 Future<double> _calculateProfit(Box<order_model.Order> ordersBox,
-    Box<expense_model.Expense> expensesBox, DateTime day) async {
-  final revenue = await _getDayRevenue(ordersBox, day);
-  final expenses = await _getDayExpenses(expensesBox, day);
+    Box<expense_model.Expense> expensesBox, DateTime day, StoreConfig config) async {
+  final revenue = await _getDayRevenue(ordersBox, day, config);
+  final expenses = await _getDayExpenses(expensesBox, day, config);
   final profite = revenue - expenses;
   return profite;
 }
 
-// Number of orders for day
+// Number of orders for business day
 Future<int> _getDayOrders(
-    Box<order_model.Order> ordersBox, DateTime day) async {
+    Box<order_model.Order> ordersBox, DateTime day, StoreConfig config) async {
   final all = ordersBox.getAll();
 
   return all
-      .where((o) =>
-          !o.isDeleted &&
-          o.date.year == day.year &&
-          o.date.month == day.month &&
-          o.date.day == day.day)
+      .where((o) => !o.isDeleted && _sameBusinessDay(o.date, day, config))
       .length;
 }
 

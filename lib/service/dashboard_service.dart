@@ -32,14 +32,19 @@ class DashboardService {
       final businessDate = BusinessDayHelper.getBusinessDayDate(DateTime.now(), config);
       final range = BusinessDayHelper.getBusinessDayRange(businessDate, config);
       startDate = range.$1;
-      endDate = range.$2.subtract(const Duration(seconds: 1));
+      // End is EXCLUSIVE (P28): repositories subtract the last
+      // millisecond. The old "−1 second" trim made the dashboard lose
+      // every order of the day's final second.
+      endDate = range.$2;
     }
 
+    // Previous period = the same-length window ending where today starts.
     final duration = endDate.difference(startDate);
-    final prevStart = startDate.subtract(duration);
-    final prevEnd = startDate.subtract(const Duration(seconds: 1));
+    final prevEnd = startDate; // exclusive
+    final prevStart = prevEnd.subtract(duration);
+    final prevLabelEnd = prevEnd.subtract(const Duration(milliseconds: 1));
 
-    final comparisonLabel = 'vs ${DateFormat('dd/MM').format(prevStart)} - ${DateFormat('dd/MM').format(prevEnd)}';
+    final comparisonLabel = 'vs ${DateFormat('dd/MM').format(prevStart)} - ${DateFormat('dd/MM').format(prevLabelEnd)}';
 
     // Calculate Today's Metrics
     final todayRevenue = await _getRevenue(startDate, endDate, selectedUserId, config);

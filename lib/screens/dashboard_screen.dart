@@ -26,7 +26,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _selectDateRange() async {
     final currentParams = ref.read(dashboardParamsProvider);
     final initialStart = currentParams.startDate ?? DateTime.now();
-    final initialEnd = currentParams.endDate ?? DateTime.now();
+    // Params store an END-EXCLUSIVE end (next day's midnight) — show the
+    // last included day back to the picker (P28).
+    final initialEnd = currentParams.endDate != null
+        ? currentParams.endDate!.subtract(const Duration(days: 1))
+        : DateTime.now();
 
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
@@ -38,8 +42,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (picked != null) {
       final newStart =
           DateTime(picked.start.year, picked.start.month, picked.start.day);
-      final newEnd = DateTime(
-          picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
+      // End-EXCLUSIVE: the day AFTER the picked end at midnight, so the
+      // whole last day is included without double-counting a boundary.
+      final newEnd =
+          DateTime(picked.end.year, picked.end.month, picked.end.day)
+              .add(const Duration(days: 1));
       ref.read(dashboardParamsProvider.notifier).state = currentParams.copyWith(
         startDate: newStart,
         endDate: newEnd,
@@ -391,6 +398,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       height: 240,
                       child: AddableListWidget(
                         expenseBox: ref.read(objectBoxProvider).store.box<Expense>(),
+                        // P19: "today" for expenses = the business day,
+                        // same as every other screen. Watching the config
+                        // rebuilds this widget if the owner changes hours.
+                        config: ref
+                            .watch(configRepositoryProvider)
+                            .getStoreConfig(),
                         onListChanged: (newExpenses) {
                           ref.invalidate(dashboardMetricsProvider);
                         },
