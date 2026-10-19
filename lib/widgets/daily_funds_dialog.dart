@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/daily_funds.dart';
+import '../service/money_parser.dart';
 import '../theme/app_colors.dart';
 
 class DailyFundsDialog extends StatefulWidget {
@@ -36,7 +37,15 @@ class _DailyFundsDialogState extends State<DailyFundsDialog> {
   }
 
   void _handleSave() {
-    final amount = double.tryParse(_controller.text) ?? 0.0;
+    // P18: no more silent 0.00 — comma accepted, garbage refuses to save.
+    final amount = MoneyParser.parse(_controller.text);
+    if (amount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Montant invalide — tapez un nombre, ex: 12,5')),
+      );
+      return;
+    }
     widget.onSave(amount);
     Navigator.of(context).pop();
   }

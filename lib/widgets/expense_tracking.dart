@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/expense.dart';
 import '../objectbox.g.dart';
+import '../service/money_parser.dart';
 import '../theme/app_colors.dart';
 
 class ListItem {
@@ -183,7 +184,8 @@ class _AddableListWidgetState extends State<AddableListWidget> {
       return;
     }
 
-    final amount = double.tryParse(amountText);
+    // P18: French comma accepted ("12,5"), garbage refuses with a message.
+    final amount = MoneyParser.parse(amountText);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -368,7 +370,7 @@ class _ListItemCard extends StatelessWidget {
               ),
             ),
             Text(
-              '\$${item.amount.toStringAsFixed(2)}',
+              '${item.amount.toStringAsFixed(2)} DH',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: errorColor,

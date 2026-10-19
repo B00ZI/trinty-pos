@@ -17,6 +17,7 @@ import '../widgets/admin_pin_dialog.dart';
 import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../providers/dashboard_provider.dart';
+import '../service/money_parser.dart';
 import '../service/printer_helper.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -929,9 +930,18 @@ class _SurgePriceSettingsSectionState extends ConsumerState<SurgePriceSettingsSe
   }
 
   Future<void> _saveConfig() async {
+    // P18: comma accepted, garbage refuses to save instead of silent 0.0.
+    final amount = MoneyParser.parse(_amountController.text);
+    if (amount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Montant invalide — tapez un nombre, ex: 2,50')),
+      );
+      return;
+    }
     final config = _currentConfig ?? StoreConfig();
     config.isSurgePriceEnabled = _isSurgeEnabled;
-    config.surgePriceAmount = double.tryParse(_amountController.text) ?? 0.0;
+    config.surgePriceAmount = amount;
     config.surgeProductIds = List<int>.from(_selectedProductIds);
 
     ref.read(objectBoxProvider).storeConfigBox.put(config);

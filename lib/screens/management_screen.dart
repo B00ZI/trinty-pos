@@ -14,6 +14,7 @@ import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import 'package:file_picker/file_picker.dart' as fp;
 import 'package:share_plus/share_plus.dart';
 import 'package:Easify/service/data_backup_service.dart';
+import 'package:Easify/service/money_parser.dart';
 import 'package:Easify/providers/dashboard_provider.dart';
 import 'package:Easify/widgets/admin_pin_dialog.dart';
 import 'package:Easify/theme/app_colors.dart';
@@ -255,7 +256,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                       controller: _priceController,
                       decoration: const InputDecoration(labelText: 'Prix'),
                       keyboardType: TextInputType.number,
-                      validator: (v) => v == null || double.tryParse(v) == null
+                      validator: (v) => MoneyParser.parse(v ?? '') == null
                           ? 'Prix valide requis'
                           : null),
                   SizedBox(height: AppSpacing.space4),
@@ -314,7 +315,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                   if (_formKey.currentState!.validate()) {
                     final p = product ?? Product(name: '', price: 0);
                     p.name = _nameController.text;
-                    p.price = double.parse(_priceController.text);
+                    p.price = MoneyParser.parse(_priceController.text)!;
                     p.category = _categoryController.text.isNotEmpty
                         ? _categoryController.text
                         : null;

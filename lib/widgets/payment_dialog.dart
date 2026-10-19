@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../service/money_parser.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -23,6 +24,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
   late TextEditingController _amountController;
   double _calculatedChange = 0;
   String _changeStatus = '';
+  bool _invalidAmount = false;
 
   @override
   void initState() {
@@ -43,26 +45,31 @@ class _PaymentDialogState extends State<PaymentDialog> {
       setState(() {
         _calculatedChange = 0;
         _changeStatus = '';
+        _invalidAmount = false;
       });
       return;
     }
 
-    try {
-      final amount = double.parse(amountText);
-      setState(() {
-        _calculatedChange = amount - widget.totalAmount;
-        if (_calculatedChange >= 0) {
-          _changeStatus = 'Monnaie à rendre';
-        } else {
-          _changeStatus = 'Montant manquant';
-        }
-      });
-    } catch (e) {
+    // P17/P18: French comma accepted ("12,5"); garbage input shows a
+    // message instead of silently wiping the change box.
+    final amount = MoneyParser.parse(amountText);
+    if (amount == null) {
       setState(() {
         _calculatedChange = 0;
-        _changeStatus = '';
+        _changeStatus = 'Montant invalide';
+        _invalidAmount = true;
       });
+      return;
     }
+    setState(() {
+      _invalidAmount = false;
+      _calculatedChange = amount - widget.totalAmount;
+      if (_calculatedChange >= 0) {
+        _changeStatus = 'Monnaie à rendre';
+      } else {
+        _changeStatus = 'Montant manquant';
+      }
+    });
   }
 
   @override
@@ -163,9 +170,9 @@ class _PaymentDialogState extends State<PaymentDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.space4),
                 decoration: BoxDecoration(
-                  color: _calculatedChange >= 0
-                      ? AppColors.successLight
-                      : AppColors.dangerLight,
+                  color: _invalidAmount || _calculatedChange < 0
+                      ? AppColors.dangerLight
+                      : AppColors.successLight,
                   borderRadius: AppRadius.rMd,
                 ),
                 child: Column(
@@ -175,9 +182,9 @@ class _PaymentDialogState extends State<PaymentDialog> {
                       _changeStatus,
                       style: TextStyle(
                         fontSize: 14,
-                        color: _calculatedChange >= 0
-                            ? AppColors.success
-                            : AppColors.danger,
+                        color: _invalidAmount || _calculatedChange < 0
+                            ? AppColors.danger
+                            : AppColors.success,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.space2),
@@ -186,9 +193,9 @@ class _PaymentDialogState extends State<PaymentDialog> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: _calculatedChange >= 0
-                            ? AppColors.success
-                            : AppColors.danger,
+                        color: _invalidAmount || _calculatedChange < 0
+                            ? AppColors.danger
+                            : AppColors.success,
                       ),
                     ),
                   ],

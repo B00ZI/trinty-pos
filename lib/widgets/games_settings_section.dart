@@ -6,6 +6,7 @@ import '../models/game_post.dart';
 import '../models/party_tier.dart';
 import '../objectbox.dart';
 import '../providers/navigation_provider.dart';
+import '../service/money_parser.dart';
 import '../theme/app_colors.dart';
 import 'package:objectbox/objectbox.dart';
 
@@ -113,7 +114,7 @@ class _GamesSettingsSectionState extends ConsumerState<GamesSettingsSection> {
                 const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: () {
-                    final rate = double.tryParse(rateController.text);
+                    final rate = MoneyParser.parse(rateController.text);
                     if (rate != null) {
                       final tier = _tiers.isNotEmpty ? _tiers.first : PartyTier(label: 'Tarif Standard', ratePerHour: rate);
                       tier.ratePerHour = rate;
