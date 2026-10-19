@@ -3,6 +3,8 @@
 **Source:** full audit of branch `2.0.0.2` (see `AUDIT_EASIFY_2.0.0.2.md` for file:line detail).
 **Workflow (batched, per owner 2026-10-18):** related problems are fixed **together in one batch** — one explain → one approval → one fix+build+test round per batch. UI/design problems are **split off into section D and deferred** to a later UI pass. Still: nothing is changed without your approval.
 
+> **New/continuing session?** Read `HANDOFF_NEXT_SESSION.md` FIRST — it has the commands, the batch progress, the product rules and the next batch's contents. Then read this file fully before saying anything to the owner.
+
 **Legend:** 🔴 critical · 🟠 high · 🟡 medium · 🔵 low — severity = impact if it bites, not effort.
 
 ---
@@ -49,6 +51,7 @@
 | P60 | Found **while fixing P15** (2026-10-19): the day-dialog revenue (`_getDayRevenue`) used **today's shelf price** (ignores the price stored on the sale), **skipped every item whose product was deleted** (revenue silently drops), and counted an extra only **once regardless of quantity** (2× lait charged as 1) | 🟠 | dialog.dart:284-311 | ✅ fixed | Now uses PricingService — the same formula as dashboard, history, receipts and the daily report |
 | P61 | Cart extras were **per-line** — "2 × Thé + Lait" charged 1 lait (silent money & kitchen loss) — and the same product could never appear twice, so "1 with, 1 without" was impossible | 🟠 | order_provider.addToCart, pricing_service, order_item JSON | ✅ fixed | Owner chose **option B** (2026-10-19): extras are **per unit** ("2 thé lait" = 2 lattes, kitchen prints `Lait ×2`) and a line **with extras is closed** — tapping its product starts a separate line (mixed orders possible; plain lines still merge for fast quantity). New lines carry a `__v:2` flag inside the existing line JSON (readers ignore non-numeric keys — no schema change, no codegen); **old lines have no flag and keep the old rule forever** (no history rewrite), and editing an old order never flips its rule. No order of taps can produce a wrong total |
 | P62 | Found by you right after P61: the cart's **− button on an extra did nothing** as soon as you left extras mode (it only looked at the "active" extras line, which is forgotten when you leave) — with two lines it could even decrement the **wrong** line's extra | 🔴 | order_provider.dart `decrementExtra`, order_screen cart rows | ✅ fixed | The button now targets **its own line** (`decrementExtra(line, extra)`) — works anytime, anywhere in the cart; 2 regression tests lock it (works after leaving extras mode; only touches its own line) |
+| P63 | Found by you 2026-10-19 (the "today is 19 but I see 9" report): **Histoire keeps a stale selected day** — the ← → arrows move one day per tap and the screen never snaps back to today, so after browsing (or an earlier tap) it can sit on an old day while new orders land on today | 🟡 | history_screen.dart `_selectedBusinessDay` (set once in initState, kept for the whole session) | ⬜ open | Offered fix: snap to today's business day whenever the Histoire screen is (re)opened; manual ← → browsing still works. Owner hasn't decided yet — ask once (yes/no) or fold into the next batch. Order data itself was verified 100% intact (orders #17–#35 all dated 19/10) |
 
 ## C. Printing (thermal receipts)
 
