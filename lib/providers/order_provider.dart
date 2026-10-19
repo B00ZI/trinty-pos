@@ -16,8 +16,8 @@ class CartLine {
   int get quantity => orderItem.quantity;
   set quantity(int v) => orderItem.quantity = v;
 
-  /// Total price for this line (base × qty + extras).
-  double total(StoreConfig? config) {
+  /// Product price × qty (surge included) — without extras.
+  double baseTotal(StoreConfig? config) {
     double basePrice = (orderItem.price ?? product?.price ?? 0).toDouble();
     // Apply surge pricing if the item has no persisted price yet
     if (orderItem.price == null &&
@@ -26,7 +26,12 @@ class CartLine {
         config.surgeProductIds.contains(product?.id)) {
       basePrice += config.surgePriceAmount;
     }
-    double t = orderItem.quantity * basePrice;
+    return orderItem.quantity * basePrice;
+  }
+
+  /// Total price for this line (base × qty + extras).
+  double total(StoreConfig? config) {
+    double t = baseTotal(config);
     for (final extra in orderItem.resolveExtras()) {
       t += extra.price * extra.quantity;
     }

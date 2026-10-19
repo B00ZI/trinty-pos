@@ -14,6 +14,7 @@ Automated: 27/27 unit tests (extras snapshot + money parser), analyze 0 errors.
 | A5 | Look at any order with extras saved **before today's fix** | shows the same numbers as always |
 | A6 | Cart: tap an extra twice → line shows `Lait ×2 … 4.00 DH`; tap **−** | quantity and price follow, − still removes |
 | A7 | Dashboard + receipt of a sale with extras | both agree with Histoire |
+| A8 | Cart line with extras | under the name: **product price only**; below: each extra with its price; under them: **"Total … DH"** = product + extras (receipt style) |
 
 ## Part B — Money inputs: comma works, no silent 0.00 (P17 / P18)
 

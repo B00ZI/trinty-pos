@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:Easify/models/order_item.dart';
 import 'package:Easify/models/product.dart';
+import 'package:Easify/providers/order_provider.dart';
 import 'package:Easify/service/pricing_service.dart';
 
 /// Batch 2 — P15/P22: extras must be frozen at sale time.
@@ -149,6 +150,22 @@ void main() {
       expect(item.getExtraQuantity(lait), 2);
       expect(item.resolveExtras(), isEmpty,
           reason: 'an entry with no readable price/name and no product is dead');
+    });
+  });
+
+  group('Cart line display: product price, extras, then total', () {
+    test('baseTotal is the product only; total = base + extras', () {
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+      final item = OrderItem(quantity: 2);
+      item.product.target = Product(id: 1, name: 'Thé', price: 10);
+      item.price = 10;
+      item.setExtraQuantity(lait, 2);
+
+      final line = CartLine(item);
+      expect(line.baseTotal(null), closeTo(20, 0.0001), // 10 × 2 — no extras
+          reason: 'the number under the name shows the product only');
+      expect(line.total(null), closeTo(24, 0.0001), // + 2×2 of lait
+          reason: 'the Total row = product + extras');
     });
   });
 }

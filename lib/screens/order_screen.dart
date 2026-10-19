@@ -651,7 +651,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${line.total(config).toStringAsFixed(2)} DH',
+                                '${line.baseTotal(config).toStringAsFixed(2)} DH',
                                 style: const TextStyle(
                                   color: AppColors.cartAccent,
                                   fontWeight: FontWeight.w700,
@@ -737,6 +737,33 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                             ),
                           );
                         }).toList(),
+                      ),
+                    ),
+                  // Owner request: show the product price, then the extras,
+                  // then the final total of the line (product + extras).
+                  if (line.orderItem.resolveExtras().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 52,
+                          right: AppSpacing.space3,
+                          bottom: AppSpacing.space3),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'Total ',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.cartMuted),
+                          ),
+                          Text(
+                            '${line.total(config).toStringAsFixed(2)} DH',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.cartAccent,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
