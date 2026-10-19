@@ -27,8 +27,8 @@ class CartLine {
       basePrice += config.surgePriceAmount;
     }
     double t = orderItem.quantity * basePrice;
-    for (final extra in orderItem.extras) {
-      t += extra.price * orderItem.getExtraQuantity(extra);
+    for (final extra in orderItem.resolveExtras()) {
+      t += extra.price * extra.quantity;
     }
     return t;
   }

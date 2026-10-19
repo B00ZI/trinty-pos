@@ -3,7 +3,7 @@ import 'package:objectbox/objectbox.dart';
 import '../models/order.dart' as order_model;
 import '../models/expense.dart' as expense_model;
 import '../objectbox.dart';
-import '../models/product.dart' as product_model;
+import '../service/pricing_service.dart';
 import '../theme/app_colors.dart';
 
 // Show daily data dialog
@@ -293,17 +293,15 @@ Future<double> _getDayRevenue(
       order.date.day == day.day);
 
   double total = 0;
+  final pricing = PricingService();
 
   for (final order in sameDayOrders) {
     for (final item in order.items) {
-      final product = item.product.target;
-      if (product == null) continue;
-
-      total += product.price * item.quantity;
-      // Include EXTRAS in revenue
-      for (final extra in item.extras) {
-        total += extra.price;
-      }
+      // One money formula everywhere (P14): stored price as sold, extras
+      // from their sale-time snapshot (P15), and products that were
+      // deleted still count (P22) — the old loop used today's shelf price,
+      // skipped items without a linked product and ignored extra quantities.
+      total += pricing.calculateItemTotal(item);
     }
   }
 

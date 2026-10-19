@@ -16,9 +16,8 @@ class PricingService {
     // No additional surge adjustments needed here.
 
     double extrasTotal = 0.0;
-    for (final extra in item.extras) {
-      final extraQty = item.getExtraQuantity(extra);
-      extrasTotal += extra.price * extraQty;
+    for (final extra in item.resolveExtras()) {
+      extrasTotal += extra.price * extra.quantity;
     }
 
     final double total = item.quantity * basePrice + extrasTotal;

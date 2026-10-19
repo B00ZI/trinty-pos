@@ -117,8 +117,8 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
         }
       }
       double total = item.quantity * basePrice;
-      for (final extra in item.extras) {
-        total += extra.price * item.getExtraQuantity(extra);
+      for (final extra in item.resolveExtras()) {
+        total += extra.price * extra.quantity;
       }
       return total;
     }

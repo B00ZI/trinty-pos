@@ -681,13 +681,17 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                       ],
                     ),
                   ),
-                  if (line.orderItem.extras.isNotEmpty)
+                  if (line.orderItem.resolveExtras().isNotEmpty)
                     Container(
                       padding: const EdgeInsets.only(
                           left: 52, right: AppSpacing.space3, bottom: AppSpacing.space3),
                       child: Column(
-                        children: line.orderItem.extras.map((extra) {
-                          final qty = line.orderItem.getExtraQuantity(extra);
+                        children: line.orderItem.resolveExtras().map((entry) {
+                          final qty = entry.quantity;
+                          final linked = line.orderItem.extras
+                              .cast<Product?>()
+                              .firstWhere((e) => e!.id == entry.productId,
+                                  orElse: () => null);
                           return Padding(
                             padding: const EdgeInsets.only(top: AppSpacing.space1),
                             child: Row(
@@ -702,7 +706,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                                   ),
                                 ),
                                 Text(
-                                  '${extra.name}${qty > 1 ? " ×$qty" : ""}',
+                                  '${entry.name}${qty > 1 ? " ×$qty" : ""}',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AppColors.cartMuted,
@@ -710,23 +714,25 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                                 ),
                                 const Spacer(),
                                 Text(
-                                  '${(extra.price * qty).toStringAsFixed(2)} DH',
+                                  '${(entry.price * qty).toStringAsFixed(2)} DH',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AppColors.cartMuted,
                                   ),
                                 ),
-                                const SizedBox(width: AppSpacing.space2),
-                                GestureDetector(
-                                  onTap: () => ref
-                                      .read(cartProvider.notifier)
-                                      .decrementExtra(extra),
-                                  child: const Icon(
-                                    Icons.remove_circle_outline_rounded,
-                                    size: 14,
-                                    color: AppColors.danger,
+                                if (linked != null) ...[
+                                  const SizedBox(width: AppSpacing.space2),
+                                  GestureDetector(
+                                    onTap: () => ref
+                                        .read(cartProvider.notifier)
+                                        .decrementExtra(linked),
+                                    child: const Icon(
+                                      Icons.remove_circle_outline_rounded,
+                                      size: 14,
+                                      color: AppColors.danger,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           );
@@ -1120,11 +1126,11 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                     'Article',
                 'quantity': item.quantity,
                 'price': item.price ?? item.product.target?.price ?? 0,
-                'extras': item.extras
+                'extras': item.resolveExtras()
                     .map((extra) => {
-                          'id': extra.id,
+                          'id': extra.productId,
                           'title': extra.name,
-                          'quantity': item.getExtraQuantity(extra),
+                          'quantity': extra.quantity,
                           'price': extra.price,
                         })
                     .toList(),

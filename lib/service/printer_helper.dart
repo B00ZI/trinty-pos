@@ -89,11 +89,11 @@ class ReceiptData {
           title: item.productName ?? item.product.target?.name ?? 'Article',
           quantity: item.quantity,
           price: (item.price ?? item.product.target?.price ?? 0).toDouble(),
-          extras: item.extras
+          extras: item.resolveExtras()
               .map((extra) => ReceiptItem(
-                    id: extra.id.toString(),
+                    id: extra.productId.toString(),
                     title: extra.name,
-                    quantity: item.getExtraQuantity(extra),
+                    quantity: extra.quantity,
                     price: extra.price,
                   ))
               .toList(),
