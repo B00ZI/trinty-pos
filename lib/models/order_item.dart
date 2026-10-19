@@ -93,6 +93,11 @@ class OrderItem {
       map.remove(key);
       extras.removeWhere((e) => e.id == extra.id);
     } else {
+      // First extra ever on this line → the line joins the per-unit rule
+      // (option B): its extras will be charged for EVERY unit of the line.
+      // Lines that already had extras keep the rule they were sold with —
+      // editing an old order can never change how it was charged.
+      final hadEntries = map.isNotEmpty;
       final prev = map[key];
       // Snapshot the price/name charged today (P15/P22): once written it
       // survives price edits and product deletion. An existing snapshot is
@@ -102,12 +107,19 @@ class OrderItem {
         'p': _rawPrice(prev) ?? extra.price,
         'n': _rawName(prev) ?? extra.name,
       };
+      if (!hadEntries) map['__v'] = 2;
       if (!extras.any((e) => e.id == extra.id)) {
         extras.add(extra);
       }
     }
     extraQuantitiesJson = jsonEncode(map);
   }
+
+  /// True when this line was sold under the per-unit extras rule (option B,
+  /// 2026-10-19): each extra's quantity applies to EVERY unit of the line
+  /// ("2 thé lait" = 2 lattes). Old lines have no flag and keep the
+  /// original rule (extras counted once) forever.
+  bool get isPerUnitExtras => _extraMap()['__v'] == 2;
 
   /// All extras of this line with money resolved: sale-time snapshot first,
   /// live product only as fallback for old orders. An entry that resolves to

@@ -72,7 +72,7 @@ void main() {
 
       final receipt = ReceiptData.convertRuciToReceiptData(order);
 
-      expect(receipt.total, '23.00'); // 2×10 sold price + 2×1.5 extras
+      expect(receipt.total, '26.00'); // 2×10 sold price + per-unit extras: 2 units × 2×1.5
       expect(receipt.items.first.title, 'Thé à la menthe');
       expect(receipt.items.first.price, 10.0);
       expect(receipt.items.first.extras.single.price, 1.5);

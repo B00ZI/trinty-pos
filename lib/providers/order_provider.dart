@@ -32,8 +32,9 @@ class CartLine {
   /// Total price for this line (base × qty + extras).
   double total(StoreConfig? config) {
     double t = baseTotal(config);
+    final multiplier = orderItem.isPerUnitExtras ? orderItem.quantity : 1;
     for (final extra in orderItem.resolveExtras()) {
-      t += extra.price * extra.quantity;
+      t += extra.price * extra.quantity * multiplier;
     }
     return t;
   }
@@ -117,8 +118,13 @@ class CartNotifier extends StateNotifier<CartState> {
       return;
     }
 
+    // Option B: only lines WITHOUT extras merge on tap. A configured line
+    // (one with extras) is closed — tapping its product starts a separate
+    // line, so "1 thé lait + 1 thé sans" is expressible.
     final existingLine = state.lines.cast<CartLine?>().firstWhere(
-          (l) => l!.product?.id == product.id,
+          (l) =>
+              l!.product?.id == product.id &&
+              l.orderItem.resolveExtras().isEmpty,
           orElse: () => null,
         );
 

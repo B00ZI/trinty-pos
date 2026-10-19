@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:Easify/models/order.dart' as order_model;
 import 'package:Easify/models/order_item.dart';
 import 'package:Easify/models/product.dart';
 import 'package:Easify/providers/order_provider.dart';
 import 'package:Easify/service/pricing_service.dart';
+import 'package:Easify/service/printer_helper.dart';
 
 /// Batch 2 — P15/P22: extras must be frozen at sale time.
 ///
@@ -126,14 +128,16 @@ void main() {
       expect(entry.name, 'Lait');
     });
 
-    test('removing an extra (qty 0) clears both json and link', () {
+    test('removing an extra (qty 0) clears json and link', () {
       final lait = Product(id: 5, name: 'Lait', price: 2);
       final item = OrderItem(quantity: 1);
       item.setExtraQuantity(lait, 1);
       item.setExtraQuantity(lait, 0);
 
       expect(item.resolveExtras(), isEmpty);
-      expect(item.extraQuantitiesJson, '{}');
+      // Only the per-unit flag remains — the line keeps its rule, so a
+      // later-added extra on this line is charged per unit as well.
+      expect(item.extraQuantitiesJson, '{"__v":2}');
     });
 
     test('garbage json never crashes and falls back safely', () {
@@ -159,13 +163,96 @@ void main() {
       final item = OrderItem(quantity: 2);
       item.product.target = Product(id: 1, name: 'Thé', price: 10);
       item.price = 10;
-      item.setExtraQuantity(lait, 2);
+      item.setExtraQuantity(lait, 1); // one lait per tea → 2 lattes
 
       final line = CartLine(item);
       expect(line.baseTotal(null), closeTo(20, 0.0001), // 10 × 2 — no extras
           reason: 'the number under the name shows the product only');
-      expect(line.total(null), closeTo(24, 0.0001), // + 2×2 of lait
+      expect(line.total(null), closeTo(24, 0.0001), // + 2 × (1 lait × 2 units)
           reason: 'the Total row = product + extras');
+    });
+  });
+
+  group('Option B — per-unit extras (lines sold from now on)', () {
+    test('a line becomes per-unit when its first extra is added', () {
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+      final item = OrderItem(quantity: 2);
+      item.product.target = Product(id: 1, name: 'Thé', price: 10);
+      item.price = 10;
+      item.setExtraQuantity(lait, 1);
+
+      expect(item.isPerUnitExtras, isTrue);
+      expect(pricing.calculateItemTotal(item), closeTo(24, 0.0001),
+          reason: '"2 thé lait" = 2 lattes: 20 + 2×2');
+    });
+
+    test('CartLine.total agrees with PricingService on per-unit lines', () {
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+      final item = OrderItem(quantity: 3);
+      item.product.target = Product(id: 1, name: 'Thé', price: 10);
+      item.price = 10;
+      item.setExtraQuantity(lait, 1);
+
+      expect(CartLine(item).total(null), closeTo(36, 0.0001)); // 30 + 3×2
+      expect(pricing.calculateItemTotal(item), closeTo(36, 0.0001));
+    });
+
+    test('the flag survives reload — a saved order keeps its rule', () {
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+      final item = OrderItem(quantity: 2, price: 10);
+      item.setExtraQuantity(lait, 1);
+
+      final reloaded = OrderItem(
+          quantity: 2, price: 10, extraQuantitiesJson: item.extraQuantitiesJson);
+      reloaded.extras.add(lait);
+      expect(reloaded.isPerUnitExtras, isTrue);
+      expect(pricing.calculateItemTotal(reloaded), closeTo(24, 0.0001));
+    });
+
+    test('receipt shows the EFFECTIVE extra count for the kitchen', () {
+      final order =
+          order_model.Order(date: DateTime(2026, 1, 5), orderNumber: 9);
+      final item = OrderItem(quantity: 2, price: 10.0, productName: 'Thé');
+      final lait = Product(name: 'Lait', price: 2.0);
+      item.extras.add(lait);
+      item.setExtraQuantity(lait, 1);
+      order.items.add(item);
+
+      final receipt = ReceiptData.convertRuciToReceiptData(order);
+      expect(receipt.items.first.extras.single.quantity, 2,
+          reason: 'kitchen must see 2 lattes, not 1');
+      expect(receipt.total, '24.00');
+    });
+  });
+
+  group('Option B — old lines keep the rule they were sold with', () {
+    test('legacy line (no flag) counts extras once', () {
+      final item = OrderItem(quantity: 2, price: 10);
+      item.extraQuantitiesJson =
+          '{"5": {"q": 1, "p": 2.0, "n": "Lait"}}'; // sold before option B
+      expect(item.isPerUnitExtras, isFalse);
+      expect(pricing.calculateItemTotal(item), closeTo(22, 0.0001)); // 20 + 2
+    });
+
+    test('editing a legacy line does NOT flip it to per-unit', () {
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+      final item = OrderItem(quantity: 2, price: 10);
+      item.extraQuantitiesJson = '{"5": {"q": 1, "p": 2.0, "n": "Lait"}}';
+      item.extras.add(lait);
+
+      item.setExtraQuantity(lait, 2); // cashier edits the extra count
+      expect(item.isPerUnitExtras, isFalse,
+          reason: 'an old order can never change how it was charged');
+      expect(pricing.calculateItemTotal(item), closeTo(24, 0.0001)); // 20 + 2×2
+    });
+
+    test('the flag key itself is never treated as an extra', () {
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+      final item = OrderItem(quantity: 1);
+      item.setExtraQuantity(lait, 1);
+
+      expect(item.resolveExtras().single.name, 'Lait');
+      expect(item.getExtraQuantity(lait), 1);
     });
   });
 }

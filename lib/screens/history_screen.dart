@@ -104,8 +104,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   double calculateItemTotal(OrderItem item) {
     double itemTotal =
         (item.price ?? item.product.target?.price ?? 0.0) * item.quantity;
+    final extrasMultiplier = item.isPerUnitExtras ? item.quantity : 1;
     for (final extra in item.resolveExtras()) {
-      itemTotal += extra.price * extra.quantity;
+      itemTotal += extra.price * extra.quantity * extrasMultiplier;
     }
     return itemTotal;
   }
@@ -605,7 +606,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               overflow: TextOverflow.ellipsis),
                           if (item.resolveExtras().isNotEmpty)
                             ...item.resolveExtras().map((extra) {
-                              final qty = extra.quantity;
+                              final qty = extra.quantity *
+                                  (item.isPerUnitExtras ? item.quantity : 1);
                               return Padding(
                                 padding: const EdgeInsets.only(
                                     left: AppSpacing.space4, top: AppSpacing.space0 + 2),

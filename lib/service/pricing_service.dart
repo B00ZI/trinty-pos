@@ -16,8 +16,11 @@ class PricingService {
     // No additional surge adjustments needed here.
 
     double extrasTotal = 0.0;
+    // Option B: per-unit lines charge their extras for EVERY unit
+    // ("2 thé lait" = 2 lattes); old lines count extras once, as sold.
+    final extrasMultiplier = item.isPerUnitExtras ? item.quantity : 1;
     for (final extra in item.resolveExtras()) {
-      extrasTotal += extra.price * extra.quantity;
+      extrasTotal += extra.price * extra.quantity * extrasMultiplier;
     }
 
     final double total = item.quantity * basePrice + extrasTotal;

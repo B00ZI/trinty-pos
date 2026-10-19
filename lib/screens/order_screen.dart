@@ -687,7 +687,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                           left: 52, right: AppSpacing.space3, bottom: AppSpacing.space3),
                       child: Column(
                         children: line.orderItem.resolveExtras().map((entry) {
-                          final qty = entry.quantity;
+                          // Per-unit lines: the extra counts for every unit
+                          // of the line ("2 thé lait" = 2 lattes).
+                          final qty = entry.quantity *
+                              (line.orderItem.isPerUnitExtras
+                                  ? line.quantity
+                                  : 1);
                           final linked = line.orderItem.extras
                               .cast<Product?>()
                               .firstWhere((e) => e!.id == entry.productId,
@@ -1157,7 +1162,8 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                     .map((extra) => {
                           'id': extra.productId,
                           'title': extra.name,
-                          'quantity': extra.quantity,
+                          'quantity': extra.quantity *
+                              (item.isPerUnitExtras ? item.quantity : 1),
                           'price': extra.price,
                         })
                     .toList(),

@@ -93,7 +93,8 @@ class ReceiptData {
               .map((extra) => ReceiptItem(
                     id: extra.productId.toString(),
                     title: extra.name,
-                    quantity: extra.quantity,
+                    quantity: extra.quantity *
+                        (item.isPerUnitExtras ? item.quantity : 1),
                     price: extra.price,
                   ))
               .toList(),

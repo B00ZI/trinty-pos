@@ -38,4 +38,16 @@ Automated: 27/27 unit tests (extras snapshot + money parser), analyze 0 errors.
 | C2 | Ticket Simple | one copy, seller attached (batch 1) |
 | C3 | Sale without printer configured | French snackbar, no crash (batch 1) |
 
-Everything checked → **batch 2 done**. Next up: batch 3 (business day).
+## Part D — Extras per unit + mixed orders (owner option B)
+
+| # | Do this | You should see |
+|---|---------|----------------|
+| D1 | Add Thé ×2 → tap **+** → add Lait (2 DH) | cart: `Thé … 20.00`, `+ Lait ×2 … 4.00`, **Total 24.00**; receipt prints `+ Lait ×2` |
+| D2 | With that line having extras, tap **Thé** in the grid | a **second, plain** Thé line appears (not merged) |
+| D3 | Flow "1 Thé Lait + 1 Thé plain" | two lines, totals 12.00 + 10.00 |
+| D4 | Tap tap tap **Thé ×3 first**, then add Lait once | one line: `+ Lait ×3 … 6.00`, Total **36.00** |
+| D5 | Look at any order **with extras sold before today's fix** | totals unchanged (extras counted once, as sold) |
+| D6 | Edit an old order, change an extra's count | stays on the old rule — no surprise multiplication |
+| D7 | Remove the extra from a per-unit line, add another extra | new extra counts per unit (line keeps its rule) |
+
+Everything checked → **batch 2 + cart behavior complete**. Next up: batch 3 (business day).

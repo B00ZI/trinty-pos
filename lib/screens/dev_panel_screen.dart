@@ -117,8 +117,9 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
         }
       }
       double total = item.quantity * basePrice;
+      final extrasMultiplier = item.isPerUnitExtras ? item.quantity : 1;
       for (final extra in item.resolveExtras()) {
-        total += extra.price * extra.quantity;
+        total += extra.price * extra.quantity * extrasMultiplier;
       }
       return total;
     }
