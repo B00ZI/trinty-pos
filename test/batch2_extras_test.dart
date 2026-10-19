@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Easify/models/order.dart' as order_model;
 import 'package:Easify/models/order_item.dart';
 import 'package:Easify/models/product.dart';
@@ -253,6 +254,54 @@ void main() {
 
       expect(item.resolveExtras().single.name, 'Lait');
       expect(item.getExtraQuantity(lait), 1);
+    });
+  });
+
+  group('Cart — the extra − button targets its own line', () {
+    test('the − button works after leaving extras mode (owner bug)', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(cartProvider.notifier);
+      final the = Product(id: 1, name: 'Thé', price: 10);
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+
+      notifier.addToCart(the);
+      final line = container.read(cartProvider).lines.first;
+      notifier.enterExtrasMode(line);
+      notifier.addToCart(lait); // lait becomes an extra of thé
+      notifier.exitExtrasMode();
+
+      expect(line.orderItem.resolveExtras(), hasLength(1));
+      notifier.decrementExtra(line, lait);
+      expect(line.orderItem.resolveExtras(), isEmpty,
+          reason: 'the button used to be dead after leaving extras mode');
+    });
+
+    test('two lines with extras: − only touches its own line', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(cartProvider.notifier);
+      final the = Product(id: 1, name: 'Thé', price: 10);
+      final cafe = Product(id: 2, name: 'Café', price: 12);
+      final lait = Product(id: 5, name: 'Lait', price: 2);
+      final sucre = Product(id: 6, name: 'Sucre', price: 1);
+
+      notifier.addToCart(the);
+      final lineThe = container.read(cartProvider).lines.first;
+      notifier.enterExtrasMode(lineThe);
+      notifier.addToCart(lait);
+      notifier.exitExtrasMode();
+
+      notifier.addToCart(cafe); // thé line has extras → new line (option B)
+      final lineCafe = container.read(cartProvider).lines.last;
+      notifier.enterExtrasMode(lineCafe);
+      notifier.addToCart(sucre);
+      notifier.exitExtrasMode();
+
+      notifier.decrementExtra(lineCafe, sucre);
+      expect(lineCafe.orderItem.resolveExtras(), isEmpty);
+      expect(lineThe.orderItem.resolveExtras(), hasLength(1),
+          reason: 'the thé line must not be touched');
     });
   });
 }

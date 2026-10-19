@@ -730,7 +730,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
                                   GestureDetector(
                                     onTap: () => ref
                                         .read(cartProvider.notifier)
-                                        .decrementExtra(linked),
+                                        .decrementExtra(line, linked),
                                     child: const Icon(
                                       Icons.remove_circle_outline_rounded,
                                       size: 14,

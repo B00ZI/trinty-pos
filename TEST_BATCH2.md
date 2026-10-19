@@ -49,5 +49,6 @@ Automated: 27/27 unit tests (extras snapshot + money parser), analyze 0 errors.
 | D5 | Look at any order **with extras sold before today's fix** | totals unchanged (extras counted once, as sold) |
 | D6 | Edit an old order, change an extra's count | stays on the old rule — no surprise multiplication |
 | D7 | Remove the extra from a per-unit line, add another extra | new extra counts per unit (line keeps its rule) |
+| D8 | Add extras to a line → go back to the cart (leave extras mode) → tap **−** on the extra | it works — quantity drops / extra removed, anytime, on any line |
 
 Everything checked → **batch 2 + cart behavior complete**. Next up: batch 3 (business day).

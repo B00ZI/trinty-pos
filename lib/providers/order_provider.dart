@@ -199,12 +199,14 @@ class CartNotifier extends StateNotifier<CartState> {
     );
   }
 
-  /// Decrement an extra's quantity on the active parent (or remove it).
-  void decrementExtra(Product extra) {
-    final parent = state.activeParentForExtras;
-    if (parent == null) return;
-    final qty = parent.orderItem.getExtraQuantity(extra);
-    parent.orderItem.setExtraQuantity(extra, qty - 1);
+  /// Decrement an extra's quantity on the given line (or remove it).
+  /// Targets the line the button belongs to — works in and out of extras
+  /// mode (bug: it only looked at the "active" extras line, so the −
+  /// button was dead as soon as you left extras mode, and with two
+  /// lines it could decrement the wrong line's extra).
+  void decrementExtra(CartLine line, Product extra) {
+    final qty = line.orderItem.getExtraQuantity(extra);
+    line.orderItem.setExtraQuantity(extra, qty - 1);
     state = state.copyWith(lines: List.of(state.lines));
   }
 
