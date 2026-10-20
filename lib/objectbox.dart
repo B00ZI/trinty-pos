@@ -55,6 +55,10 @@ class ObjectBox {
     return ObjectBox._create(store);
   }
 
+  /// Wraps an already-open store with the app's usual boxes — used by the
+  /// real-database tests (batch 2+) and the temp-dump tool from the handoff.
+  static ObjectBox attach(Store store) => ObjectBox._create(store);
+
   static Future<Store> _openStore() async {
     if (Platform.isAndroid || Platform.isIOS) return openStore();
 

@@ -18,6 +18,7 @@ import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../providers/dashboard_provider.dart';
 import '../service/money_parser.dart';
+import '../service/input_rules.dart';
 import '../service/printer_helper.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -445,6 +446,11 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
 
     if (!mounted) return;
 
+    // P30: never two users with the same name (two "Youssef" in the login
+    // list = nobody knows which PIN belongs to whom).
+    final existingNames =
+        _users.map((u) => u.name).toList(growable: false);
+
     final nameController = TextEditingController();
     final pinController = TextEditingController();
     final confirmPinController = TextEditingController();
@@ -473,7 +479,10 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
                     enabledBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.surface3)),
                     focusedBorder: OutlineInputBorder(borderRadius: AppRadius.rLg, borderSide: const BorderSide(color: AppColors.primary, width: 2)),
                   ),
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Nom requis' : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Nom requis';
+                    return InputRules.uniqueName(v, existingNames);
+                  },
                 ),
                 SizedBox(height: AppSpacing.space4),
                 TextFormField(

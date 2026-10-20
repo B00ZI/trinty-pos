@@ -76,6 +76,15 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
         ref
             .read(cartProvider.notifier)
             .loadOrderForEditing(widget.orderToEdit!);
+      } else if (ref.read(cartProvider.notifier).prepareNewOrder() &&
+          mounted) {
+        // P23: the cart still held an old order's lines (Modifier → ← →
+        // Nouvelle Commande) — they were dropped so they can't be charged
+        // twice as a new sale.
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Panier de la commande précédente vidé')),
+        );
       }
     });
   }

@@ -53,11 +53,12 @@ workflow rules, environment commands, what's done, what's next.
   → `Stop-Process -Name Easify -Force -ErrorAction SilentlyContinue`
   → `Start-Process "...\build\windows\x64\runner\Debug\Easify.exe"`.
 - Analyze: exits code 1 when infos exist (**normal**); PowerShell shows harmless
-  NativeCommandError noise on stderr. Baseline: **178 infos / 0 errors** — stay ≤ 178.
+  NativeCommandError noise on stderr. Baseline: **176 infos / 0 errors** — stay ≤ 178.
 - Tests: **always pass file paths explicitly**
   (`flutter test test/batch1_printing_test.dart test/batch2_extras_test.dart
-  test/batch2_money_parser_test.dart test/batch3_business_day_test.dart`) — bare
-  `flutter test` hung once. Baseline: **50/50 pass**.
+  test/batch2_money_parser_test.dart test/batch3_business_day_test.dart
+  test/batch4_backup_and_guards_test.dart`) — bare
+  `flutter test` hung once. Baseline: **69/69 pass**.
 - Real-store tests need `objectbox.dll` on PATH:
   add `;C:\Users\HP\Documents\bozi\trinty-pos-2.0.0.2\build\windows\x64\runner\Debug`
   to `$env:Path` before `flutter test`; without it the batch3 store group **skips
@@ -71,7 +72,10 @@ workflow rules, environment commands, what's done, what's next.
 - Owner's current app state (2026-10-19 22:16): **"hours" mode active with reset
   09:00** left over from their own B2/B3 test; they were told how to switch back to
   "Jour standard". Test data: orders #17–#35 dated 19/10 (orders #1–#16 deleted
-  earlier).
+  earlier). **Batch-4 build running since 2026-10-20 17:02** (owner is testing
+  P23/P24/P26/P30 with `TEST_BATCH4.md`).
+- Test helper added in batch 4: `ObjectBox.attach(Store)` wraps a manually opened
+  store with the app's boxes (used by the real-DB tests; no schema/codegen impact).
 
 ## 3. What is DONE (commits on 2.0.0.3, oldest → newest)
 
@@ -81,24 +85,27 @@ workflow rules, environment commands, what's done, what's next.
 | Batch 2 | `d5f5afa` `1111073` `df3e92b` `e182771` | P15 ✅ (extras snapshot) · P22 ✅ (deleted products still count) · P17 ✅ (comma money + "Montant invalide"; tracking = NONE by owner decision) · P18 ✅ (shared MoneyParser, `$`→DH) · P60 ✅ (day-dialog revenue → PricingService) · cart line display (base/extras/Total rows) · **P61 = option B** per-unit extras |
 | P62 (found by owner while testing P61) | `fa1ee24` | extra − button targets its own line (was dead outside extras mode; could hit wrong line) |
 | Batch 3 | `191a952` | **P19 ✅ P27 ✅ P28 ✅** — one clock for the whole app: funds/expenses/day-dialog/units-sold/auto-clean on the business day (P19b fixed along the way); settings = owner's 2-questions idea with calculated reset (P27); end-exclusive ranges everywhere + picker stores exclusive end (P28). 13 new tests |
+| Batch 4 | (this session, commit below) | **P23 ✅ P24 ✅ P26 ✅ P30 ✅** — cart from an old order dropped on a fresh Nouvelle Commande (drafts kept); paid game = order+counter+session+link in ONE sealed tx (both spots); **real full backup v2** (one Sauvegarde button → Exporter/Importer, export by sections, import asks "Ce fichier contient…" first, never wipes, no Wi-Fi password in files, v1 files still import); price 0 ok / negative refused / unique names (products, categories, users — `service/input_rules.dart`). 19 new tests |
 | Earlier (pre-batch, security/DB) | per Decisions log in PROBLEMS.md | P01 ⚠️ keep · P02 ✅ · P03 ✅ (dev panel PIN 9999) · P04 ✅ (PIN-gated maintenance) · P05 ⚠️ by design · P06 ✅ · P07 ✅ (desktop DB in %LOCALAPPDATA%) · P08 ✅ fail-closed activation · P09 ⚠️ · P10 ⚠️ (owner must back up debug.keystore) · P11 ❌ not a problem · P12 ✅ transactions · P59 ✅ category dropdown crash |
 
 ## 4. What's NEXT (in order)
 
-1. **Ask about P63 once** (history stale day — snap to today on open? yes/no). Tiny fix.
-2. **Batch 4 = P23 P24 P26 P30** — explain → approve → fix:
-   - P23 🟠 edit old order → "Nouvelle Commande" leaves old lines in cart (double-charge risk) — order_screen.dart:963-984
-   - P24 🟠 game order ↔ session link = separate 2nd save; crash in between = double-count — games_screen.dart:147-160
-   - P26 🟡 "Sauvegarde" only saves products+categories but looks full; import overwrites by name — data_backup_service.dart:27-87
-   - P30 🟡 prices accept negative/zero; duplicate user names — management_screen.dart:257, settings_screen.dart:448
+1. **Ask about P63 once more** (history stale day — snap to today on open?
+   yes/no). Tiny fix. Asked twice now (batch-3 offer + batch-4 explanation),
+   owner hasn't answered — do NOT implement unprompted.
+2. **Owner tests batch 4** with `TEST_BATCH4.md` (checklist written 2026-10-20).
+   Fix only what they report, on their say.
 3. **Batch 5 = P42 P43 P44 P45 P47 P49 P50** (error handling, mounted checks, controller
    leaks, dead code, auth-mode round-trip bug, release logging, games 1s-timer query leak).
 4. **Batch 6 = P53 P51 P52 P54 P55 P56 P57** (windows/tool not in git!, Windows gaps,
    Android bits, pubspec cleanup, broken old test, router rebuild, stale providers).
+   Note: P51 (dev-panel export broken on Windows) now overlaps with the new full
+   backup in P26 — check before doing it twice.
 5. **Leftovers, individually yes/no**: P20 (ObjectBox indexes — **codegen risk: requires
    objectbox.g.dart regeneration which HANGS; propose deferring or doing on another
-   machine**), P46 (repository layer drift — recommend defer), P48 (pointycastle
-   override in license path — recommend keep, verify later).
+   machine**), P21 (categories linked by name — note P30 now blocks duplicate category
+   names, which shrinks it), P46 (repository layer drift — recommend defer), P48
+   (pointycastle override in license path — recommend keep, verify later).
 6. **Section D UI deferrals** (later UI pass): P25 P38 P39 P40 P41 P58.
 
 ## 5. Per-batch definition of done

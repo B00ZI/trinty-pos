@@ -123,9 +123,9 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
 
     final price = (minutes / 60.0) * tier.ratePerHour;
 
-    // Create Order directly
-    final orderCounterBox = ref.read(objectBoxProvider).store.box<OrderCounter>();
-    final orderBox = ref.read(objectBoxProvider).store.box<order_model.Order>();
+    final objectbox = ref.read(objectBoxProvider);
+    final orderCounterBox = objectbox.store.box<OrderCounter>();
+    final orderBox = objectbox.store.box<order_model.Order>();
 
     final orderCounter = orderCounterBox.isEmpty()
         ? OrderCounter(id: 1, value: 1)
@@ -135,7 +135,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
       orderNumber: orderCounter.value,
     );
     if (userId != null) {
-      final user = ref.read(objectBoxProvider).userBox.get(userId);
+      final user = objectbox.userBox.get(userId);
       if (user != null) order.user.target = user;
     }
 
@@ -144,25 +144,32 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
     item.productName = 'Jeu (${minutes}min): ${post.label}';
     order.items.add(item);
 
-    // P12: order + counter must commit together — all or nothing.
-    ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
-      orderBox.put(order);
-      orderCounter.value += 1;
-      orderCounterBox.put(orderCounter);
-    });
-
-    // Start Session
-    final session = await GameSessionService.startSession(
+    // P24: build the session in memory — the write happens below, inside the
+    // same transaction as its order.
+    final session = await GameSessionService.prepareSession(
       post: post,
       tier: tier,
       userId: userId,
-      objectbox: ref.read(objectBoxProvider),
+      objectbox: objectbox,
       durationMinutes: minutes,
     );
-    session.relatedOrderId = order.id;
-    ref.read(objectBoxProvider).gameSessionBox.put(session);
 
-    PrinterHelper.printSessionStartTicket(session, ref.read(objectBoxProvider));
+    // P12 + P24: order + counter + session + the order↔session link commit
+    // as ONE sealed save. A crash between the two writes used to leave the
+    // session without its link → the same sale counted twice (order revenue
+    // AND unlinked session revenue) and the post stuck as "occupied".
+    objectbox.store.runInTransaction(TxMode.write, () {
+      orderBox.put(order);
+      orderCounter.value += 1;
+      orderCounterBox.put(orderCounter);
+
+      session.relatedOrderId = order.id;
+      post.isActive = true;
+      objectbox.gamePostBox.put(post);
+      objectbox.gameSessionBox.put(session);
+    });
+
+    PrinterHelper.printSessionStartTicket(session, objectbox);
     setState(() {});
   }
 
@@ -270,10 +277,11 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                     false;
 
                 if (paymentConfirmed) {
+                  final objectbox = ref.read(objectBoxProvider);
                   final orderCounterBox =
-                      ref.read(objectBoxProvider).store.box<OrderCounter>();
+                      objectbox.store.box<OrderCounter>();
                   final orderBox =
-                      ref.read(objectBoxProvider).store.box<order_model.Order>();
+                      objectbox.store.box<order_model.Order>();
 
                   final orderCounter = orderCounterBox.isEmpty()
                       ? OrderCounter(id: 1, value: 1)
@@ -284,7 +292,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                   );
                   if (session.attributedUserId != null) {
                     final user =
-                        ref.read(objectBoxProvider).userBox.get(session.attributedUserId!);
+                        objectbox.userBox.get(session.attributedUserId!);
                     if (user != null) {
                       order.user.target = user;
                     }
@@ -295,16 +303,30 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                   item.productName = 'Jeu: ${session.postLabel}';
                   order.items.add(item);
 
-                  // P12: order + counter must commit together — all or nothing.
-                  ref.read(objectBoxProvider).store.runInTransaction(TxMode.write, () {
+                  final post = session.post.target;
+
+                  // P12 + P24: order + counter + the session's end AND its
+                  // order link commit as ONE sealed save — a crash between
+                  // the two writes used to leave the session unlinked and
+                  // the same game sale was counted twice.
+                  objectbox.store.runInTransaction(TxMode.write, () {
                     orderBox.put(order);
                     orderCounter.value += 1;
                     orderCounterBox.put(orderCounter);
+
+                    session.status = 1; // Completed
+                    session.endTime = DateTime.now();
+                    session.relatedOrderId = order.id;
+                    objectbox.gameSessionBox.put(session);
                   });
 
-                  GameSessionService.endSession(session, ref.read(objectBoxProvider),
-                      relatedOrderId: order.id);
-                  PrinterHelper.printGameTicket(session, ref.read(objectBoxProvider));
+                  // Queue promotion carries no money — it runs after the
+                  // sealed save (P24), never inside it.
+                  if (post != null) {
+                    GameSessionService.promoteNextQueued(post, objectbox);
+                  }
+
+                  PrinterHelper.printGameTicket(session, objectbox);
                   setState(() {});
                 }
               },

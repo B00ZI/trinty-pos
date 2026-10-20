@@ -170,7 +170,24 @@ class CartNotifier extends StateNotifier<CartState> {
       comment: '',
       clearCategoryFilter: true,
       clearActiveParent: true,
+      clearOrderToEdit: true,
     );
+  }
+
+  /// P23: starting a NEW sale must never inherit an old order's lines.
+  ///
+  /// A normal draft is kept (you added 3 teas, checked the printer, came
+  /// back — nothing should be lost). Only a cart loaded from an EXISTING
+  /// order (`orderToEdit != null`, via Historique → Modifier → ←) is
+  /// dropped: keeping it would charge those items a second time as a
+  /// brand-new order (double-charge risk).
+  ///
+  /// Returns `true` when old-order lines were dropped, so the screen can
+  /// tell the owner what happened.
+  bool prepareNewOrder() {
+    if (state.orderToEdit == null) return false;
+    clearCart();
+    return true;
   }
 
   // ── Extras ───────────────────────────────────────────────────────────────

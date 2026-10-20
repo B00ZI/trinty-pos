@@ -21,7 +21,15 @@ class GameSessionService {
     return number;
   }
 
-  static Future<GameSession> startSession({
+  /// Builds a session IN MEMORY and performs **no** session write.
+  ///
+  /// P24: the paid-start flow needs the session object to be written inside
+  /// the SAME transaction as its order (one sealed save: order + counter +
+  /// session + `relatedOrderId` link) — otherwise a crash between the two
+  /// writes leaves the session unlinked and the same sale is counted twice
+  /// (order revenue + "unlinked" session revenue). The only write here is
+  /// the party-number counter bump, whose worst case is a skipped number.
+  static Future<GameSession> prepareSession({
     required GamePost post,
     required PartyTier tier,
     required int? userId,
@@ -29,12 +37,11 @@ class GameSessionService {
     int? durationMinutes,
   }) async {
     final partyNumber = await getNextPartyNumber(objectbox);
-    final startTime = DateTime.now();
     final session = GameSession(
       postLabel: post.label,
       partyNumber: partyNumber,
       tierLabel: tier.label,
-      startTime: startTime,
+      startTime: DateTime.now(),
       ratePerHour: tier.ratePerHour,
       attributedUserId: userId,
       isLimitedDuration: durationMinutes != null,
@@ -43,6 +50,23 @@ class GameSessionService {
 
     session.post.target = post;
     session.tier.target = tier;
+    return session;
+  }
+
+  static Future<GameSession> startSession({
+    required GamePost post,
+    required PartyTier tier,
+    required int? userId,
+    required ObjectBox objectbox,
+    int? durationMinutes,
+  }) async {
+    final session = await prepareSession(
+      post: post,
+      tier: tier,
+      userId: userId,
+      objectbox: objectbox,
+      durationMinutes: durationMinutes,
+    );
 
     // Update post status
     post.isActive = true;
@@ -52,6 +76,26 @@ class GameSessionService {
     objectbox.gameSessionBox.put(session);
     
     return session;
+  }
+
+  /// Promotes the next queued session on [post] to "running" (or frees the
+  /// post). Split out of [endSession] (P24) so a caller can commit its own
+  /// money-critical transaction first and run this afterwards.
+  static void promoteNextQueued(GamePost post, ObjectBox objectbox) {
+    // Check if there's a queued session for this post
+    final queuedSession = getNextQueuedSessionForPost(post.id, objectbox);
+    if (queuedSession != null) {
+      // Start the queued session
+      queuedSession.status = 0;
+      queuedSession.startTime = DateTime.now();
+      queuedSession.endTime = null;
+      objectbox.gameSessionBox.put(queuedSession);
+
+      post.isActive = true;
+    } else {
+      post.isActive = false;
+    }
+    objectbox.gamePostBox.put(post);
   }
 
   static void endSession(GameSession session, ObjectBox objectbox, {int? relatedOrderId}) {
@@ -64,20 +108,7 @@ class GameSessionService {
 
     final post = session.post.target;
     if (post != null) {
-      // Check if there's a queued session for this post
-      final queuedSession = getNextQueuedSessionForPost(post.id, objectbox);
-      if (queuedSession != null) {
-        // Start the queued session
-        queuedSession.status = 0;
-        queuedSession.startTime = DateTime.now();
-        queuedSession.endTime = null;
-        objectbox.gameSessionBox.put(queuedSession);
-        
-        post.isActive = true;
-      } else {
-        post.isActive = false;
-      }
-      objectbox.gamePostBox.put(post);
+      promoteNextQueued(post, objectbox);
     }
   }
 

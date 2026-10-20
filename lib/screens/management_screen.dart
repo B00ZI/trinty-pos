@@ -15,6 +15,7 @@ import 'package:file_picker/file_picker.dart' as fp;
 import 'package:share_plus/share_plus.dart';
 import 'package:Easify/service/data_backup_service.dart';
 import 'package:Easify/service/money_parser.dart';
+import 'package:Easify/service/input_rules.dart';
 import 'package:Easify/providers/dashboard_provider.dart';
 import 'package:Easify/widgets/admin_pin_dialog.dart';
 import 'package:Easify/theme/app_colors.dart';
@@ -38,9 +39,165 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
     _backupService = DataBackupService(ref.read(objectBoxProvider));
   }
 
-  Future<void> _exportData() async {
+  /// P26: which slices of the shop the owner can tick in the export dialog.
+  static const Map<String, String> _sectionLabels = {
+    'catalogue': 'Produits & catégories',
+    'orders': 'Commandes & tickets',
+    'users': 'Utilisateurs',
+    'expenses': 'Dépenses',
+    'funds': 'Fond de caisse',
+    'games': 'Jeux & parties',
+    'settings': 'Réglages boutique & imprimantes',
+  };
+
+  static const Map<String, String> _countLabels = {
+    'orders': 'commandes',
+    'products': 'produits',
+    'categories': 'catégories',
+    'users': 'utilisateurs',
+    'expenses': 'dépenses',
+    'funds': 'fonds de caisse',
+    'gameSessions': 'parties de jeu',
+    'gamePosts': 'postes de jeu',
+    'partyTiers': 'paliers',
+    'printerConfigs': 'configs imprimante',
+    'settings': 'réglages boutique',
+  };
+
+  /// One button (P26) → this dialog with the two actions.
+  void _showBackupDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
+        title: const Text('Sauvegarde'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Que voulez-vous faire ?',
+              style: TextStyle(fontSize: 13, color: AppColors.ink3),
+            ),
+            SizedBox(height: AppSpacing.space4),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.surface0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.file_upload_outlined, size: 20),
+                label: const Text('Exporter'),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showExportOptions();
+                },
+              ),
+            ),
+            SizedBox(height: AppSpacing.space3),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.file_download_outlined, size: 20),
+                label: const Text('Importer'),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _importData();
+                },
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// "Que voulez-vous exporter ?" — everything (recommended) or a selection.
+  void _showExportOptions() {
+    final selected = <String, bool>{
+      for (final key in _sectionLabels.keys) key: true,
+    };
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final all = selected.values.every((v) => v);
+          return AlertDialog(
+            backgroundColor: AppColors.surface0,
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
+            title: const Text('Que voulez-vous exporter ?'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CheckboxListTile(
+                    value: all,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: const Text('Tout (recommandé)',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    onChanged: (v) => setDialogState(() {
+                      for (final key in _sectionLabels.keys) {
+                        selected[key] = v ?? true;
+                      }
+                    }),
+                  ),
+                  const Divider(),
+                  for (final entry in _sectionLabels.entries)
+                    CheckboxListTile(
+                      value: selected[entry.key],
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(entry.value,
+                          style: const TextStyle(fontSize: 13)),
+                      onChanged: all
+                          ? null
+                          : (v) => setDialogState(
+                              () => selected[entry.key] = v ?? false),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.payNowText,
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _exportData(BackupSections.fromMap(selected));
+                },
+                child: const Text('Exporter la sélection'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _exportData(BackupSections sections) async {
     try {
-      final jsonString = _backupService.exportData();
+      final jsonString = _backupService.exportData(sections: sections);
       final tempDir = await getTemporaryDirectory();
       final file = File(
           '${tempDir.path}/easify_backup_${DateTime.now().millisecondsSinceEpoch}.json');
@@ -65,20 +222,25 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
         allowedExtensions: ['json'],
       );
 
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-        final jsonString = await file.readAsString();
-        final importResult = _backupService.importData(jsonString);
+      if (result == null || result.files.single.path == null) return;
+      final file = File(result.files.single.path!);
+      final jsonString = await file.readAsString();
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Import réussi: ${importResult['products']} produits, ${importResult['categories']} catégories'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        }
+      // P26: ask "what will be replaced?" BEFORE writing anything.
+      final preview = _backupService.previewImport(jsonString);
+      if (!mounted) return;
+      final confirmed = await _confirmImport(preview);
+      if (confirmed != true || !mounted) return;
+
+      final importResult = _backupService.importData(jsonString);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import réussi : ${_summaryCounts(importResult)}'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -87,6 +249,72 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
             backgroundColor: AppColors.danger));
       }
     }
+  }
+
+  Future<bool?> _confirmImport(Map<String, int> preview) {
+    final legacy = preview['legacy'] == 1;
+    final lines = <String>[
+      for (final e in preview.entries)
+        if (e.key != 'legacy' && e.value > 0)
+          '• ${e.value} ${_countLabels[e.key] ?? e.key}',
+    ];
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.rLg),
+        title: const Text('Importer cette sauvegarde ?'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                legacy
+                    ? 'Ancienne sauvegarde : produits et catégories uniquement.'
+                    : 'Ce fichier contient :',
+                style: const TextStyle(fontSize: 13, color: AppColors.ink2),
+              ),
+              if (!legacy && lines.isNotEmpty) ...[
+                SizedBox(height: AppSpacing.space2),
+                Text(lines.join('\n'),
+                    style: const TextStyle(fontSize: 13, color: AppColors.ink0)),
+              ],
+              SizedBox(height: AppSpacing.space4),
+              const Text(
+                'Ces données seront ajoutées ou remplacées dans la base. '
+                'Les commandes et dépenses déjà présentes ne sont jamais '
+                'écrasées. Cette action est irréversible.',
+                style: TextStyle(fontSize: 12, color: AppColors.ink3),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: AppColors.surface0,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Importer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _summaryCounts(Map<String, int> counts) {
+    final parts = <String>[
+      for (final e in counts.entries)
+        if (e.key != 'legacy' && e.value > 0)
+          '${e.value} ${_countLabels[e.key] ?? e.key}',
+    ];
+    return parts.isEmpty ? 'rien à importer' : parts.join(', ');
   }
 
   @override
@@ -132,21 +360,14 @@ class _ManagementScreenState extends ConsumerState<ManagementScreen> {
                             ],
                           ),
                         ),
-                        // Icons on the right
+                        // P26: ONE backup button → dialog with Exporter /
+                        // Importer (was two bare icons that looked like a
+                        // full backup and asked no questions).
                         IconButton(
-                          icon: Icon(Icons.file_upload_outlined,
-                              color: AppColors.info, size: isMobile ? 20 : 24),
-                          tooltip: 'Exporter',
-                          onPressed: _exportData,
-                          padding: EdgeInsets.all(isMobile ? 8 : 12),
-                          constraints: const BoxConstraints(),
-                        ),
-                        SizedBox(width: isMobile ? 4 : 8),
-                        IconButton(
-                          icon: Icon(Icons.file_download_outlined,
-                              color: AppColors.success, size: isMobile ? 20 : 24),
-                          tooltip: 'Importer',
-                          onPressed: _importData,
+                          icon: Icon(Icons.import_export_rounded,
+                              color: AppColors.primary, size: isMobile ? 20 : 24),
+                          tooltip: 'Sauvegarde',
+                          onPressed: _showBackupDialog,
                           padding: EdgeInsets.all(isMobile ? 8 : 12),
                           constraints: const BoxConstraints(),
                         ),
@@ -223,6 +444,10 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
   }
 
   void _showProductDialog([Product? product]) {
+    // P30: name must be unique (a duplicate name broke the category dropdown
+    // and made backup-by-name ambiguous) — snapshot taken when the dialog opens.
+    final existingNames =
+        _productBox.getAll().map((p) => p.name).toList(growable: false);
     if (product != null) {
       _nameController.text = product.name;
       _priceController.text = product.price.toString();
@@ -249,16 +474,20 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                   TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(labelText: 'Nom'),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Nom requis' : null),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Nom requis';
+                        // P30: never two products with the same name.
+                        return InputRules.uniqueName(v, existingNames,
+                            excluding: product?.name);
+                      }),
                   SizedBox(height: AppSpacing.space4),
                   TextFormField(
                       controller: _priceController,
                       decoration: const InputDecoration(labelText: 'Prix'),
                       keyboardType: TextInputType.number,
-                      validator: (v) => MoneyParser.parse(v ?? '') == null
-                          ? 'Prix valide requis'
-                          : null),
+                      // P30: 0 is allowed (free product), negative never.
+                      validator: (v) =>
+                          InputRules.nonNegativePrice(v ?? '')),
                   SizedBox(height: AppSpacing.space4),
                   DropdownButtonFormField<String>(
                     value: () {
@@ -314,7 +543,7 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     final p = product ?? Product(name: '', price: 0);
-                    p.name = _nameController.text;
+                    p.name = _nameController.text.trim();
                     p.price = MoneyParser.parse(_priceController.text)!;
                     p.category = _categoryController.text.isNotEmpty
                         ? _categoryController.text
@@ -494,6 +723,10 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
   }
 
   void _showCategoryDialog([Category? cat]) {
+    // P30: duplicate category names were the seed of the old red-screen
+    // crash (P59) — never two categories with the same name.
+    final existingNames =
+        _categoryBox.getAll().map((c) => c.name).toList(growable: false);
     _nameController.text = cat?.name ?? '';
     _selectedImagePath = cat?.imageUrl;
     showDialog(
@@ -511,7 +744,11 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
                   TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(labelText: 'Nom'),
-                      validator: (v) => v == null || v.isEmpty ? 'Requis' : null),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Requis';
+                        return InputRules.uniqueName(v, existingNames,
+                            excluding: cat?.name);
+                      }),
                   SizedBox(height: AppSpacing.space4),
                   _buildImagePicker(setDialogState),
                 ],
@@ -527,7 +764,7 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
                   if (_formKey.currentState!.validate()) {
                     final newCat = Category(
                         id: cat?.id ?? 0,
-                        name: _nameController.text,
+                        name: _nameController.text.trim(),
                         imageUrl: _selectedImagePath);
                     _categoryBox.put(newCat);
                     Navigator.pop(ctx);
