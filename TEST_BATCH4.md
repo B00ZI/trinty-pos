@@ -1,6 +1,6 @@
-# TEST_BATCH4.md — your turn to test (batch 4 = P23 · P24 · P26 · P30)
+# TEST_BATCH4.md — your turn to test (batch 4 = P23 · P24 · P26 · P30 · P63)
 
-The new build is **already running** on this machine (started 20/10 17:02).
+The new build is **already running** on this machine (restarted 20/10 17:32).
 Nothing here touches your data except the tests you choose to run — do them
 in a safe order: **first the small checks, then the backup tests** (P26 test 3
 imports data, so do it last and use a copy of the file, not your only one).
@@ -66,11 +66,22 @@ On a **copy** of your machine, or after you have two files saved:
 ⚠️ The **Wi-Fi password is never in the file** — it stays in the system's
 secure storage, so a backup file can be shared without leaking it.
 
+## 5. P63 — Histoire never sits on a stale day (your "19 but I see 9" report)
+
+| # | Do this | You should see |
+|---|---------|----------------|
+| 1 | **Historique** (from the hub) | The date shown is **today's business day** |
+| 2 | Tap ← a few times to look at an older day | It moves back one day per tap (browsing works) |
+| 3 | Press ← to leave, open **Historique** again | It is back on **today** — not the old day |
+| 4 | While on an old day: open an order → **Modifier** → ← (back) | Histoire shows **today** again (it snaps as soon as it is uncovered) |
+| 5 | Browse to an old day once more, then tap the **"Aujourd'hui"** button at the right of the date | Jumps back to today in one tap |
+
 ---
 
-### Still open (your call, not changed)
-- **P63** — Historique staying on an old day: snap back to today when the
-  screen opens? **yes / no** (you haven't answered yet).
+### Test order reminder
+Do sections 1 → 2 → 3 → 4a → 4b first; section 4c (a real restore) and
+section 5 whenever you like. Section 4b's step 4 imports data — use a copy
+of the exported file, never your only one.
 
 When you have tested: tell me what works, what doesn't, and anything new you
 find. Nothing gets fixed without your say.

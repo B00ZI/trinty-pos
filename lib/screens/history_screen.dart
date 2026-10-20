@@ -34,15 +34,28 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   bool _showDeletedOrders = false;
   DateTime _selectedBusinessDay = DateTime.now();
   StoreConfig _config = StoreConfig();
+  // P63: remembers whether this screen was covered by another route, so
+  // coming back to it snaps to today instead of keeping a stale day.
+  bool _routeWasHidden = false;
 
   @override
   void initState() {
     super.initState();
     final ob = ref.read(objectBoxProvider);
     _orderBox = ob.store.box<order_model.Order>();
+    _snapToToday();
+  }
+
+  /// The business day that "today" is right now (P63).
+  DateTime _todayBusinessDay() =>
+      BusinessDayHelper.getBusinessDayDate(DateTime.now(), _config);
+
+  /// P63: Histoire always opens on today. The config is re-read as well, so
+  /// the boundary stays honest if the working hours were changed in
+  /// settings while this screen was away.
+  void _snapToToday() {
     _config = ref.read(configRepositoryProvider).getStoreConfig();
-    _selectedBusinessDay =
-        BusinessDayHelper.getBusinessDayDate(DateTime.now(), _config);
+    _selectedBusinessDay = _todayBusinessDay();
   }
 
   Future<void> _deleteOrder(order_model.Order order) async {
@@ -116,6 +129,21 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // P63: whenever this screen is (back) in front — reopened from the hub,
+    // or an older instance in the stack brought back by ← after editing an
+    // order — snap to today's business day instead of keeping whatever day
+    // the arrows were left on. While it is covered, the browsing position
+    // is kept (that is continuation, not reopening).
+    // ModalRoute.of() subscribes this build to the route, so popping the
+    // route above triggers a rebuild here and the snap happens immediately.
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? true;
+    if (!isCurrent) {
+      _routeWasHidden = true;
+    } else if (_routeWasHidden) {
+      _routeWasHidden = false;
+      _snapToToday();
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surface1,
       body: Column(
@@ -152,6 +180,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         },
                       ),
                     ),
+                    // P63: browsing somewhere old is never a trap — one tap
+                    // gets you back to today's business day.
+                    if (_selectedBusinessDay != _todayBusinessDay())
+                      TextButton(
+                        onPressed: () => setState(_snapToToday),
+                        child: const Text("Aujourd'hui"),
+                      ),
                   ],
                 ),
               ),
