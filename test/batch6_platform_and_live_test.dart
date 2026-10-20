@@ -16,7 +16,8 @@ import 'package:Easify/service/notification_service.dart';
 /// Batch 6 — the platform truths (P52/P54) and the live settings (P57).
 ///
 /// P54 — the pubspec is the app's identity card: version = the product
-/// (2.0.0, build 20002), real description, no dead packages.
+/// (3.0.0, build 30000 — renamed from 2.0.0+20002 when the app jumped to
+/// version 3), real description, no dead packages.
 ///
 /// P52 — the owner uses the app mainly on Android tablets, but the
 /// notification service must never crash a non-Android build (Windows
@@ -36,8 +37,8 @@ void main() {
   group('P54 — the identity card says who the app is', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
 
-    test('version is the product: 2.0.0 with build 20002 (= 2.0.0.2)', () {
-      expect(pubspec, contains('version: 2.0.0+20002'));
+    test('version is the product: 3.0.0 with build 30000', () {
+      expect(pubspec, contains('version: 3.0.0+30000'));
     });
 
     test('description is no longer the Flutter template', () {

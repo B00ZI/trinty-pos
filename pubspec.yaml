@@ -6,7 +6,7 @@ publish_to: "none" # Remove this line if you plan to publish the package.
 # P54: the product is "2.0.0.2" — the identity card said 1.0.0+1.
 # Pub only accepts X.Y.Z+build, so the 4th digit lives in the build
 # number: version 2.0.0, build 20002 (= 2.0.0.2).
-version: 2.0.0+20002
+version: 3.0.0+30000
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

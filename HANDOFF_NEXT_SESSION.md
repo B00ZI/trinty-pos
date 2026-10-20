@@ -2,7 +2,8 @@
 
 **Read this file first, then `PROBLEMS.md` fully, before saying anything to the owner.**
 Everything the owner cares about is recorded in `PROBLEMS.md` (P01–P63 + Decisions log);
-the file-level audit detail is in `AUDIT_EASIFY_2.0.0.2.md`. This file = the glue:
+the original file-level audit was `AUDIT_EASIFY_2.0.0.2.md` — removed in the
+2026-10-20 cleanup (recoverable from git history). This file = the glue:
 workflow rules, environment commands, what's done, what's next.
 
 ---
@@ -19,8 +20,11 @@ workflow rules, environment commands, what's done, what's next.
   on 2026-10-20 ("yes it should, you can do that now and close P63") and is now fixed —
   no open questions are being carried; ask about anything new, one at a time.
 - UI/design problems are **deferred** to a later UI pass (Section D rows).
-- Owner tests personally between batches; always write a `TEST_BATCHN.md` checklist.
-- All work happens in this worktree on branch **2.0.0.3**. Branch `2.0.0.2`
+- Owner tests personally between batches. **No more `TEST_BATCHN.md` checklist files**
+  (owner's cleanup order 2026-10-20 — all checklists deleted): give the test steps
+  directly in chat and/or in "What's NEXT" below, plain French-UI terms.
+- All work happens in this worktree on branch **3.0.0.0** (renamed from `2.0.0.3`
+  on 2026-10-20 — the app jumped to version 3). Branch `2.0.0.2`
   (`9db66ec`, production) and the original folder `C:\Users\HP\Documents\bozi\trinty-pos`
   are **never modified**.
 
@@ -90,12 +94,13 @@ workflow rules, environment commands, what's done, what's next.
 - Owner's current app state (2026-10-19 22:16): **"hours" mode active with reset
   09:00** left over from their own B2/B3 test; they were told how to switch back to
   "Jour standard". Test data: orders #17–#35 dated 19/10 (orders #1–#16 deleted
-  earlier). **Batch-6 build running since 2026-10-20 19:17** (owner is testing
-  P51–P57 with `TEST_BATCH6.md`).
+  earlier). **Batch-6 build ran 2026-10-20 19:17; owner has not yet reported
+  batch-6 results** (its checklist was deleted in the cleanup — essentials are
+  inlined in section 4).
 - Test helper added in batch 4: `ObjectBox.attach(Store)` wraps a manually opened
   store with the app's boxes (used by the real-DB tests; no schema/codegen impact).
 
-## 3. What is DONE (commits on 2.0.0.3, oldest → newest)
+## 3. What is DONE (commits on 3.0.0.0 — renamed from 2.0.0.3 — oldest → newest)
 
 | Batch | Commit(s) | Contents |
 |---|---|---|
@@ -106,19 +111,32 @@ workflow rules, environment commands, what's done, what's next.
 | Batch 4 | `b0c5615` + P63 follow-up (same session) | **P23 ✅ P24 ✅ P26 ✅ P30 ✅ P63 ✅** — cart from an old order dropped on a fresh Nouvelle Commande (drafts kept); paid game = order+counter+session+link in ONE sealed tx (both spots); **real full backup v2** (one Sauvegarde button → Exporter/Importer, export by sections, import asks "Ce fichier contient…" first, never wipes, no Wi-Fi password in files, v1 files still import); price 0 ok / negative refused / unique names (products, categories, users — `service/input_rules.dart`); **P63** Histoire snaps to today on open *and* when an old instance is uncovered, plus an "Aujourd'hui" button while browsing. 21 new tests (19 + 2 widget tests) |
 | Batch 5 | `37a7e51` | **P42 ✅ P43 ✅ P44 ✅ P45 ✅ P47 ✅ P49 ✅ P50 ✅** — global error handler (`runZonedGuarded` + `PlatformDispatcher.onError` + `FlutterError.onError` → "Une erreur est survenue — réessayez", rate-limited; ErrorBoundary plugged in via `MaterialApp.builder`); 10 context-after-await guards; `dispose()` on all held controllers + dialog fields; dead code deleted (`providers/game_session_provider.dart`, `widgets/bestSellr.dart` incl. its shadowing Product, `comment_dialog.dart`, `order_details.dart`, route `/order/edit/:orderId`, `AuthService.getUsers/verifyPin`, `_printTextLogo`, `_formatPaymentMethod`, unused imports → **6 warnings → 0**); **P47** `setAuthMode`/`getAuthMode` share ONE spelling `per_order` (reader also accepts old `perOrder`) — "PIN par commande" cannot forget itself; **P49** router traces + receipt logging debug-only; **P50** games clock ticks via `ValueNotifier` (only the 2 moving lines rebuild), sessions cached, DB asked ≤ every 10s (~360 queries/hour instead of ~3,600). 7 new tests (`test/batch5_auth_and_errors_test.dart`) |
 | Batch 6 | (commit of 2026-10-20, see git log) | **P51 ✅ P52 ✅ P53 ✅ P54 ✅ P55 ✅ P56 ✅ P57 ✅** — owner stated the app is used **mainly on Android tablets**. P53 closed (already in git since batch 2); P55 broken template test deleted; P54 pubspec = real identity (`2.0.0+20002`, French description, 5 dead packages removed); P56 router built ONCE (held by Easify state) + Histoire→Modifier through go_router; P57 live providers (`storeConfigProvider`/`printerConfigProvider`/`allUsersProvider` — settings & users apply immediately, no restart); P51 dev-panel export buttons deleted (Android-only folder, silent no-op on Windows) + `cancelSessionNotification` deleted; **P52** Android: manifest `POST_NOTIFICATIONS`, permission asked once before first alert, growing notification IDs (was `millisecond` 0–999), everything Android-guarded + try/catch, "Partie terminée" alert finally wired to the games auto-end. 6 new tests (`test/batch6_platform_and_live_test.dart`) |
-| Batch 7 | (commit of 2026-10-20, see git log) | **P21 ✅** — owner: "do p21". Categories stay linked by NAME (deliberate: ids would need schema + codegen), and `lib/service/category_service.dart` owns the 3 rules that keep the live link true: **rename cascades** to every product behind the old name in ONE write transaction (`putKeepingProducts`) — products can never be orphaned again; **delete refused while products use it** (count in the French message, checked BEFORE the admin PIN); **edit keeps `displayOrder`** (the old dialog rebuilt the entity without it → every edited category reset to 0 and jumped to the front) and **new categories append at the end** (same old bug: created with 0 = front). Legacy orphans (made before this fix) are NOT auto-repaired — `TEST_BATCH7.md` asks the owner to report if he sees one. 8 new tests (`test/batch7_categories_test.dart`: 5 service + 3 through the real dialog/card) |
+| Batch 7 | (commit of 2026-10-20, see git log) | **P21 ✅** — owner: "do p21". Categories stay linked by NAME (deliberate: ids would need schema + codegen), and `lib/service/category_service.dart` owns the 3 rules that keep the live link true: **rename cascades** to every product behind the old name in ONE write transaction (`putKeepingProducts`) — products can never be orphaned again; **delete refused while products use it** (count in the French message, checked BEFORE the admin PIN); **edit keeps `displayOrder`** (the old dialog rebuilt the entity without it → every edited category reset to 0 and jumped to the front) and **new categories append at the end** (same old bug: created with 0 = front). Legacy orphans (made before this fix) are NOT auto-repaired — the owner is asked
+about them (question inlined in section 4). 8 new tests (`test/batch7_categories_test.dart`: 5 service + 3 through the real dialog/card) |
 | Earlier (pre-batch, security/DB) | per Decisions log in PROBLEMS.md | P01 ⚠️ keep · P02 ✅ · P03 ✅ (dev panel PIN 9999) · P04 ✅ (PIN-gated maintenance) · P05 ⚠️ by design · P06 ✅ · P07 ✅ (desktop DB in %LOCALAPPDATA%) · P08 ✅ fail-closed activation · P09 ⚠️ · P10 ⚠️ (owner must back up debug.keystore) · P11 ❌ not a problem · P12 ✅ transactions · P59 ✅ category dropdown crash |
 
 ## 4. What's NEXT (in order)
 
-1. **Owner tests batch 7 + batch 6** (`TEST_BATCH7.md` first — categories,
-   ~5 min, incl. the legacy-orphan question; then `TEST_BATCH6.md` — live
-   settings, navigation, dev panel). Fix only what they report, on their say.
-2. **APK** — built (`Documents\Easify-v2.0.0.2.apk`), line 2.0.0.3 **pushed to
-   GitHub** incl. the keystore (owner's informed call on the public repo).
-   Install on a tablet that doesn't have the app → verify P52 notifications on
-   real Android. Old tablets stay on their old app (their key is lost — owner
-   accepted; migration = nice-to-have, not needed).
+1. **Owner tests — inlined checklists (all TEST_BATCHN files deleted by owner's
+   order); fix only what he reports, on his say:**
+   - **Batch 7 / categories (~5 min):** rename a category that has products →
+     its products must show under the new name on the order screen and the card
+     must **not** jump to the front; try deleting a category that still has
+     products → refusal message with the count, nothing lost, **no PIN asked**;
+     an empty category still deletes behind the admin PIN; a new category
+     appears **last**. **Question for him:** did a product ever vanish from the
+     order screen *before* this fix (an old rename/delete)? If yes → propose a
+     one-time legacy-orphan repair tool (only if he really has some).
+   - **Batch 6:** settings changed in Paramètres appear everywhere immediately
+     (no restart); Histoire → Modifier never resets navigation to home; dev
+     panel (5 taps + 9999) still opens; **on a real Android device:** permission
+     asked once, then the "Partie terminée" alert when a prepaid party ends.
+2. **APK for version 3** — `Documents\Easify-v3.0.0.apk` (rebuilt after the
+   version bump; the old v2 copy was deleted). Line **3.0.0.0 pushed to GitHub**
+   incl. the keystore (owner's informed call on the public repo). Install on a
+   tablet that doesn't have the app → verify P52 notifications on real Android.
+   Old tablets stay on their old app (their key is lost — owner accepted;
+   migration = nice-to-have, not needed).
 3. **Leftovers, individually yes/no**: P20 (ObjectBox indexes — **codegen risk: requires
    objectbox.g.dart regeneration which HANGS; propose deferring or doing on another
    machine**), P46 (repository layer drift — recommend defer), P48
@@ -134,8 +152,9 @@ workflow rules, environment commands, what's done, what's next.
 3. `flutter analyze` ≤ 178 infos, 0 errors.
 4. `flutter build windows --debug`, stop old Easify, start new one.
 5. Update `PROBLEMS.md` rows + Decisions log entry (with the owner's own words when
-   they made the call); write `TEST_BATCHN.md` checklist (simple steps, French UI
-   labels, expected results).
+   they made the call); give the owner the test steps **in chat** (simple steps,
+   French UI labels, expected results — no checklist files since the 2026-10-20
+   cleanup).
 6. Commit with a descriptive message referencing the P-numbers.
 
 Files that are the "spine" of the app for money/time:
