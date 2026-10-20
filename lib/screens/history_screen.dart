@@ -8,7 +8,7 @@ import '../objectbox.g.dart';
 import 'package:objectbox/objectbox.dart';
 import '../models/order.dart' as order_model;
 import '../service/printer_helper.dart';
-import 'order_screen.dart' as custom_order_screen;
+import '../router.dart';
 import '../service/business_day_helper.dart';
 import 'package:intl/intl.dart';
 import '../widgets/business_day_filter.dart';
@@ -733,13 +733,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     }
 
     if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              custom_order_screen.OrderScreen(orderToEdit: order),
-        ),
-      ).then((_) => setState(() {}));
+      // P56: through the router like everything else (was a direct
+      // Navigator push). Coming back here still refreshes the list.
+      context
+          .push(AppRoutes.order,
+              extra: OrderRouteExtras(orderToEdit: order))
+          .then((_) {
+        if (mounted) setState(() {});
+      });
     }
   }
 

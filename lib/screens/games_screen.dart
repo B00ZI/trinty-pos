@@ -8,6 +8,7 @@ import '../models/app_user.dart';
 import '../objectbox.g.dart';
 import '../service/game_session_service.dart';
 import '../service/auth_service.dart';
+import '../service/notification_service.dart';
 import '../service/printer_helper.dart';
 import '../widgets/user_selection_dialog.dart';
 import '../widgets/payment_dialog.dart';
@@ -60,6 +61,11 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
             .add(Duration(minutes: session.limitedDurationMinutes));
         if (now.isAfter(endAt)) {
           GameSessionService.endSession(session, ref.read(objectBoxProvider));
+          // P52: the tablet tells the server the prepaid party is over
+          // ("Poste 1 — le temps est écoulé"). Android-only inside.
+          NotificationService.showHeadsUpNotification(
+              title: 'Partie terminée',
+              body: '${session.postLabel} — le temps est écoulé');
           endedAny = true;
         }
       }

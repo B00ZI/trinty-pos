@@ -17,10 +17,18 @@ final authModeProvider = FutureProvider<AuthMode>((ref) async {
   return await AuthService.getAuthMode();
 });
 
-// All users
+// P57: the users list as a live stream (fires on any add/change/delete).
+final _usersStreamProvider = StreamProvider<List<AppUser>>((ref) {
+  return ref.watch(userRepositoryProvider).watchAll();
+});
+
+// All users — P57: live. It used to read ONCE at startup, so a user added
+// in Paramètres did not appear on the Dashboard until an app restart.
 final allUsersProvider = Provider<List<AppUser>>((ref) {
-  final repo = ref.watch(userRepositoryProvider);
-  return repo.getAll();
+  // First paint shows what is already in the box; the stream keeps it fresh.
+  final fromStream = ref.watch(_usersStreamProvider).value;
+  if (fromStream != null) return fromStream;
+  return ref.watch(userRepositoryProvider).getAll();
 });
 
 // Check if current user is admin

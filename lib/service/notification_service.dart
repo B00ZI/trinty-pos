@@ -1,55 +1,58 @@
-import 'package:audioplayers/audioplayers.dart';
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-// import 'package:timezone/timezone.dart' as tz;
-// import '../models/game_session.dart';
 
+/// P52: notifications work where they can work (Android), ask for the
+/// permission Android 13+ requires, and can never crash the app on a
+/// platform that does not support them (Windows throws UnimplementedError
+/// for every call — this service used to run there unguarded).
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  static final AudioPlayer _audioPlayer = AudioPlayer();
+  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
-  static Future<void> playNotificationSound() async {
+  // P52: IDs used to be DateTime.now().millisecond — a number between 0
+  // and 999! Two alerts close in time silently replaced each other.
+  // A simple growing counter cannot collide.
+  static int _nextNotificationId = 0;
+
+  static Future<void> init() async {
+    if (!Platform.isAndroid) return; // only Android ever shows alerts
     try {
-      _audioPlayer.audioCache.prefix = '';
-      await _audioPlayer.play(AssetSource('lib/assets/notif.mp3'));
+      const settings = InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'));
+      await _notificationsPlugin.initialize(settings);
     } catch (e) {
-      print('Error playing sound: $e');
+      if (kDebugMode) debugPrint('Notification init failed: $e');
     }
   }
 
-  static Future<void> init() async {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-    
-    await _notificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (details) {
-        // Handle notification tap
-      },
-    );
-  }
-
-  // scheduleSessionEnd removed - dynamic sessions do not have a fixed end time
-
-  static Future<void> showHeadsUpNotification({required String title, required String body}) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'game_sessions_alerts',
-      'Game Session Alerts',
-      channelDescription: 'High priority alerts for finished games',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-    await _notificationsPlugin.show(
-      DateTime.now().millisecond,
-      title,
-      body,
-      platformChannelSpecifics,
-    );
-  }
-
-  static Future<void> cancelSessionNotification(int sessionId) async {
-    await _notificationsPlugin.cancel(sessionId);
+  /// "La partie est terminée" — shown when a prepaid party runs out by
+  /// itself (games screen timer), so the server knows to tell the client.
+  static Future<void> showHeadsUpNotification(
+      {required String title, required String body}) async {
+    if (!Platform.isAndroid) return;
+    try {
+      final android = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      // P52: Android 13+ demands the POST_NOTIFICATIONS permission —
+      // asked here, once, before the first alert (declared in the manifest).
+      await android?.requestNotificationsPermission();
+      const details = NotificationDetails(
+          android: AndroidNotificationDetails(
+        'game_sessions_alerts',
+        'Game Session Alerts',
+        channelDescription: 'High priority alerts for finished games',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      ));
+      await _notificationsPlugin
+          .show(_nextNotificationId++, title, body, details);
+    } catch (e) {
+      if (kDebugMode) debugPrint('Notification failed: $e');
+    }
   }
 }

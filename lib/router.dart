@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Easify/models/app_user.dart';
+import 'package:Easify/models/order.dart' as order_model;
 import 'theme/app_colors.dart';
 import 'screens/order_screen.dart';
 import 'screens/history_screen.dart';
@@ -29,12 +29,19 @@ class AppRoutes {
 class OrderRouteExtras {
   final AppUser? assignedUser;
   final String? initialCategory;
+  // P56: Histoire → Modifier used to push the screen directly with
+  // Navigator (bypassing the router); the order now travels as an extra.
+  final order_model.Order? orderToEdit;
 
-  OrderRouteExtras({this.assignedUser, this.initialCategory});
+  OrderRouteExtras(
+      {this.assignedUser, this.initialCategory, this.orderToEdit});
 }
 
 // ─── Router builder ──────────────────────────────────────────────────────────
-GoRouter createRouter(WidgetRef ref) {
+/// P56: built ONCE for the app's whole life (held by the Easify state) —
+/// it used to be rebuilt on every root `build()`, which threw the shop
+/// back to the home screen whenever anything redrew the whole app.
+GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: AppRoutes.home,
     // P49: GoRouter traces exist in debug builds only — a tablet in the
@@ -82,6 +89,7 @@ GoRouter createRouter(WidgetRef ref) {
             child: OrderScreen(
               assignedUser: extras?.assignedUser,
               initialCategory: extras?.initialCategory,
+              orderToEdit: extras?.orderToEdit,
             ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {

@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:go_router/go_router.dart';
 import 'package:Easify/objectbox.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'models/order_counter.dart';
@@ -105,14 +106,22 @@ Future<void> main() async {
 final GlobalKey<ScaffoldMessengerState> rootMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 
-class Easify extends ConsumerWidget {
+class Easify extends ConsumerStatefulWidget {
   final ObjectBox objectbox;
   const Easify({super.key, required this.objectbox});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final router = createRouter(ref);
+  ConsumerState<Easify> createState() => _EasifyState();
+}
 
+class _EasifyState extends ConsumerState<Easify> {
+  // P56: the navigation map is built ONCE for the app's whole life.
+  // It used to be rebuilt on every root build(), which threw the shop
+  // back to the home screen whenever the whole app redrew.
+  late final GoRouter _router = createAppRouter();
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       scaffoldMessengerKey: rootMessengerKey,
       title: 'Easify',
@@ -131,7 +140,7 @@ class Easify extends ConsumerWidget {
       ],
       locale: const Locale('fr', 'FR'),
       theme: AppTheme.light,
-      routerConfig: router,
+      routerConfig: _router,
     );
   }
 }

@@ -1,7 +1,7 @@
-import 'dart:io';
+// P51: dart:io + path_provider removed with the export buttons — they
+// only served the Android-only folder the dead exports wrote to.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import '../objectbox.g.dart';
 import '../models/order.dart' as order_model;
@@ -219,158 +219,6 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
     }
   }
 
-  Future<void> _exportDb() async {
-    try {
-      final storePath = ref.read(objectBoxProvider).store.directoryPath;
-      final externalDir = await getExternalStorageDirectory();
-
-      if (externalDir != null) {
-        final backupDir = Directory(
-            '${externalDir.path}/EasifyBackup_${DateTime.now().millisecondsSinceEpoch}');
-        await backupDir.create(recursive: true);
-
-        final dbDir = Directory(storePath);
-        for (final entity in dbDir.listSync()) {
-          if (entity is File) {
-            final fileName = entity.path.split(Platform.pathSeparator).last;
-            await entity.copy('${backupDir.path}/$fileName');
-          }
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('DB exported to:\n${backupDir.path}', maxLines: 3)),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _exportSql() async {
-    try {
-      final store = ref.read(objectBoxProvider).store;
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir == null) return;
-
-      final fileName = 'Easify_export_${DateTime.now().toIso8601String()}.sql';
-      final outFile = File('${externalDir.path}/$fileName');
-      final sb = StringBuffer();
-
-      String esc(Object? v) {
-        if (v == null) return 'NULL';
-        final s = v.toString();
-        return "'" + s.replaceAll("'", "''") + "'";
-      }
-
-      // Export Products
-      final productBox = store.box<Product>();
-      final products = productBox.getAll();
-      sb.writeln('-- Products');
-      for (final p in products) {
-        sb.writeln(
-            'INSERT INTO products (id, name, price, category, description, imageUrl, isAvailable, displayOrder) VALUES ('
-            '${p.id}, ${esc(p.name)}, ${p.price}, ${esc(p.category)}, ${esc(p.description)}, ${esc(p.imageUrl)}, ${p.isAvailable ? 1 : 0}, ${p.displayOrder});');
-      }
-      sb.writeln();
-
-      // Export Users
-      final userBox = store.box<AppUser>();
-      final users = userBox.getAll();
-      sb.writeln('-- Users');
-      for (final u in users) {
-        sb.writeln(
-            'INSERT INTO users (id, name, pin, isAdmin, createdAt) VALUES ('
-            '${u.id}, ${esc(u.name)}, ${esc(u.pin)}, ${u.isAdmin ? 1 : 0}, ${esc(u.createdAt.toIso8601String())});');
-      }
-      sb.writeln();
-
-      // Export StoreConfig
-      final cfgBox = store.box<StoreConfig>();
-      final cfgs = cfgBox.getAll();
-      sb.writeln('-- StoreConfig');
-      for (final c in cfgs) {
-        sb.writeln(
-            'INSERT INTO store_config (id, storeName, storePhone, storeLogoPath, wifiPassword, dayStartHour, dayStartMinute, dayEndHour, dayEndMinute, isSurgePriceEnabled, surgePriceAmount, surgeProductIds) VALUES ('
-            '${c.id}, ${esc(c.storeName)}, ${esc(c.storePhone)}, ${esc(c.storeLogoPath)}, ${esc(c.wifiPassword)}, ${c.dayStartHour}, ${c.dayStartMinute}, ${c.dayEndHour}, ${c.dayEndMinute}, ${c.isSurgePriceEnabled ? 1 : 0}, ${c.surgePriceAmount}, ${esc(c.surgeProductIds.join(","))});');
-      }
-      sb.writeln();
-
-      // Export Orders and OrderItems
-      final ruciBox = store.box<order_model.Order>();
-      final orders = ruciBox.getAll();
-      sb.writeln('-- Orders');
-      for (final o in orders) {
-        final userId =
-            o.user.targetId == 0 ? 'NULL' : o.user.targetId.toString();
-        sb.writeln(
-            'INSERT INTO orders (id, orderNumber, date, isDeleted, isEdited, relatedGameSessionId, userId) VALUES ('
-            '${o.id}, ${o.orderNumber}, ${esc(o.date.toIso8601String())}, ${o.isDeleted ? 1 : 0}, ${o.isEdited ? 1 : 0}, ${o.relatedGameSessionId ?? 'NULL'}, ${userId});');
-
-        // items
-        for (final item in o.items) {
-          final prodId = item.product.target?.id ?? 0;
-          final extrasJson = item.extraQuantitiesJson != null
-              ? item.extraQuantitiesJson!.replaceAll("'", "''")
-              : '';
-          sb.writeln(
-              'INSERT INTO order_items (id, orderId, productId, quantity, extraQuantitiesJson, price, productName) VALUES ('
-              '${item.id}, ${o.id}, ${prodId}, ${item.quantity}, ${esc(extrasJson)}, ${item.price ?? 'NULL'}, ${esc(item.productName)});');
-        }
-      }
-      sb.writeln();
-
-      // Export GameSessions
-      final gameBox = store.box<GameSession>();
-      final games = gameBox.getAll();
-      sb.writeln('-- GameSessions');
-      for (final g in games) {
-        sb.writeln(
-            'INSERT INTO game_sessions (id, postId, tierId, postLabel, partyNumber, tierLabel, startTime, endTime, status, ratePerHour, attributedUserId, relatedOrderId, isLimitedDuration, limitedDurationMinutes) VALUES ('
-            '${g.id}, ${g.postId}, ${g.tierId}, ${esc(g.postLabel)}, ${g.partyNumber}, ${esc(g.tierLabel)}, ${esc(g.startTime.toIso8601String())}, ${g.endTime != null ? esc(g.endTime!.toIso8601String()) : 'NULL'}, ${g.status}, ${g.ratePerHour}, ${g.attributedUserId ?? 'NULL'}, ${g.relatedOrderId ?? 'NULL'}, ${g.isLimitedDuration ? 1 : 0}, ${g.limitedDurationMinutes});');
-      }
-      sb.writeln();
-
-      // Export Expenses
-      final expBox = store.box<Expense>();
-      final exps = expBox.getAll();
-      sb.writeln('-- Expenses');
-      for (final ex in exps) {
-        sb.writeln('INSERT INTO expenses (id, title, amount, date) VALUES ('
-            '${ex.id}, ${esc(ex.title)}, ${ex.amount}, ${esc(ex.date.toIso8601String())});');
-      }
-      sb.writeln();
-
-      // Export DailyFunds
-      final dfBox = store.box<DailyFunds>();
-      final dfs = dfBox.getAll();
-      sb.writeln('-- DailyFunds');
-      for (final d in dfs) {
-        sb.writeln('INSERT INTO daily_funds (id, date, amount) VALUES ('
-            '${d.id}, ${esc(d.date.toIso8601String())}, ${d.amount});');
-      }
-
-      await outFile.writeAsString(sb.toString());
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('SQL exported to: ${outFile.path}')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Export SQL failed: $e')));
-      }
-    }
-  }
-
   void _deleteAllHistory() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -424,16 +272,10 @@ class _DevPanelScreenState extends ConsumerState<DevPanelScreen> {
             onPressed: _selectDateRange,
             tooltip: 'Filtrer par date',
           ),
-          IconButton(
-            icon: Icon(Icons.article, color: AppColors.surface0),
-            onPressed: _exportSql,
-            tooltip: 'Export SQL',
-          ),
-          IconButton(
-            icon: Icon(Icons.save_alt, color: AppColors.surface0),
-            onPressed: _exportDb,
-            tooltip: 'Export DB',
-          ),
+          // P51: the two former export buttons (Export SQL / Export DB)
+          // are gone — they wrote to an Android-only folder, so on
+          // Windows they did nothing at all. The real Sauvegarde button
+          // (Paramètres) does exports on both platforms.
         ],
       ),
       body: _isLoading
