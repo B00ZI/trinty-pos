@@ -13,7 +13,7 @@ server, no account needed to sell.
 | **Branches** | `2.0.0.2` = production line · `2.0.0.3` = current fix line (this repo state) |
 | **Platforms** | Windows 10/11 x64 · Android tablets (side-loaded APK — no Play Store) |
 | **Stack** | Flutter 3.47.x stable · ObjectBox (embedded database) · GoRouter · TCP printing (port 91000) |
-| **Quality** | 84 automated tests passing · `flutter analyze`: 0 errors, 0 warnings |
+| **Quality** | 92 automated tests passing · `flutter analyze`: 0 errors, 0 warnings |
 
 ---
 
@@ -153,7 +153,7 @@ flutter build apk --release
 # always pass explicit test files (bare `flutter test` is not used)
 flutter test test\batch1_printing_test.dart test\batch2_extras_test.dart test\batch2_money_parser_test.dart `
   test\batch3_business_day_test.dart test\batch4_backup_and_guards_test.dart test\p63_history_today_test.dart `
-  test\batch5_auth_and_errors_test.dart test\batch6_platform_and_live_test.dart
+  test\batch5_auth_and_errors_test.dart test\batch6_platform_and_live_test.dart test\batch7_categories_test.dart
 flutter analyze   # baseline: 0 errors / 0 warnings / ≤178 infos
 ```
 

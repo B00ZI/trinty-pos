@@ -16,6 +16,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:Easify/service/data_backup_service.dart';
 import 'package:Easify/service/money_parser.dart';
 import 'package:Easify/service/input_rules.dart';
+import 'package:Easify/service/category_service.dart';
 import 'package:Easify/providers/dashboard_provider.dart';
 import 'package:Easify/widgets/admin_pin_dialog.dart';
 import 'package:Easify/theme/app_colors.dart';
@@ -778,11 +779,22 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
             ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
+                    final store = ref.read(objectBoxProvider).store;
                     final newCat = Category(
                         id: cat?.id ?? 0,
                         name: _nameController.text.trim(),
-                        imageUrl: _selectedImagePath);
-                    _categoryBox.put(newCat);
+                        imageUrl: _selectedImagePath,
+                        // P21: editing keeps its place in the grid — the
+                        // old dialog rebuilt the entity without
+                        // displayOrder, so every edited category silently
+                        // reset to 0 and jumped to the front.
+                        displayOrder: cat?.displayOrder ??
+                            CategoryService.nextDisplayOrder(store));
+                    // P21: a rename carries its products along, or they
+                    // stay tagged with the old name and become
+                    // unreachable on the order screen.
+                    CategoryService.putKeepingProducts(store, newCat,
+                        oldName: cat?.name);
                     Navigator.pop(ctx);
                   }
                 },
@@ -877,8 +889,20 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
                     onTap: () {},
                     onEdit: () => _showCategoryDialog(c),
                     onDelete: () async {
-                      // Deleting a category unlinks its products (P06/P21):
-                      // destructive → admin PIN.
+                      final store = ref.read(objectBoxProvider).store;
+                      // P21: a category that still holds products can never
+                      // be deleted — its products would become unreachable
+                      // on the order screen (no card shows them anymore).
+                      final used = CategoryService.usageCount(store, c.name);
+                      if (used > 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(used == 1
+                              ? '« ${c.name} » : 1 produit l\'utilise encore — changez sa catégorie d\'abord.'
+                              : '« ${c.name} » : $used produits l\'utilisent encore — changez-leur de catégorie d\'abord.'),
+                        ));
+                        return;
+                      }
+                      // Empty category — deleting is destructive → admin PIN.
                       final isAdmin = await AdminPinDialog.verify(
                           context, ref.read(objectBoxProvider));
                       if (!context.mounted) return;
