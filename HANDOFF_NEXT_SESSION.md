@@ -166,4 +166,8 @@ Signing: **no key.properties** — Flutter signs release APKs with this machine'
 debug keystore `C:\Users\HP\.android\debug.keystore` (auto-created 2026-10-20).
 That IS the app's real identity for anything installed from here on; back it up
 (`%USERPROFILE%\.android\debug.keystore`) or a future PC cannot update them.
+**Copy kept for the owner**: `C:\Users\HP\Documents\cle-de-signature-easify.keystore`
+(owner told to store it somewhere permanent — this is a temporary job PC). Debug
+keystore credentials (standard): store password `android`, alias `androiddebugkey`,
+key password `android` — needed to wire `android/key.properties` on a future machine.
 `applicationId` remains `com.example.Easify` — same id as the old tablet app.
