@@ -34,9 +34,16 @@ workflow rules, environment commands, what's done, what's next.
   freebies for friends and pay-later customers are everyday features. French UI, DH.
 - **The owner uses the app mainly on ANDROID tablets** (stated 2026-10-20, batch 6) —
   the Windows build here is the dev/test mirror. Any platform-specific work must
-  respect Android first. **Open question with the owner**: how do they install APKs
-  today? This machine has **no Android SDK** (`flutter doctor` ✗), so no APK can be
-  built here yet.
+  respect Android first. **APK pipeline is SET UP on this machine** (2026-10-20, see
+  "Building the APK" below). Distribution = hand-install, **no Play Store**.
+- **Signing-key reality (owner's decision, 2026-10-20)**: the tablets already run an
+  old APK signed by a **different machine's key** (that PC is gone, key lost). Smooth
+  in-place updates of those old tablets are therefore **impossible** — owner accepts:
+  old tablets keep the old app forever; **new/fresh installs** get APKs built here.
+  All APKs from this machine sign automatically with `%USERPROFILE%\.android\debug.keystore`
+  (auto-created 2026-10-20) — back it up if this machine's identity matters later.
+  `applicationId` stays `com.example.Easify` (same as old app, deliberate — new key +
+  same id would just be refused; renaming id would fork the app into two icons).
 - Release builds (tablets) **skip Flutter assertions** — bugs can be silent there,
   loud in Windows debug (P59 lesson).
 - **Extras are per-unit (P61, owner's option B)**: an extra's count applies to every
@@ -104,9 +111,11 @@ workflow rules, environment commands, what's done, what's next.
 
 1. **Owner tests batch 6** with `TEST_BATCH6.md` (live settings, navigation,
    dev panel). Fix only what they report, on their say.
-2. **The APK question (asked 2026-10-20, awaiting answer)**: how does the owner
-   install APKs on the Android tablets today? No Android SDK on this machine —
-   if he wants, install the SDK here and add "build APK" to the workflow.
+2. **APK pipeline ✅ DONE (2026-10-20)** — see "Building the APK" below. First
+   APK: `C:\Users\HP\Documents\Easify-v2.0.0.2.apk` (v2.0.0 / code 20002).
+   The APK question is **closed** by the owner's decision: old tablets stay on
+   the old app (their key is lost with the other PC); APKs from here are for
+   fresh installs; updates between *my* versions work normally.
 3. **Leftovers, individually yes/no**: P20 (ObjectBox indexes — **codegen risk: requires
    objectbox.g.dart regeneration which HANGS; propose deferring or doing on another
    machine**), P21 (categories linked by name — note P30 now blocks duplicate category
@@ -133,3 +142,28 @@ Files that are the "spine" of the app for money/time:
 `funds_repository.dart` (all end-exclusive ranges), `lib/models/order_item.dart`
 (extras JSON + `__v:2`), `lib/providers/order_provider.dart` (cart), 
 `lib/service/money_parser.dart` (input parsing).
+
+## 6. Building the APK (Android) — set up 2026-10-20
+
+Toolchain (no admin, no Android Studio):
+- **JDK 17**: `C:\dev\android-tools\jdk\jdk-17.0.20.1+1` (Temurin zip).
+- **Android SDK**: `C:\dev\android-sdk` (cmdline-tools + platform-tools +
+  platforms;android-36 + build-tools;36.0.0; licenses accepted).
+- `flutter config --android-sdk C:\dev\android-sdk` already set.
+- android/ template bumped to current Flutter minimums: Gradle **8.14.3**
+  (wrapper), AGP **8.11.1**, Kotlin **2.2.20** (settings.gradle.kts);
+  `android.builtInKotlin=false` + `android.newDsl=false` added by Flutter migrator.
+
+Build command (PowerShell, from the worktree):
+```powershell
+$env:JAVA_HOME = 'C:\dev\android-tools\jdk\jdk-17.0.20.1+1'
+$env:Path = "$env:JAVA_HOME\bin;$env:Path;C:\dev\flutter\bin"
+flutter build apk --release
+# → build\app\outputs\flutter-apk\app-release.apk  (~72 MB, takes ~17 min first time)
+```
+
+Signing: **no key.properties** — Flutter signs release APKs with this machine's
+debug keystore `C:\Users\HP\.android\debug.keystore` (auto-created 2026-10-20).
+That IS the app's real identity for anything installed from here on; back it up
+(`%USERPROFILE%\.android\debug.keystore`) or a future PC cannot update them.
+`applicationId` remains `com.example.Easify` — same id as the old tablet app.
