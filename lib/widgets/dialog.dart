@@ -12,6 +12,8 @@ import '../theme/app_colors.dart';
 void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
   try {
     final dailyData = await _getAllDailyData(objectbox);
+    // P43: the screen that opened us may be gone while we loaded.
+    if (!context.mounted) return;
 
     showDialog(
       context: context,
@@ -211,6 +213,8 @@ void showDailyDataDialog(BuildContext context, ObjectBox objectbox) async {
       ),
     );
   } catch (e) {
+    // P43: the screen that opened us may be gone while we failed.
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Erreur de chargement des données : $e')),
     );

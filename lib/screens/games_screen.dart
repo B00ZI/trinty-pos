@@ -29,37 +29,68 @@ class GamesScreen extends ConsumerStatefulWidget {
 
 class _GamesScreenState extends ConsumerState<GamesScreen> {
   Timer? _timer;
+
+  // P50: the clock texts (elapsed time / running price) listen to this —
+  // only THEY are redrawn every second, not the whole screen.
+  final ValueNotifier<int> _clockTick = ValueNotifier(0);
+
+  // P50: the active sessions are cached in memory; the database is asked
+  // when something changes and at most every 10 seconds — not 60 times a
+  // minute (~3,600 queries/hour before).
+  List<GameSession> _activeSessions = const [];
+  int _ticksSinceDbCheck = 0;
+
   @override
   void initState() {
     super.initState();
+    _refreshActiveSessions();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        _checkLimitedSessions();
+      if (!mounted) return;
+
+      // 1) the clock texts tick
+      _clockTick.value++;
+
+      // 2) prepaid sessions whose time is up end — checked in memory on
+      // the cached list (no query here).
+      var endedAny = false;
+      final now = DateTime.now();
+      for (final session in _activeSessions) {
+        if (!session.isLimitedDuration) continue;
+        final endAt = session.startTime
+            .add(Duration(minutes: session.limitedDurationMinutes));
+        if (now.isAfter(endAt)) {
+          GameSessionService.endSession(session, ref.read(objectBoxProvider));
+          endedAny = true;
+        }
+      }
+      if (endedAny) {
+        _refreshActiveSessions();
+        // A session really ended: the finished card must disappear, so one
+        // full rebuild is allowed — once, not every second.
         setState(() {});
+        return;
+      }
+
+      // 3) the database is re-asked at most every 10 seconds, so a party
+      // started elsewhere appears quickly (P50: ~360 queries/hour).
+      if (++_ticksSinceDbCheck >= 10) {
+        _refreshActiveSessions();
       }
     });
   }
 
-  void _checkLimitedSessions() {
-    final activeSessions = ref.read(objectBoxProvider).gameSessionBox
+  void _refreshActiveSessions() {
+    _ticksSinceDbCheck = 0;
+    _activeSessions = ref.read(objectBoxProvider).gameSessionBox
         .query(GameSession_.status.equals(0))
         .build()
         .find();
-
-    for (final session in activeSessions) {
-      if (session.isLimitedDuration) {
-        final endAt = session.startTime
-            .add(Duration(minutes: session.limitedDurationMinutes));
-        if (DateTime.now().isAfter(endAt)) {
-          GameSessionService.endSession(session, ref.read(objectBoxProvider));
-        }
-      }
-    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _clockTick.dispose();
     super.dispose();
   }
 
@@ -110,6 +141,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
 
     int? userId;
     final authMode = await AuthService.getAuthMode();
+    if (!mounted) return; // P43: the screen may be gone while we waited
     if (authMode == AuthMode.perOrder) {
       final user = await showDialog<AppUser>(
         context: context,
@@ -170,7 +202,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
     });
 
     PrinterHelper.printSessionStartTicket(session, objectbox);
-    setState(() {});
+    setState(() => _refreshActiveSessions());
   }
 
   void _startSession(GamePost post, {bool isQueue = false}) async {
@@ -185,6 +217,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
     final tier = tiers.first;
     int? userId;
       final authMode = await AuthService.getAuthMode();
+      if (!mounted) return; // P43: the screen may be gone while we waited
       if (authMode == AuthMode.perOrder) {
         final user = await showDialog<AppUser>(
           context: context,
@@ -204,6 +237,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
           userId: userId,
           objectbox: ref.read(objectBoxProvider),
         );
+        if (!mounted) return; // P43: the screen may be gone while we queued
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Partie mise en attente pour ${post.label}')));
       } else {
@@ -215,7 +249,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         );
         PrinterHelper.printSessionStartTicket(session, ref.read(objectBoxProvider));
       }
-      setState(() {});
+      setState(() => _refreshActiveSessions());
   }
 
   void _manageSession(GameSession session) async {
@@ -258,7 +292,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                 if (session.isLimitedDuration ||
                     session.relatedOrderId != null) {
                   GameSessionService.endSession(session, ref.read(objectBoxProvider));
-                  setState(() {});
+                  setState(() => _refreshActiveSessions());
                   return;
                 }
 
@@ -327,7 +361,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                   }
 
                   PrinterHelper.printGameTicket(session, objectbox);
-                  setState(() {});
+                  setState(() => _refreshActiveSessions());
                 }
               },
             ),
@@ -444,11 +478,6 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                               ? AppColors.warning
                               : AppColors.success);
 
-                      Duration remaining = Duration.zero;
-                      if (isBusy) {
-                        remaining = DateTime.now().difference(session.startTime);
-                      }
-
                       return StreamBuilder<List<GameSession>>(
                         stream: ref.read(objectBoxProvider).gameSessionBox
                             .query(GameSession_.post
@@ -491,29 +520,47 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                                               style: TextStyle(
                                                   color: textColor, fontSize: 12)),
                                           SizedBox(height: AppSpacing.space1),
-                                          Text(
-                                            session.isLimitedDuration
-                                                ? _formatDuration(() {
-                                                    final diff = session.startTime
-                                                        .add(Duration(
-                                                            minutes: session
-                                                                .limitedDurationMinutes))
-                                                        .difference(DateTime.now());
-                                                    return diff.isNegative
-                                                        ? Duration.zero
-                                                        : diff;
-                                                  }())
-                                                : _formatDuration(remaining),
-                                            style: TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.bold,
-                                              color: textColor,
-                                            ),
+                                          // P50: these two lines are the only
+                                          // thing on this screen that changes
+                                          // every second — only they rebuild.
+                                          ListenableBuilder(
+                                            listenable: _clockTick,
+                                            builder: (context, _) {
+                                              final Duration shown;
+                                              if (session.isLimitedDuration) {
+                                                final diff = session.startTime
+                                                    .add(Duration(
+                                                        minutes: session
+                                                            .limitedDurationMinutes))
+                                                    .difference(DateTime.now());
+                                                shown = diff.isNegative
+                                                    ? Duration.zero
+                                                    : diff;
+                                              } else {
+                                                shown = DateTime.now()
+                                                    .difference(
+                                                        session.startTime);
+                                              }
+                                              return Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    _formatDuration(shown),
+                                                    style: TextStyle(
+                                                      fontSize: 22,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: textColor,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                      '${session.currentCalculatedPrice.toStringAsFixed(2)} DH',
+                                                      style: TextStyle(
+                                                          color: textColor,
+                                                          fontSize: 14)),
+                                                ],
+                                              );
+                                            },
                                           ),
-                                          Text(
-                                              '${session.currentCalculatedPrice.toStringAsFixed(2)} DH',
-                                              style: TextStyle(
-                                                  color: textColor, fontSize: 14)),
                                           if (queuedSessions.isNotEmpty)
                                             Padding(
                                               padding:

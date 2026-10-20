@@ -5,8 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../models/store_config.dart';
 import '../objectbox.dart';
-import '../objectbox.g.dart';
-import 'package:objectbox/objectbox.dart';
 import '../service/printer_helper.dart';
 import '../service/wifi_password_store.dart';
 import '../theme/app_colors.dart';

@@ -54,12 +54,14 @@ workflow rules, environment commands, what's done, what's next.
   → `Stop-Process -Name Easify -Force -ErrorAction SilentlyContinue`
   → `Start-Process "...\build\windows\x64\runner\Debug\Easify.exe"`.
 - Analyze: exits code 1 when infos exist (**normal**); PowerShell shows harmless
-  NativeCommandError noise on stderr. Baseline: **176 infos / 0 errors** — stay ≤ 178.
+  NativeCommandError noise on stderr. Baseline: **161 infos / 0 errors / 0 warnings** —
+  stay ≤ 178 infos, 0 errors (batch 5 removed the last 6 warnings).
 - Tests: **always pass file paths explicitly**
   (`flutter test test/batch1_printing_test.dart test/batch2_extras_test.dart
   test/batch2_money_parser_test.dart test/batch3_business_day_test.dart
-  test/batch4_backup_and_guards_test.dart test/p63_history_today_test.dart`) — bare
-  `flutter test` hung once. Baseline: **71/71 pass**.
+  test/batch4_backup_and_guards_test.dart test/p63_history_today_test.dart
+  test/batch5_auth_and_errors_test.dart`) — bare `flutter test` hung once, and there is
+  no `test/objectbox_test.dart` (that name fails to load). Baseline: **78/78 pass**.
 - Real-store tests need `objectbox.dll` on PATH:
   add `;C:\Users\HP\Documents\bozi\trinty-pos-2.0.0.2\build\windows\x64\runner\Debug`
   to `$env:Path` before `flutter test`; without it the batch3 store group **skips
@@ -73,8 +75,8 @@ workflow rules, environment commands, what's done, what's next.
 - Owner's current app state (2026-10-19 22:16): **"hours" mode active with reset
   09:00** left over from their own B2/B3 test; they were told how to switch back to
   "Jour standard". Test data: orders #17–#35 dated 19/10 (orders #1–#16 deleted
-  earlier). **Batch-4 + P63 build running since 2026-10-20 17:32** (owner is testing
-  P23/P24/P26/P30/P63 with `TEST_BATCH4.md`, section 5 = P63).
+  earlier). **Batch-5 build running since 2026-10-20 18:29** (owner is testing
+  P42/P43/P44/P45/P47/P49/P50 with `TEST_BATCH5.md`).
 - Test helper added in batch 4: `ObjectBox.attach(Store)` wraps a manually opened
   store with the app's boxes (used by the real-DB tests; no schema/codegen impact).
 
@@ -87,24 +89,23 @@ workflow rules, environment commands, what's done, what's next.
 | P62 (found by owner while testing P61) | `fa1ee24` | extra − button targets its own line (was dead outside extras mode; could hit wrong line) |
 | Batch 3 | `191a952` | **P19 ✅ P27 ✅ P28 ✅** — one clock for the whole app: funds/expenses/day-dialog/units-sold/auto-clean on the business day (P19b fixed along the way); settings = owner's 2-questions idea with calculated reset (P27); end-exclusive ranges everywhere + picker stores exclusive end (P28). 13 new tests |
 | Batch 4 | `b0c5615` + P63 follow-up (same session) | **P23 ✅ P24 ✅ P26 ✅ P30 ✅ P63 ✅** — cart from an old order dropped on a fresh Nouvelle Commande (drafts kept); paid game = order+counter+session+link in ONE sealed tx (both spots); **real full backup v2** (one Sauvegarde button → Exporter/Importer, export by sections, import asks "Ce fichier contient…" first, never wipes, no Wi-Fi password in files, v1 files still import); price 0 ok / negative refused / unique names (products, categories, users — `service/input_rules.dart`); **P63** Histoire snaps to today on open *and* when an old instance is uncovered, plus an "Aujourd'hui" button while browsing. 21 new tests (19 + 2 widget tests) |
+| Batch 5 | (commit of 2026-10-20, see git log) | **P42 ✅ P43 ✅ P44 ✅ P45 ✅ P47 ✅ P49 ✅ P50 ✅** — global error handler (`runZonedGuarded` + `PlatformDispatcher.onError` + `FlutterError.onError` → "Une erreur est survenue — réessayez", rate-limited; ErrorBoundary plugged in via `MaterialApp.builder`); 10 context-after-await guards; `dispose()` on all held controllers + dialog fields; dead code deleted (`providers/game_session_provider.dart`, `widgets/bestSellr.dart` incl. its shadowing Product, `comment_dialog.dart`, `order_details.dart`, route `/order/edit/:orderId`, `AuthService.getUsers/verifyPin`, `_printTextLogo`, `_formatPaymentMethod`, unused imports → **6 warnings → 0**); **P47** `setAuthMode`/`getAuthMode` share ONE spelling `per_order` (reader also accepts old `perOrder`) — "PIN par commande" cannot forget itself; **P49** router traces + receipt logging debug-only; **P50** games clock ticks via `ValueNotifier` (only the 2 moving lines rebuild), sessions cached, DB asked ≤ every 10s (~360 queries/hour instead of ~3,600). 7 new tests (`test/batch5_auth_and_errors_test.dart`) |
 | Earlier (pre-batch, security/DB) | per Decisions log in PROBLEMS.md | P01 ⚠️ keep · P02 ✅ · P03 ✅ (dev panel PIN 9999) · P04 ✅ (PIN-gated maintenance) · P05 ⚠️ by design · P06 ✅ · P07 ✅ (desktop DB in %LOCALAPPDATA%) · P08 ✅ fail-closed activation · P09 ⚠️ · P10 ⚠️ (owner must back up debug.keystore) · P11 ❌ not a problem · P12 ✅ transactions · P59 ✅ category dropdown crash |
 
 ## 4. What's NEXT (in order)
 
-1. **Owner tests batch 4 + P63** with `TEST_BATCH4.md` (checklist written
-   2026-10-20, section 5 = P63). Fix only what they report, on their say.
-2. **Batch 5 = P42 P43 P44 P45 P47 P49 P50** (error handling, mounted checks, controller
-   leaks, dead code, auth-mode round-trip bug, release logging, games 1s-timer query leak).
-3. **Batch 6 = P53 P51 P52 P54 P55 P56 P57** (windows/tool not in git!, Windows gaps,
+1. **Owner tests batch 5** with `TEST_BATCH5.md` (games clock, PIN-mode memory,
+   error message). Fix only what they report, on their say.
+2. **Batch 6 = P53 P51 P52 P54 P55 P56 P57** (windows/tool not in git!, Windows gaps,
    Android bits, pubspec cleanup, broken old test, router rebuild, stale providers).
    Note: P51 (dev-panel export broken on Windows) now overlaps with the new full
    backup in P26 — check before doing it twice.
-4. **Leftovers, individually yes/no**: P20 (ObjectBox indexes — **codegen risk: requires
+3. **Leftovers, individually yes/no**: P20 (ObjectBox indexes — **codegen risk: requires
    objectbox.g.dart regeneration which HANGS; propose deferring or doing on another
    machine**), P21 (categories linked by name — note P30 now blocks duplicate category
    names, which shrinks it), P46 (repository layer drift — recommend defer), P48
    (pointycastle override in license path — recommend keep, verify later).
-5. **Section D UI deferrals** (later UI pass): P25 P38 P39 P40 P41 P58.
+4. **Section D UI deferrals** (later UI pass): P25 P38 P39 P40 P41 P58.
 
 ## 5. Per-batch definition of done
 

@@ -443,6 +443,15 @@ class _ProductsListSectionState extends ConsumerState<ProductsListSection> {
     _productBox = ref.read(objectBoxProvider).store.box<Product>();
   }
 
+  @override
+  void dispose() {
+    // P44: the product dialog fields must not outlive this section.
+    _nameController.dispose();
+    _priceController.dispose();
+    _categoryController.dispose();
+    super.dispose();
+  }
+
   void _showProductDialog([Product? product]) {
     // P30: name must be unique (a duplicate name broke the category dropdown
     // and made backup-by-name ambiguous) — snapshot taken when the dialog opens.
@@ -720,6 +729,13 @@ class _CategoriesListSectionState extends ConsumerState<CategoriesListSection> {
   void initState() {
     super.initState();
     _categoryBox = ref.read(objectBoxProvider).store.box<Category>();
+  }
+
+  @override
+  void dispose() {
+    // P44: the category dialog field must not outlive this section.
+    _nameController.dispose();
+    super.dispose();
   }
 
   void _showCategoryDialog([Category? cat]) {

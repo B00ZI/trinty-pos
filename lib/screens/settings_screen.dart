@@ -256,6 +256,14 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
     _loadConfig();
   }
 
+  @override
+  void dispose() {
+    // P44: controllers were kept alive after leaving the screen.
+    _ipAddressController.dispose();
+    _portController.dispose();
+    super.dispose();
+  }
+
   void _loadConfig() {
     final existingConfig = _printerConfigBox.getAll();
     if (existingConfig.isNotEmpty) {
@@ -309,9 +317,11 @@ class _PrinterSettingsSectionState extends ConsumerState<PrinterSettingsSection>
         socket.add(bytes);
         await socket.flush();
         await socket.close();
+        if (!mounted) return; // P43: the section may be gone while printing
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Test envoyé')));
       } catch (e) {
         // Short French message instead of the raw socket dump (timeouts).
+        if (!mounted) return; // P43: the section may be gone while printing
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(PrinterHelper.friendlyError(e))));
       }
@@ -557,6 +567,10 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
         );
       }
     }
+    // P44: the dialog is closed and its text no longer needed — free it.
+    nameController.dispose();
+    pinController.dispose();
+    confirmPinController.dispose();
   }
 
   Future<void> _editUserPin(AppUser user) async {
@@ -661,6 +675,9 @@ class _UserManagementSectionState extends ConsumerState<UserManagementSection> {
         );
       }
     }
+    // P44: the dialog is closed and its text no longer needed — free it.
+    pinController.dispose();
+    confirmPinController.dispose();
   }
 
   Future<void> _deleteUser(AppUser user) async {
@@ -928,6 +945,13 @@ class _SurgePriceSettingsSectionState extends ConsumerState<SurgePriceSettingsSe
     _loadConfig();
   }
 
+  @override
+  void dispose() {
+    // P44: the amount field must not outlive this section.
+    _amountController.dispose();
+    super.dispose();
+  }
+
   void _loadConfig() {
     final configs = ref.read(objectBoxProvider).storeConfigBox.getAll();
     if (configs.isNotEmpty) {
@@ -1188,6 +1212,7 @@ class _AuthModeSectionState extends ConsumerState<AuthModeSection> {
 
   Future<void> _loadAuthMode() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return; // P43: the section may be gone while we waited
     setState(() {
       _authMode = prefs.getString('auth_mode') ?? 'off';
     });
@@ -1204,7 +1229,9 @@ class _AuthModeSectionState extends ConsumerState<AuthModeSection> {
     }
 
     final prefs = await SharedPreferences.getInstance();
+    // P47: the same value AuthService.getAuthMode() reads ('per_order').
     await prefs.setString('auth_mode', mode);
+    if (!mounted) return; // P43: the section may be gone while we saved
     setState(() {
       _authMode = mode;
     });

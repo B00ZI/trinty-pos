@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Easify/models/app_user.dart';
-import 'package:Easify/models/order.dart' as order_model;
-import 'providers/dashboard_provider.dart';
-import 'providers/navigation_provider.dart';
 import 'theme/app_colors.dart';
 import 'screens/order_screen.dart';
 import 'screens/history_screen.dart';
@@ -25,9 +23,6 @@ class AppRoutes {
   static const String management = '/management';
   static const String settings = '/settings';
   static const String devPanel = '/dev-panel';
-  static const String orderEdit = '/order/edit/:orderId';
-
-  static String orderEditPath(int orderId) => '/order/edit/$orderId';
 }
 
 // ─── Route extras (for passing non-path data) ───────────────────────────────
@@ -40,11 +35,11 @@ class OrderRouteExtras {
 
 // ─── Router builder ──────────────────────────────────────────────────────────
 GoRouter createRouter(WidgetRef ref) {
-  final objectbox = ref.read(objectBoxProvider);
-
   return GoRouter(
     initialLocation: AppRoutes.home,
-    debugLogDiagnostics: true,
+    // P49: GoRouter traces exist in debug builds only — a tablet in the
+    // café must not log every navigation to the console.
+    debugLogDiagnostics: kDebugMode,
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('Erreur')),
       body: Center(
@@ -168,21 +163,6 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       // Standalone routes
-      GoRoute(
-        path: AppRoutes.orderEdit,
-        builder: (context, state) {
-          final orderId = int.parse(state.pathParameters['orderId']!);
-          final order = objectbox.store.box<order_model.Order>().get(orderId);
-          if (order == null) {
-            return const Scaffold(
-              body: Center(child: Text('Order not found')),
-            );
-          }
-          return OrderScreen(
-            orderToEdit: order,
-          );
-        },
-      ),
       GoRoute(
         path: AppRoutes.devPanel,
         builder: (context, state) => const DevPanelScreen(),

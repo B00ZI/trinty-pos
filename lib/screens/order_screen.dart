@@ -977,6 +977,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen>
     final config = ref.read(storeConfigProvider);
 
     final authMode = await AuthService.getAuthMode();
+    if (!mounted) return; // P43: the screen may be gone while we waited
     if (authMode == AuthMode.perOrder) {
       final selected = await showDialog<AppUser>(
         context: context,

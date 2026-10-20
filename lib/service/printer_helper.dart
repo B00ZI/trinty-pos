@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import '../models/store_config.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
 import 'package:esc_pos_printer/esc_pos_printer.dart';
 import 'package:image/image.dart' as img;
@@ -225,8 +224,11 @@ class PrinterHelper {
       printer.reset();
       await _printHeader(printer, receipt, storeConfig, comment);
 
-      // Debug: Check items before printing
-      debugPrint('Items to print: ${receipt.items}');
+      // Debug: Check items before printing (P49: debug builds only —
+      // the receipt items are never written to a tablet's console).
+      if (kDebugMode) {
+        debugPrint('Items to print: ${receipt.items}');
+      }
 
       _printItems(printer, receipt.items);
       await _printTotals(printer, receipt, isTakeAway, storeConfig);
@@ -361,25 +363,8 @@ class PrinterHelper {
 
       printer.feed(1);
     } catch (e) {
-      debugPrint("Image print failed: $e");
-      // _printTextLogo(printer); // fallback
+      if (kDebugMode) debugPrint("Image print failed: $e");
     }
-  }
-
-  static void _printTextLogo(NetworkPrinter printer) {
-    printer.text(
-      '====================',
-      styles: const PosStyles(align: PosAlign.center),
-    );
-    printer.text(
-      '   EASIFY POS   ',
-      styles: const PosStyles(align: PosAlign.center, bold: true),
-    );
-    printer.text(
-      '====================',
-      styles: const PosStyles(align: PosAlign.center),
-    );
-    printer.feed(1);
   }
 
   static void _printItems(NetworkPrinter printer, List<ReceiptItem> items) {
@@ -495,19 +480,6 @@ class PrinterHelper {
       return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (e) {
       return dateString;
-    }
-  }
-
-  static String _formatPaymentMethod(String method) {
-    switch (method.toLowerCase()) {
-      case 'cash':
-        return 'CASH';
-      case 'card':
-        return 'CARD';
-      case 'delivery':
-        return 'DELIVERY';
-      default:
-        return method.toUpperCase();
     }
   }
 
