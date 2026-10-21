@@ -77,10 +77,10 @@ workflow rules, environment commands, what's done, what's next.
   test/batch2_money_parser_test.dart test/batch3_business_day_test.dart
   test/batch4_backup_and_guards_test.dart test/p63_history_today_test.dart
   test/batch5_auth_and_errors_test.dart test/batch6_platform_and_live_test.dart
-  test/batch7_categories_test.dart`) —
+  test/batch7_categories_test.dart test/batch8_dashboard_trend_test.dart`) —
   bare `flutter test` hung once, and there is no `test/objectbox_test.dart`
   (`test/widget_test.dart` was deleted in batch 6 — broken template). Baseline:
-  **92/92 pass**.
+  **98/98 pass**.
 - Real-store tests need `objectbox.dll` on PATH:
   add `;C:\Users\HP\Documents\bozi\trinty-pos-2.0.0.2\build\windows\x64\runner\Debug`
   to `$env:Path` before `flutter test`; without it the batch3 store group **skips
@@ -94,9 +94,9 @@ workflow rules, environment commands, what's done, what's next.
 - Owner's current app state (2026-10-19 22:16): **"hours" mode active with reset
   09:00** left over from their own B2/B3 test; they were told how to switch back to
   "Jour standard". Test data: orders #17–#35 dated 19/10 (orders #1–#16 deleted
-  earlier). **Batch-6 build ran 2026-10-20 19:17; owner has not yet reported
-  batch-6 results** (its checklist was deleted in the cleanup — essentials are
-  inlined in section 4).
+  earlier). **Batch-7 build ran 2026-10-20 22:35 and the batch-8 (P25) build
+  2026-10-21 16:11; owner has not yet reported batch-6/7 results** (checklists
+  deleted in the cleanup — essentials are inlined in section 4).
 - Test helper added in batch 4: `ObjectBox.attach(Store)` wraps a manually opened
   store with the app's boxes (used by the real-DB tests; no schema/codegen impact).
 
@@ -113,6 +113,7 @@ workflow rules, environment commands, what's done, what's next.
 | Batch 6 | (commit of 2026-10-20, see git log) | **P51 ✅ P52 ✅ P53 ✅ P54 ✅ P55 ✅ P56 ✅ P57 ✅** — owner stated the app is used **mainly on Android tablets**. P53 closed (already in git since batch 2); P55 broken template test deleted; P54 pubspec = real identity (`2.0.0+20002`, French description, 5 dead packages removed); P56 router built ONCE (held by Easify state) + Histoire→Modifier through go_router; P57 live providers (`storeConfigProvider`/`printerConfigProvider`/`allUsersProvider` — settings & users apply immediately, no restart); P51 dev-panel export buttons deleted (Android-only folder, silent no-op on Windows) + `cancelSessionNotification` deleted; **P52** Android: manifest `POST_NOTIFICATIONS`, permission asked once before first alert, growing notification IDs (was `millisecond` 0–999), everything Android-guarded + try/catch, "Partie terminée" alert finally wired to the games auto-end. 6 new tests (`test/batch6_platform_and_live_test.dart`) |
 | Batch 7 | (commit of 2026-10-20, see git log) | **P21 ✅** — owner: "do p21". Categories stay linked by NAME (deliberate: ids would need schema + codegen), and `lib/service/category_service.dart` owns the 3 rules that keep the live link true: **rename cascades** to every product behind the old name in ONE write transaction (`putKeepingProducts`) — products can never be orphaned again; **delete refused while products use it** (count in the French message, checked BEFORE the admin PIN); **edit keeps `displayOrder`** (the old dialog rebuilt the entity without it → every edited category reset to 0 and jumped to the front) and **new categories append at the end** (same old bug: created with 0 = front). Legacy orphans (made before this fix) are NOT auto-repaired — the owner is asked
 about them (question inlined in section 4). 8 new tests (`test/batch7_categories_test.dart`: 5 service + 3 through the real dialog/card) |
+| Batch 8 | (commit of 2026-10-21, see git log) | **P25 ✅** — owner: "go ahad and fix the fake numbers problem on dashbord" (the UI pass itself re-parked: "im planing to do big fix for cosestent ui and colors and better ux… another session"). The dashboard's 3 overview chips (Revenue/Orders/Profit) were hardcoded fiction (`+ 12.5%` `+ 8.4%` `+ 18.7%`, always green). Now `computeTrendPercent` (charts.dart) compares **these 7 days vs the previous 7** — green `+x.x %` up, red `-x.x %` down — and the chip **hides** when the previous week was empty (nothing honest to compare → no invented number). Same chip, real value. 6 new tests (`test/batch8_dashboard_trend_test.dart`: 4 math rules + 2 real-DB widget tests: −50.0 % on a real half-as-good week, no chip on a first week) |
 | Earlier (pre-batch, security/DB) | per Decisions log in PROBLEMS.md | P01 ⚠️ keep · P02 ✅ · P03 ✅ (dev panel PIN 9999) · P04 ✅ (PIN-gated maintenance) · P05 ⚠️ by design · P06 ✅ · P07 ✅ (desktop DB in %LOCALAPPDATA%) · P08 ✅ fail-closed activation · P09 ⚠️ · P10 ⚠️ (owner must back up debug.keystore) · P11 ❌ not a problem · P12 ✅ transactions · P59 ✅ category dropdown crash |
 
 ## 4. What's NEXT (in order)
@@ -131,6 +132,12 @@ about them (question inlined in section 4). 8 new tests (`test/batch7_categories
      (no restart); Histoire → Modifier never resets navigation to home; dev
      panel (5 taps + 9999) still opens; **on a real Android device:** permission
      asked once, then the "Partie terminée" alert when a prepaid party ends.
+   - **Batch 8 / dashboard trends (~2 min):** open the dashboard → the 3
+     overview cards (Revenue / Orders / Profit) show the little % chip next to
+     the big total. It must be a **real** number: green `+x.x %` when this week
+     beat the previous 7 days, **red `-x.x %`** when it was worse. A shop with
+     no sales in the previous 7 days shows **no chip at all** (totals still
+     show). The old `+ 12.5%` / `+ 8.4%` / `+ 18.7%` can never appear again.
 2. **APK for version 3** — `Documents\Easify-v3.0.0.apk` (rebuilt after the
    version bump; the old v2 copy was deleted). Line **3.0.0.0 pushed to GitHub**
    incl. the keystore (owner's informed call on the public repo). Install on a
@@ -141,9 +148,11 @@ about them (question inlined in section 4). 8 new tests (`test/batch7_categories
    objectbox.g.dart regeneration which HANGS; propose deferring or doing on another
    machine**), P46 (repository layer drift — recommend defer), P48
    (pointycastle override in license path — keep, owner decided). ~~P21~~ done in batch 7.
-4. **Section D UI deferrals** (later UI pass): P25 P38 P39 P40 P41 P58.
-   Note from P51: if the owner ever wants fancy fonts offline on tablets,
-   bundle google_fonts TTFs as assets (needs a yes).
+4. **Section D UI items** — the owner plans his own dedicated session for the
+   big UI/colors/UX fix (his call 2026-10-21): P38 P39 P40 P41 P58 (~~P25~~
+   done in batch 8 — it was correctness, not design). Note from P51: if the
+   owner ever wants fancy fonts offline on tablets, bundle google_fonts TTFs
+   as assets (needs a yes).
 
 ## 5. Per-batch definition of done
 

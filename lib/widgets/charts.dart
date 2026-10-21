@@ -26,6 +26,17 @@ class DailyData {
   });
 }
 
+/// P25 — the weekly trend labels used to be hardcoded fiction
+/// (`+12.5%`, `+8.4%`, `+18.7%`, always positive) shown next to real numbers.
+/// This computes the REAL change of the current 7 days against the previous
+/// 7 days, in percent. Returns null when no honest comparison exists
+/// (previous period = 0) — the UI then hides the chip instead of inventing
+/// a number.
+double? computeTrendPercent(double current, double previous) {
+  if (previous == 0) return null;
+  return (current - previous) / previous * 100;
+}
+
 class WeeklyPerformanceChart extends StatefulWidget {
   final Store store;
   final String title;
@@ -47,6 +58,10 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   late final Box<GameSession> _gameSessionBox;
   late final Box<Expense> _expenseBox;
   List<DailyData> weeklyData = [];
+  // P25: real trends vs the previous 7 days (null = nothing to compare).
+  double? _revenueTrend;
+  double? _ordersTrend;
+  double? _profitTrend;
   StreamSubscription? _orderSubscription;
   StreamSubscription? _gameSubscription;
   StreamSubscription? _expenseSubscription;
@@ -82,9 +97,33 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
       newWeeklyData.insert(0, dayData);
     }
 
+    // P25: the trend compares these 7 days with the 7 days BEFORE them
+    // (the old code showed hardcoded +12.5% / +8.4% / +18.7%).
+    double prevRevenue = 0;
+    double prevExpense = 0;
+    int prevOrders = 0;
+    for (int i = 7; i < 14; i++) {
+      final dayData = await _getDayData(today.subtract(Duration(days: i)));
+      prevRevenue += dayData.revenue;
+      prevExpense += dayData.expense;
+      prevOrders += dayData.orders;
+    }
+
+    final currentRevenue =
+        newWeeklyData.fold<double>(0, (sum, d) => sum + d.revenue);
+    final currentOrders =
+        newWeeklyData.fold<int>(0, (sum, d) => sum + d.orders);
+    final currentProfit =
+        newWeeklyData.fold<double>(0, (sum, d) => sum + d.profit);
+
     if (mounted) {
       setState(() {
         weeklyData = newWeeklyData;
+        _revenueTrend = computeTrendPercent(currentRevenue, prevRevenue);
+        _ordersTrend =
+            computeTrendPercent(currentOrders.toDouble(), prevOrders.toDouble());
+        _profitTrend =
+            computeTrendPercent(currentProfit, prevRevenue - prevExpense);
       });
     }
   }
@@ -206,8 +245,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
         _buildOverviewCard(
           title: 'Revenue Overview',
           totalLabel: '${totalRevenue.toStringAsFixed(2)} DH',
-          trendLabel: '+ 12.5%', // Dynamically aligned
-          isPositive: true,
+          trendPercent: _revenueTrend,
           chart: DashboardLineChart(
             values: revenues,
             labels: labels,
@@ -221,8 +259,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
         _buildOverviewCard(
           title: 'Orders Overview',
           totalLabel: '$totalOrders',
-          trendLabel: '+ 8.4%',
-          isPositive: true,
+          trendPercent: _ordersTrend,
           chart: DashboardBarChart(
             values: orders,
             labels: labels,
@@ -235,8 +272,7 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
         _buildOverviewCard(
           title: 'Profit Overview',
           totalLabel: '${totalProfit.toStringAsFixed(2)} DH',
-          trendLabel: '+ 18.7%',
-          isPositive: true,
+          trendPercent: _profitTrend,
           chart: DashboardLineChart(
             values: profits,
             labels: labels,
@@ -251,10 +287,16 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
   Widget _buildOverviewCard({
     required String title,
     required String totalLabel,
-    required String trendLabel,
-    required bool isPositive,
+    required double? trendPercent,
     required Widget chart,
   }) {
+    // P25: the chip shows the REAL change vs the previous 7 days — and
+    // hides itself when there is nothing honest to compare (previous = 0).
+    final isPositive = (trendPercent ?? 0) >= 0;
+    final trendText = trendPercent == null
+        ? null
+        : '${trendPercent >= 0 ? '+' : '-'}'
+            '${trendPercent.abs().toStringAsFixed(1)} %';
     return Container(
       padding: const EdgeInsets.all(AppSpacing.space5),
       decoration: BoxDecoration(
@@ -313,22 +355,24 @@ class _WeeklyPerformanceChartState extends State<WeeklyPerformanceChart> {
                   color: AppColors.ink0,
                 ),
               ),
-              const SizedBox(width: AppSpacing.space2),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space2, vertical: AppSpacing.space1),
-                decoration: BoxDecoration(
-                  color: (isPositive ? AppColors.success : AppColors.danger).withAlpha(25),
-                  borderRadius: AppRadius.rSm,
-                ),
-                child: Text(
-                  trendLabel,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: isPositive ? AppColors.success : AppColors.danger,
+              if (trendPercent != null) ...[
+                const SizedBox(width: AppSpacing.space2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space2, vertical: AppSpacing.space1),
+                  decoration: BoxDecoration(
+                    color: (isPositive ? AppColors.success : AppColors.danger).withAlpha(25),
+                    borderRadius: AppRadius.rSm,
+                  ),
+                  child: Text(
+                    trendText!,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isPositive ? AppColors.success : AppColors.danger,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.space6),
