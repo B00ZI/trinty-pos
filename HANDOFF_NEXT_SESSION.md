@@ -94,9 +94,11 @@ workflow rules, environment commands, what's done, what's next.
 - Owner's current app state (2026-10-19 22:16): **"hours" mode active with reset
   09:00** left over from their own B2/B3 test; they were told how to switch back to
   "Jour standard". Test data: orders #17–#35 dated 19/10 (orders #1–#16 deleted
-  earlier). **Batch-7 build ran 2026-10-20 22:35 and the batch-8 (P25) build
-  2026-10-21 16:11; owner has not yet reported batch-6/7 results** (checklists
-  deleted in the cleanup — essentials are inlined in section 4).
+  earlier). **Batch 6 + batch 7 reviewed by the owner 2026-10-21** ("i already
+  reviewed the categories test (batch 7), the batch 6 checks") — no problems
+  reported. Batch-8 (P25) build ran 2026-10-21 16:11; the owner installs an
+  APK **after his own UI/UX session** ("the app i will do later after ui ux
+  fixes").
 - Test helper added in batch 4: `ObjectBox.attach(Store)` wraps a manually opened
   store with the app's boxes (used by the real-DB tests; no schema/codegen impact).
 
@@ -118,32 +120,22 @@ about them (question inlined in section 4). 8 new tests (`test/batch7_categories
 
 ## 4. What's NEXT (in order)
 
-1. **Owner tests — inlined checklists (all TEST_BATCHN files deleted by owner's
-   order); fix only what he reports, on his say:**
-   - **Batch 7 / categories (~5 min):** rename a category that has products →
-     its products must show under the new name on the order screen and the card
-     must **not** jump to the front; try deleting a category that still has
-     products → refusal message with the count, nothing lost, **no PIN asked**;
-     an empty category still deletes behind the admin PIN; a new category
-     appears **last**. **Question for him:** did a product ever vanish from the
-     order screen *before* this fix (an old rename/delete)? If yes → propose a
-     one-time legacy-orphan repair tool (only if he really has some).
-   - **Batch 6:** settings changed in Paramètres appear everywhere immediately
-     (no restart); Histoire → Modifier never resets navigation to home; dev
-     panel (5 taps + 9999) still opens; **on a real Android device:** permission
-     asked once, then the "Partie terminée" alert when a prepaid party ends.
-   - **Batch 8 / dashboard trends (~2 min):** open the dashboard → the 3
-     overview cards (Revenue / Orders / Profit) show the little % chip next to
-     the big total. It must be a **real** number: green `+x.x %` when this week
-     beat the previous 7 days, **red `-x.x %`** when it was worse. A shop with
-     no sales in the previous 7 days shows **no chip at all** (totals still
-     show). The old `+ 12.5%` / `+ 8.4%` / `+ 18.7%` can never appear again.
-2. **APK for version 3** — `Documents\Easify-v3.0.0.apk` (rebuilt after the
-   version bump; the old v2 copy was deleted). Line **3.0.0.0 pushed to GitHub**
-   incl. the keystore (owner's informed call on the public repo). Install on a
-   tablet that doesn't have the app → verify P52 notifications on real Android.
-   Old tablets stay on their old app (their key is lost — owner accepted;
-   migration = nice-to-have, not needed).
+1. **Owner tests — done on his side 2026-10-21:** batch 6 + batch 7 reviewed,
+   no problems reported (batch 7's legacy-orphan question never answered with
+   a "yes" → no repair tool unless he comes across one). Only **batch 8**
+   (dashboard % chips) awaits his eyes whenever: the 3 overview cards
+   (Revenue / Orders / Profit) must show a REAL chip — green `+x.x %` when
+   this week beat the previous 7 days, **red `-x.x %`** when it was worse, and
+   **no chip at all** when the previous 7 days were empty (totals still show).
+   The old `+ 12.5%` / `+ 8.4%` / `+ 18.7%` fiction can never appear again.
+2. **After the owner's UI/UX session: build a fresh APK** (recipe §6) — the
+   current `Documents\Easify-v3.0.0.apk` predates his UI changes and stays
+   only as the interim build. He installs the fresh one on a tablet that
+   doesn't have the app → verify P52 notifications on real Android (never yet
+   run on real hardware). Line **3.0.0.0 pushed to GitHub** incl. the keystore
+   (owner's informed call on the public repo). Old tablets stay on their old
+   app (their key is lost — owner accepted; migration = nice-to-have, not
+   needed).
 3. **Leftovers, individually yes/no**: P20 (ObjectBox indexes — **codegen risk: requires
    objectbox.g.dart regeneration which HANGS; propose deferring or doing on another
    machine**), P46 (repository layer drift — recommend defer), P48
